@@ -2,15 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>barip-react</title>
-    <meta name="theme-color" content="#3b82f6" />
+    <title>Bari Porichalona - House Rent Management</title>
+    
+    <meta name="theme-color" content="#f9873c" />
     <meta name="description" content="Complete house rent management system" />
     <link rel="manifest" href="/manifest.json" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     
-    <!-- Apple touch icon -->
-    <link rel="apple-touch-icon" href="/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
+
+    <link rel="icon" type="image/ico" sizes="192x192" href="/favicon.ico" />
+    
+    <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
+
     <link href="/src/index.css" rel="stylesheet">
   </head>
   <body>
@@ -20,7 +30,8 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
+          // Note: The service worker file is typically named 'sw.js' or 'service-worker.js'
+          navigator.serviceWorker.register('/sw.js'); 
         });
       }
     </script>

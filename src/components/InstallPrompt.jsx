@@ -1,17 +1,26 @@
 import React, { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks';
 import { clearDeferredPrompt } from '../store/slices/uiSlice';
+import { globalDeferredPrompt } from '../App';
+
 
 const InstallPrompt = () => {
   const dispatch = useAppDispatch();
-  const { deferredPrompt } = useAppSelector(state => state.ui);
+  // 1. Read the boolean FLAG from Redux (to control visibility)
+  const isPromptAvailable = useAppSelector(state => state.ui.deferredPrompt); 
   const [isVisible, setIsVisible] = useState(true);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    // 2. Use the global variable for the actual prompt object
+    const promptEvent = globalDeferredPrompt; 
     
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    if (!promptEvent) {
+        console.error("Install prompt event object is missing.");
+        return;
+    }
+    
+    promptEvent.prompt();
+    const { outcome } = await promptEvent.userChoice;
     
     if (outcome === 'accepted') {
       console.log('User accepted the install prompt');
@@ -19,108 +28,89 @@ const InstallPrompt = () => {
       console.log('User dismissed the install prompt');
     }
     
-    dispatch(clearDeferredPrompt());
+    // 3. Clear the global variable and the Redux flag
+    globalDeferredPrompt = null; 
+    dispatch(clearDeferredPrompt()); // This clears the Redux boolean flag
     setIsVisible(false);
   };
 
   const handleDismiss = () => {
+    // 4. Clear the global variable and the Redux flag upon dismissal as well
+    globalDeferredPrompt = null;
+    dispatch(clearDeferredPrompt());
     setIsVisible(false);
     localStorage.setItem('installPromptDismissed', 'true');
   };
 
-  if (!deferredPrompt || !isVisible) return null;
-  if (localStorage.getItem('installPromptDismissed') === 'true') return null;
+  // 5. Check visibility using the Redux flag instead of the object itself
+  if (!isPromptAvailable || !isVisible) return null;
+  if (localStorage.getItem('installPromptDismissed') === 'true') return null;if (localStorage.getItem('installPromptDismissed') === 'true') return null;
 
-  return (
-    <div className="install-prompt">
-      <div className="install-content">
-        <div className="install-icon">📱</div>
-        <div className="install-text">
-          <h4>Install Barip App</h4>
-          <p>Install the app for a better experience with offline access</p>
+ return (
+        <div 
+            className="
+                fixed bottom-5 left-1/2 -translate-x-1/2 
+                w-[90%] max-w-lg bg-white 
+                rounded-xl shadow-2xl z-1000 
+                transition-all duration-300 ease-out
+            "
+        >
+            <div 
+                className="
+                    flex items-center p-4 gap-4 
+                    sm:flex-row sm:text-left 
+                    flex-col text-center
+                "
+            >
+                <div 
+                    // .install-icon: font-size: 32px
+                    className="text-3xl"
+                >
+                    📱
+                </div>
+                
+                <div 
+                    className="flex-1"
+                >
+                    <h4 
+                        className="mb-1 font-semibold text-lg"
+                    >
+                        Install Barip App
+                    </h4>
+                    <p 
+                        className="text-sm text-gray-600"
+                    >
+                        Install the app for a better experience with offline access
+                    </p>
+                </div>
+                
+                <div 
+                    className="flex gap-2 w-full sm:w-auto"
+                >
+                    <button 
+                        onClick={handleInstall} 
+                        className="
+                            flex-1 px-4 py-2 rounded-lg text-white 
+                            bg-blue-600 hover:bg-blue-700 
+                            font-medium transition-colors
+                        "
+                    >
+                        Install
+                    </button>
+                    <button 
+                        onClick={handleDismiss} 
+                        className="
+                            flex-1 px-4 py-2 rounded-lg font-medium 
+                            text-blue-600 border border-blue-600 
+                            hover:bg-blue-50 transition-colors
+                        "
+                    >
+                        Later
+                    </button>
+                </div>
+            </div>
         </div>
-        <div className="install-actions">
-          <button onClick={handleInstall} className="button button-primary">
-            Install
-          </button>
-          <button onClick={handleDismiss} className="button button-outline">
-            Later
-          </button>
-        </div>
-      </div>
-      
-      <style jsx>{`
-        .install-prompt {
-          position: fixed;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 90%;
-          max-width: 500px;
-          background-color: white;
-          border-radius: 12px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-          z-index: 1000;
-          animation: slideUp 0.3s ease;
-        }
-        
-        .install-content {
-          display: flex;
-          align-items: center;
-          padding: 16px;
-          gap: 16px;
-        }
-        
-        .install-icon {
-          font-size: 32px;
-        }
-        
-        .install-text {
-          flex: 1;
-        }
-        
-        .install-text h4 {
-          margin-bottom: 4px;
-        }
-        
-        .install-text p {
-          color: #666;
-          font-size: 14px;
-        }
-        
-        .install-actions {
-          display: flex;
-          gap: 8px;
-        }
-        
-        @keyframes slideUp {
-          from {
-            transform: translate(-50%, 100%);
-            opacity: 0;
-          }
-          to {
-            transform: translate(-50%, 0);
-            opacity: 1;
-          }
-        }
-        
-        @media (max-width: 600px) {
-          .install-content {
-            flex-direction: column;
-            text-align: center;
-          }
-          
-          .install-actions {
-            width: 100%;
-          }
-          
-          .install-actions button {
-            flex: 1;
-          }
-        }
-      `}</style>
-    </div>
-  );
+    );
 };
 
 export default InstallPrompt;

@@ -62,7 +62,7 @@ const AppRoutes = () => {
         <Route path="/auth/success" element={<AuthSuccess />} />
         
         {/* Protected Routes 78with Layout */}
-        <Route path="/" element={
+        <Route element={
           <ProtectedRoute>
             <Layout />
           </ProtectedRoute>
