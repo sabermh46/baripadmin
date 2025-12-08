@@ -39,8 +39,8 @@ const useNotifications = (initialFilters = {}) => {
     refetch: refetchUnreadCount,
     isLoading: isLoadingUnreadCount 
   } = useGetUnreadCountQuery(undefined, {
-    // Poll for unread count every 30 seconds
-    pollingInterval: 30000,
+    // Poll for unread count every 60 seconds
+    pollingInterval: 60000,
   });
 
   const [markAsRead] = useMarkAsReadMutation();
