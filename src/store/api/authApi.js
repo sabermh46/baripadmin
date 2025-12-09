@@ -18,7 +18,20 @@ export const authApi = baseApi.injectEndpoints({
         data,
       }),
     }),
-    
+
+    validateToken: builder.mutation({
+      query: (data) => ({
+        url: '/auth/validate-token',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    getPublicRegistrationStatus: builder.query({
+      query: () => '/auth/public-registration-status',
+      providesTags: ['Settings'],
+    }),
+        
     googleLogin: builder.query({
       query: () => ({
         url: '/auth/login/success',
@@ -68,4 +81,6 @@ export const {
   useLinkGoogleAccountMutation,
   useLogoutMutation,
   useRefreshTokenMutation,
+  useValidateTokenMutation,
+  useGetPublicRegistrationStatusQuery,
 } = authApi;

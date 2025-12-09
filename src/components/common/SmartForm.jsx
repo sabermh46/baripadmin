@@ -8,7 +8,7 @@ import { appLogo } from "../../assets";
  * SmartForm Component
  * Renders a dynamic form based on a configuration array (fields).
  */
-export default function SmartForm({ fields = [], onSubmit, header = <p>Form</p>, logoVisible = false }) {
+export default function SmartForm({ fields = [], onSubmit, header = <p>Form</p>, logoVisible = false, submitText = "Submit", submitDisabled = false }) {
     const [formData, setFormData] = useState(() => {
         // Initialize formData with default values (or empty strings) for all fields
         return fields.reduce((acc, field) => {
@@ -118,9 +118,10 @@ export default function SmartForm({ fields = [], onSubmit, header = <p>Form</p>,
             {/* Submit Button - Original Tailwind classes preserved */}
             <button
                 type="submit"
-                className="mt-4 w-full py-1 rounded-md bg-primary-600 text-white font-poppins hover:bg-primary-700 transition cursor-pointer"
+                disabled={submitDisabled}
+                className={`mt-4 w-full py-1 bg-primary rounded-md font-poppins transition cursor-pointer ${submitDisabled ? 'opacity-50 cursor-not-allowed' : 'bg-primary hover:bg-primary-700 cursor-pointer'}`}
             >
-                Submit
+                {submitText}
             </button>
         </form>
     );

@@ -11,6 +11,7 @@ export default function TextField({
   error = "",
   isPassword = false,
   validate = null,
+  disabled = false,
 }) {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -37,6 +38,7 @@ export default function TextField({
           type={isPassword && !showPassword ? "password" : "text"}
           placeholder={placeholder}
           value={value || ""}
+          disabled={disabled}
           onChange={handleChange}
           className={`w-full px-3 py-2 rounded-md border border-primary ${ error
               ? "focus:border-red-500"
