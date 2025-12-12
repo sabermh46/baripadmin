@@ -159,7 +159,7 @@ const ProfilePage = () => {
             </div>
             
             {/* Set Password Form (Conditional) */}
-            {user?.needsPasswordSetup && !user.passwordHash && (
+            {user?.needsPasswordSetup && (!user.passwordHash || !user.googleId) && (
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <h4 className="text-lg font-semibold text-gray-700 mb-3">Set Password</h4>
                 <form onSubmit={handleSetPassword} className="space-y-4">

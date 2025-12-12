@@ -31,6 +31,7 @@ const SignupPage = () => {
 
   // Set public registration status
   useEffect(() => {
+    
     if (publicRegStatus) {
       setPublicRegistrationEnabled(publicRegStatus.publicRegistrationEnabled);
     }
@@ -191,9 +192,7 @@ const SignupPage = () => {
 
   const googleAuth = () => {
     // Include token in Google auth if present
-    const googleAuthUrl = token 
-      ? `${import.meta.env.VITE_APP_API_URL}/auth/google?token=${token}`
-      : `${import.meta.env.VITE_APP_API_URL}/auth/google`;
+    const googleAuthUrl = `${import.meta.env.VITE_APP_API_URL}/auth/google`;
     
     window.open(googleAuthUrl, "_self");
   };
@@ -371,10 +370,10 @@ const SignupPage = () => {
 
         <GoogleButton 
           onClick={googleAuth}
-          disabled={!token && !publicRegistrationEnabled}
+          disabled={!publicRegistrationEnabled}
           title={
-            !token && !publicRegistrationEnabled 
-              ? "Requires invitation" 
+           !publicRegistrationEnabled 
+              ? "Public registration is disabled" 
               : "Sign up with Google"
           }
         />

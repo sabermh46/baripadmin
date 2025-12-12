@@ -51,7 +51,7 @@ export default function LoginPage() {
   // ---- GOOGLE AUTH ----
   const googleAuth = () => {
     window.open(
-      `${import.meta.env.VITE_APP_API_URL}/auth/google?prompt=select_account`,
+      `${import.meta.env.VITE_APP_API_URL}/auth/google?prompt=select_account&token=abcdxyz`,
       "_self"
     );
   };

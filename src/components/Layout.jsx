@@ -5,17 +5,17 @@ import { useLogoutMutation } from '../store/api/authApi';
 import { useAppDispatch } from '../hooks';
 import { logout as logoutAction } from '../store/slices/authSlice';
 import { appLogo } from '../assets';
-import usePushNotifications from '../hooks/usePushNotifications';
 import NotificationIcon from './notifications/NotificationIcon';
+import SideNav from './layout/SideNav';
+import usePushNotifications from '../hooks/usePushNotifications';
 
 const Layout = () => {
   const { user, isWebOwner, isHouseOwner, isStaff, isCaretaker } = useAuth();
+  const { unsubscribe, subscription } = usePushNotifications();
   const [logoutMutation] = useLogoutMutation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const { unsubscribe } = usePushNotifications();
 
   
   
@@ -30,23 +30,11 @@ const Layout = () => {
     }
   };
 
-  const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/houses', label: 'Houses', icon: '🏠', roles: ['web_owner', 'house_owner'] },
-    { path: '/notices', label: 'Notices', icon: '📢', roles: ['web_owner', 'staff', 'house_owner'] },
-    { path: '/profile', label: 'Profile', icon: '👤' },
-  ];
-
-  const filteredNavItems = navItems.filter(item => {
-    if (!item.roles) return true;
-    if (!user?.role?.slug) return false;
-    return item.roles.includes(user.role.slug);
-  });
 
 
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen max-w-full overflow-x-clip">
       {/* Sidebar */}
       <div className="hidden md:flex md:sticky top-0 w-64 bg-surface border-r border-gray-200 flex-col py-5 max-h-screen">
         <div className="px-5 pb-5 border-b border-gray-200 mb-5 flex flex-col items-center">
@@ -58,26 +46,7 @@ const Layout = () => {
           </p>
         </div>
         <nav className="flex-1">
-          {filteredNavItems.map(item => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="flex items-center gap-3 px-5 py-3 text-text hover:bg-primary duration-300 transition-colors aria-[current=page]:bg-primary aria-[current=page]:text-white"
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-
-          {isWebOwner && (
-            <Link
-              to="/settings"
-              className="flex items-center gap-3 px-5 py-3 text-text hover:bg-primary duration-300 transition-colors"
-            >
-              <span className="text-xl">⚙️</span>
-              <span>Settings</span>
-            </Link>
-          )}
+          <SideNav />
         </nav>
 
         <div className="px-5 pt-5 border-t border-gray-200">
@@ -100,20 +69,21 @@ const Layout = () => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col bg-background">
-        <header className="h-16 bg-surface/30 border-b border-gray-200 flex items-center justify-between px-5 sticky top-0 backdrop-blur-[3px]">
+      <main className="flex-1 flex flex-col bg-background overflow-x-clip">
+        <header className="h-16 bg-surface/30 border-b border-gray-200 flex items-center justify-between sticky top-0 backdrop-blur-[3px] z-40 px-4">
           <button
             className="md:hidden bg-transparent border-none text-2xl cursor-pointer"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             ☰
           </button>
+          <span></span>
           <div className="flex items-center gap-4">
             <NotificationIcon />
           </div>
         </header>
 
-        <div className="flex-1 p-5 overflow-y-auto">
+        <div className="flex-1 p-5 overflow-y-auto max-w-full overflow-x-clip relative">
           <Outlet />
         </div>
       </main>

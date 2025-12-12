@@ -23,12 +23,15 @@ export const authApi = baseApi.injectEndpoints({
       query: (data) => ({
         url: '/auth/validate-token',
         method: 'POST',
-        body: data,
+        data
       }),
     }),
 
     getPublicRegistrationStatus: builder.query({
-      query: () => '/auth/public-registration-status',
+      query: () => ({
+        url: '/auth/public-registration-status',
+        method: 'GET',
+      }),
       providesTags: ['Settings'],
     }),
         
@@ -55,11 +58,19 @@ export const authApi = baseApi.injectEndpoints({
         data,
       }),
     }),
+
+    generateToken: builder.mutation({
+      query: (data) => ({
+        url: '/auth/generate-token',
+        method: 'POST',
+        data,
+      }),
+    }),
     
     logout: builder.mutation({
       query: () => ({
         url: '/auth/logout',
-        method: 'GET',
+        method: 'POST',
       }),
     }),
     
@@ -79,6 +90,7 @@ export const {
   useGoogleLoginQuery,
   useSetPasswordMutation,
   useLinkGoogleAccountMutation,
+  useGenerateTokenMutation,
   useLogoutMutation,
   useRefreshTokenMutation,
   useValidateTokenMutation,

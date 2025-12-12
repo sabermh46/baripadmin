@@ -169,8 +169,9 @@ const usePushNotifications = () => {
     const unsubscribe = useCallback(async () => {
         if (!subscription) return false;
 
+        await subscription.unsubscribe();
+        
         try {
-            await subscription.unsubscribe();
 
             await axios.post(
                 `${import.meta.env.VITE_APP_API_URL}/push/unsubscribe`,
@@ -190,6 +191,17 @@ const usePushNotifications = () => {
             toast.success('Unsubscribed from push notifications.');
             return true;
         } catch (error) {
+            if(error.response?.data?.error === "Subscription not found") {
+                setSubscription(null);
+                setIsSubscribed(false);
+                isSubscribedRef.current = false;
+                toast.success('Unsubscribed from push notifications.');
+                return true;
+            } else if (error?.response?.data?.error === "Access denied. No token provided."){
+                toast.success('Unsubscribed from push notifications.');
+                return true;
+            }
+
             console.error('Unsubscription error:', error);
             toast.error('Failed to unsubscribe from notifications');
             return false;

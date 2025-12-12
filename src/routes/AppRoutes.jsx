@@ -9,6 +9,10 @@ import ProfilePage from '../pages/Profile';
 import AuthSuccess from '../pages/AuthSuccess';
 import PublicHome from '../pages/PublicHome'
 import NotificationPage from '../pages/Notification';
+import ComingSoonPage from '../pages/utility/ComingSoonPage';
+import AccessDeniedPage from '../pages/utility/AccessDeniedPage';
+import AdminSettingsPage from '../pages/Admin';
+import GenerateToken from '../pages/Admin/userBased/GenerateToken';
 
 
 // ============ PROTECTED ROUTES IMPORTS ============
@@ -180,6 +184,7 @@ const AppRoutes = () => {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="notification" element={<NotificationPage />} />
+          <Route path="access-denied" element={<AccessDeniedPage />} />
           {/* House Owner & Web Owner Routes */}
           {/* <Route path="houses" element={
             <ProtectedRoute roles={['web_owner', 'house_owner']}>
@@ -200,6 +205,30 @@ const AppRoutes = () => {
               <SettingsPage />
             </ProtectedRoute>
           } /> */}
+
+            {/* ===== STAFF-SPECIFIC ROUTES ===== */}
+            <Route path="staff/audit-logs" element={
+              <ProtectedRoute roles={['staff', 'web_owner']}>
+                <ComingSoonPage />
+              </ProtectedRoute>
+            } />
+            <Route path="staff/user-approvals" element={
+              <ProtectedRoute roles={['staff', 'web_owner']}>
+                <ComingSoonPage />
+              </ProtectedRoute>
+            } />
+
+            {/* ===== ADMIN-SPECIFIC ROUTES ===== */}
+            <Route path="admin/settings" element={
+              <ProtectedRoute roles={['web_owner']}>
+                <AdminSettingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/generate-token" element={
+              <ProtectedRoute roles={['web_owner']}>
+                <GenerateToken />
+              </ProtectedRoute>
+            } />
         </Route>
         
         {/* ============ 404 ROUTE ============ */}

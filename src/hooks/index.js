@@ -9,14 +9,19 @@ export const useAppSelector = useSelector; // No need for TypedUseSelectorHook i
 export const useAuth = () => {
   const { user, isAuthenticated, isLoading } = useAppSelector(state => state.auth);
   const dispatch = useAppDispatch();
+  console.log(user);
+  
 
-  console.log('useAuth has been called');
-  
-  
-  const hasPermission = (permission) => {
-    if (!user?.role) return false;
-    // Add permission logic based on role
-    return true;
+  const hasPermission = (permissionKey) => {
+    if (!user) return false;
+    
+    // Web owner has all permissions
+    if (user.role?.slug === 'web_owner' || user.role?.slug === 'developer') {
+      return true;
+    }
+    
+    // Check user's permissions array
+    return user.permissions.includes(permissionKey);
   };
   
   const isRole = (roleSlug) => {
