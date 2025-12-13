@@ -9,7 +9,7 @@ import AppRoutes from './routes/AppRoutes';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import nProgress from 'nprogress';
-import RouteLoader from './components/common/RouteLoader.jsx';
+import RouteLoader, { LoaderMinimal } from './components/common/RouteLoader.jsx';
 import usePushNotifications from './hooks/usePushNotifications.js';
 
 nProgress.configure({
@@ -362,20 +362,7 @@ const AppContent = () => {
             <AppRoutes />
 
             {
-                user && (isSupported && permission === 'granted' ? (
-                    <div className='fixed bottom-4 right-4 z-50'>
-                        <button
-                        className={`px-4 py-2 rounded-lg shadow-lg ${
-                            isSubscribed 
-                            ? 'bg-red-500 text-white hover:bg-red-600'
-                            : 'bg-green-500 text-white hover:bg-green-600' 
-                        }`}
-                        onClick={toggleSubscription}>
-                            {isSubscribed ? '🔕 Disable Notifications' : '🔔 Subscribe Notifications'}
-                        </button>
-                    </div>
-                ) : (
-
+                user && permission !== 'granted' && (
                     <div className='fixed bottom-4 right-4 z-50'>
                         <button 
                         className='px-4 cursor-pointer py-2 rounded-lg shadow-lg bg-primary text-black capitalize hover:bg-primary-800 hover:text-white duration-200'
@@ -390,15 +377,13 @@ const AppContent = () => {
                         >
                             {'enable notifications'}
                         </button>
-                    </div>
-                    
-                ))
+                    </div>)
             }
 
             {/* 3. Render the integrated component, passing the Redux flag */}
             <PwaInstallPrompt isPromptAvailable={isPromptAvailable} />
             
-            <ToastContainer position="top-right" autoClose={5000} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
+            <ToastContainer position="bottom-center" autoClose={5000} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
             {updateAvailable && (
                 <div className="fixed bottom-4 left-4 right-4 bg-yellow-500 text-white p-4 rounded-lg shadow-lg z-50 flex justify-between items-center">
                     <p className="font-semibold">New version available!</p>
@@ -417,7 +402,7 @@ const AppContent = () => {
 const App = () => {
     return (
         <Provider store={store}>
-            <PersistGate loading={<div>Loading...</div>} persistor={persistor}>
+            <PersistGate loading={<LoaderMinimal />} persistor={persistor}>
                 <Router>
                     <AppContent />
                 </Router>

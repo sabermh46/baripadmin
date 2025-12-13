@@ -30,9 +30,9 @@ const PublicHome = () => {
         <div className="max-w-7xl mx-auto px-5 flex justify-between items-center">
 
 
-          <Link to={'/'} className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <img src={appLogo} alt="Barip Logo" className="h-full w-auto max-h-12 p-0" />
-            <h1 className="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-primary-400 to-red-400 font-oswald">
+            <h1 className="text-sm md:text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-primary-400 to-red-400 font-oswald">
                 Bari Porichalona
             </h1>
           </Link>
@@ -60,12 +60,12 @@ const PublicHome = () => {
                 <span className="text-gray-600 font-medium hidden sm:inline">
                     Hello, {user?.name?.split(' ')[0] || 'User'}!
                 </span>
-                <Link 
-                    to="/dashboard" 
-                    className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-md"
+                <Btn
+                  type="primary"
+                  href="/dashboard"
                 >
                   Dashboard
-                </Link>
+                </Btn>
               </>
             ) : (
               <>

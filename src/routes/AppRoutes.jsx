@@ -13,6 +13,11 @@ import ComingSoonPage from '../pages/utility/ComingSoonPage';
 import AccessDeniedPage from '../pages/utility/AccessDeniedPage';
 import AdminSettingsPage from '../pages/Admin';
 import GenerateToken from '../pages/Admin/userBased/GenerateToken';
+import ViewAllStaff from '../pages/Admin/staff/ViewAllStaff';
+import StaffPage from '../pages/Admin/staff';
+import { LoaderMinimal } from '../components/common/RouteLoader';
+import { Loader } from 'lucide-react';
+
 
 
 // ============ PROTECTED ROUTES IMPORTS ============
@@ -92,12 +97,7 @@ const ProtectedRoute = ({ children, roles = [], permissions = [] }) => {
   
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
+      <LoaderMinimal />
     );
   }
   
@@ -128,7 +128,7 @@ const PublicRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <LoaderMinimal />;
   }
   
   if (isAuthenticated) {
@@ -225,8 +225,19 @@ const AppRoutes = () => {
               </ProtectedRoute>
             } />
             <Route path="admin/generate-token" element={
-              <ProtectedRoute roles={['web_owner']}>
+              <ProtectedRoute roles={['web_owner', 'staff']}>
                 <GenerateToken />
+              </ProtectedRoute>
+            } />
+
+            <Route path="admin/view/all-staff" element={
+              <ProtectedRoute roles={['web_owner']}>
+                <ViewAllStaff />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/staff" element={
+              <ProtectedRoute roles={['web_owner']}>
+                <StaffPage />
               </ProtectedRoute>
             } />
         </Route>

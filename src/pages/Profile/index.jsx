@@ -87,20 +87,20 @@ const ProfilePage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-full mx-auto">
         {/* Header */}
-        <h1 className="text-4xl font-extrabold text-gray-800 mb-8 border-b-4 border-indigo-500 pb-2 inline-block">
-          ⚙️ Profile Settings
+        <h1 className="text-base md:text-xl font-semibold text-slate-600 mb-8 pb-2 inline-block">
+          Profile Settings
         </h1>
 
         {/* Profile Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
           {/* Personal Information Card */}
-          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 md:col-span-2 lg:col-span-1">
-            <h3 className="text-xl font-bold text-indigo-600 mb-4 flex items-center">
-              <span className="mr-2 text-2xl">👤</span> Personal Information
+          <div className="bg-white max-w-full p-3 md:p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 md:col-span-2 lg:col-span-1">
+            <h3 className="text-4base md:text-xl font-bold text-indigo-600 mb-4 flex items-center">
+              <span className="mr-2 text-base md:text-2xl">👤</span> Personal Information
             </h3>
             
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
@@ -110,7 +110,7 @@ const ProfilePage = () => {
             
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <strong className="text-gray-600 font-medium">Email:</strong> 
-              <span className="text-gray-800 font-semibold">{user?.email}</span>
+              <span className="text-gray-800 font-semibold whitespace-pre-wrap break-all text-right">{user?.email}</span>
             </div>
             
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
@@ -126,8 +126,8 @@ const ProfilePage = () => {
 
           {/* Security Card */}
           <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 md:col-span-1 lg:col-span-1">
-            <h3 className="text-xl font-bold text-indigo-600 mb-4 flex items-center">
-              <span className="mr-2 text-2xl">🔐</span> Security
+            <h3 className="text-base md:text-xl font-bold text-indigo-600 mb-4 flex items-center">
+              <span className="mr-2 text-base md:text-2xl">🔐</span> Security
             </h3>
             
             {/* Password Status */}
@@ -199,8 +199,8 @@ const ProfilePage = () => {
 
           {/* Account Linking Card */}
           <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 md:col-span-3 lg:col-span-1">
-            <h3 className="text-xl font-bold text-indigo-600 mb-4 flex items-center">
-              <span className="mr-2 text-2xl">🔗</span> Account Linking
+            <h3 className="text-base md:text-xl font-bold text-indigo-600 mb-4 flex items-center">
+              <span className="mr-2 text-base md:text-2xl">🔗</span> Account Linking
             </h3>
             <p className="text-gray-500 mb-6">Connect external services for fast, secure login.</p>
             

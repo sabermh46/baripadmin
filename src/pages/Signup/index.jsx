@@ -56,7 +56,6 @@ const SignupPage = () => {
         setCheckingToken(false);
       }
     };
-
     validateRegistrationToken();
   }, [token, validateToken]);
 
@@ -171,6 +170,7 @@ const SignupPage = () => {
     // Prepare data for registration
     const registrationData = {
       ...formData,
+
       token: token || undefined
     };
 

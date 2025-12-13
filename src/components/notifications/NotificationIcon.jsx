@@ -138,7 +138,7 @@ const NotificationIcon = () => {
                 {/* Unread Badge */}
                 {unreadCount > 0 && (
                     <span 
-                        className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-red-500 rounded-full animate-pulse"
+                        className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-primary rounded-full animate-pulse"
                         role="status"
                         aria-label={`${unreadCount} unread notifications`}
                     >
@@ -150,13 +150,13 @@ const NotificationIcon = () => {
             {/* Dropdown */}
             {isOpen && (
                 <div 
-                    className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[80vh] overflow-hidden"
+                    className="absolute -right-10 md:right-10 mt-2 w-65 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[80vh] overflow-hidden ring-2 ring-gray-200/50"
                     role="menu"
                     aria-orientation="vertical"
                     aria-labelledby="notification-menu"
                 >
                     {/* Header */}
-                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                    <div className="py-2 px-3 md:p-4 border-b border-gray-100 bg-gray-50">
                         <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-gray-800">Notifications</h3>
                             <div className="flex items-center space-x-2">
@@ -191,11 +191,11 @@ const NotificationIcon = () => {
                                 <p className="mt-2 text-gray-500">No notifications yet</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-gray-100">
+                            <div className="divide-y divide-gray-300">
                                 {notifications.slice(0, 10).map((notification) => (
                                     <div
                                         key={notification.id}
-                                        className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                        className={`px-3 py-2 md:py-4 md:px-4 hover:bg-gray-50 cursor-pointer transition-colors ${
                                             !notification.read ? 'bg-blue-50' : ''
                                         }`}
                                         onClick={() => handleNotificationClick(notification)}
@@ -211,10 +211,10 @@ const NotificationIcon = () => {
 
                                             {/* Content */}
                                             <div className="flex-1 min-w-0">
-                                                <h4 className="font-medium text-gray-900 truncate">
+                                                <h4 className="font-medium text-sm md:text-base text-gray-900 truncate">
                                                     {notification.title}
                                                 </h4>
-                                                <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                                <p className="text-xs md:text-sm text-gray-600 mt-1 line-clamp-2">
                                                     {notification.message}
                                                 </p>
                                                 <div className="flex items-center justify-between mt-2">

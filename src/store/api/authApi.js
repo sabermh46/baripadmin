@@ -66,6 +66,22 @@ export const authApi = baseApi.injectEndpoints({
         data,
       }),
     }),
+
+    getRegistrationTokens: builder.query({
+      query: () => ({
+        url: '/auth/registration-tokens',
+        method: 'GET',
+      }),
+      providesTags: ['Auth'],
+    }),
+
+    deleteToken: builder.mutation({
+      query: (tokenId) => ({
+        url: `/auth/registration-token/${tokenId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Auth'],
+    }),
     
     logout: builder.mutation({
       query: () => ({
@@ -89,6 +105,8 @@ export const {
   useGoogleLoginQuery,
   useSetPasswordMutation,
   useLinkGoogleAccountMutation,
+  useDeleteTokenMutation,
+  useGetRegistrationTokensQuery,
   useGenerateTokenMutation,
   useLogoutMutation,
   useRefreshTokenMutation,

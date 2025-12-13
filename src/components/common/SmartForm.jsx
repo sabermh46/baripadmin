@@ -1,5 +1,5 @@
 // SmartForm.jsx
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import TextField from "./TextField";
 import SelectField from "./SelectField";
 import { appLogo } from "../../assets";
@@ -10,22 +10,46 @@ import { appLogo } from "../../assets";
  */
 export default function SmartForm({ 
   fields = [], 
-  onSubmit, 
+  onSubmit,
   header = <p>Form</p>, 
   logoVisible = false, 
   submitText = "Submit", 
   submitDisabled = false 
 }) {
+    
+    // Initialize formData with field values
     const [formData, setFormData] = useState(() => {
-        // Initialize formData with default values (or empty strings) for all fields
         const initialData = {};
         fields.forEach(field => {
+            // Priority: value prop > defaultValue > empty string
             initialData[field.name] = field.value !== undefined ? field.value : 
                                     field.defaultValue !== undefined ? field.defaultValue : '';
         });
         return initialData;
     });
+    
     const [errors, setErrors] = useState({});
+
+    // Update formData when fields with values change (especially for disabled fields)
+    useEffect(() => {
+        const updates = {};
+        let hasUpdates = false;
+        
+        fields.forEach(field => {
+            // For disabled fields or fields with explicit values, update formData
+            if (field.value !== undefined && formData[field.name] !== field.value) {
+                updates[field.name] = field.value;
+                hasUpdates = true;
+            }
+        });
+        
+        if (hasUpdates) {
+            setFormData(prev => ({
+                ...prev,
+                ...updates
+            }));
+        }
+    }, [fields]); // Watch for changes in fields array
 
     // Handles input change for all field types
     const handleChange = useCallback((name, value) => {
@@ -100,16 +124,20 @@ export default function SmartForm({
                 // Create a wrapped validate function for this field
                 const fieldValidate = createFieldValidate(field.name, field.validate);
                 
+                // Get the value - prioritize formData, then field.value, then empty string
+                const fieldValue = formData[field.name] !== undefined ? formData[field.name] : 
+                                 field.value !== undefined ? field.value : '';
+                
                 // Define props object
                 const commonProps = {
                     name: field.name,
                     label: field.label,
-                    value: formData[field.name] || '',
+                    value: fieldValue,
                     onChange: handleChange,
                     placeholder: field.placeholder,
                     hint: field.hint,
                     error: errors[field.name],
-                    validate: fieldValidate, // Use the wrapped validate function
+                    validate: fieldValidate,
                     disabled: field.disabled || false,
                 };
 
@@ -142,7 +170,6 @@ export default function SmartForm({
             >
                 {submitText}
             </button>
-            
         </form>
     );
 }

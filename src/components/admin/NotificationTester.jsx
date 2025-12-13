@@ -76,7 +76,7 @@ const NotificationTester = () => {
   };
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <div className="bg-white shadow rounded-lg p-6 max-w-[280px] md:max-w-full overflow-x-hidden">
       <h3 className="text-lg font-semibold mb-4">Push Notification Tester</h3>
       <p className="text-gray-600 mb-6">
         Use these buttons to test push notifications. Make sure you've subscribed to notifications first.

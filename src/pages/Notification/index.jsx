@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import useNotifications from '../../hooks/useNotifications';
+import Btn from '../../components/common/Button';
 
 const NotificationsPage = () => {
     const {
@@ -126,34 +127,29 @@ const NotificationsPage = () => {
     }
 
     return (
-            <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="mx-auto px-0 sm:px-6 lg:px-8 py-0 md:py-4 relative">
                 {/* Header */}
-                <div className="flex flex-wrap items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between mb-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
-                        <p className="mt-2 text-gray-600">
+                        <h1 className="text-xl md:text-3xl font-bold text-slate-600">Notifications</h1>
+                        <p className="mt-2 text-gray-600 text-sm md:text-base">
                             {unreadCount} unread • {notifications.length} total
                         </p>
                     </div>
-                    <div className="flex items-center space-x-4">
-                        <button
-                            onClick={refresh}
-                            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                        >
+                    <div className="flex flex-wrap items-center gap-4 mt-2">
+
+                        <Btn onClick={refresh}>
                             Refresh
-                        </button>
+                        </Btn>
                         {unreadCount > 0 && (
-                            <button
-                                onClick={markAllAsRead}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                            >
-                                Mark all as read
-                            </button>
+                            <Btn onClick={markAllAsRead} type='primary'>
+                            Mark all as read
+                        </Btn>
                         )}
                     </div>
                 </div>
-
-                {/* Filters */}
+                    {/* 
+            
                 <div className="flex flex-wrap items-center space-x-4">
                     <div className="flex items-center">
                         <Filter className="w-5 h-5 text-gray-400 mr-2" />
@@ -210,11 +206,11 @@ const NotificationsPage = () => {
                             Clear filters
                         </button>
                     )}
-                </div>
+                </div> */}
 
                 {/* Bulk Actions */}
                 {selectedNotifications.length > 0 && (
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row items-center justify-between sticky top-10 bg-primary-200 rounded-xl py-2 px-1 my-2">
                         <span className="font-medium">
                             {selectedNotifications.length} notification{selectedNotifications.length !== 1 ? 's' : ''} selected
                         </span>
@@ -247,37 +243,39 @@ const NotificationsPage = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-y-4">
                         {notifications.map((notification) => (
                             <div
                                 key={notification.id}
                                 className={`bg-white rounded-lg shadow border ${getTypeColor(notification.type)} ${
-                                    !notification.read ? 'border-l-4 border-l-blue-500' : ''
+                                    !notification.read ? 'border-l-4 border-l-primary' : ''
                                 }`}
                             >
-                                <div className="p-4">
+                                <div className="p-2 md:p-4">
                                     <div className="flex items-start">
                                         {/* Checkbox for selection */}
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedNotifications.includes(notification.id)}
-                                            onChange={() => handleSelectNotification(notification.id)}
-                                            className="mt-1 mr-4"
-                                        />
-                                        
-                                        {/* Icon */}
-                                        <div className="flex-shrink-0">
-                                            {getTypeIcon(notification.type)}
+                                        <div className='flex flex-col gap-3 items-center w-4 justify-center'>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedNotifications.includes(notification.id)}
+                                                onChange={() => handleSelectNotification(notification.id)}
+                                                className="mt-1 md:mr-4"
+                                            />
+                                            
+                                            {/* Icon */}
+                                            <div className="flex-shrink-0">
+                                                {getTypeIcon(notification.type)}
+                                            </div>
                                         </div>
 
                                         {/* Content */}
-                                        <div className="flex-1 ml-4">
+                                        <div className="flex-1 ml-2 md:ml-4">
                                             <div className="flex items-start justify-between">
                                                 <div>
                                                     <h3 className="font-medium text-gray-900">
                                                         {notification.title}
                                                     </h3>
-                                                    <p className="mt-1 text-sm text-gray-600">
+                                                    <p className="font-mooli mt-1 text-sm text-gray-600">
                                                         {notification.message}
                                                     </p>
                                                     <p className="mt-2 text-xs text-gray-400">
@@ -286,7 +284,7 @@ const NotificationsPage = () => {
                                                 </div>
                                                 
                                                 {/* Actions */}
-                                                <div className="flex items-center space-x-2 ml-4">
+                                                <div className="flex items-center justify-center flex-col gap-3 ml-2 md:ml-4">
                                                     <button
                                                         onClick={() => toggleRead(notification.id)}
                                                         className="p-1 text-gray-400 hover:text-gray-600"

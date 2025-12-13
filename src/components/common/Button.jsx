@@ -9,7 +9,7 @@ const Btn = ({
     ...rest
 }) => {
     // Base classes applied to all buttons
-    const baseClasses = `inline-flex items-center justify-center whitespace-nowrap px-4 py-1 font-semibold rounded-lg transition-all duration-200 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`;
+    const baseClasses = `inline-flex items-center justify-center text-sm md:text-base whitespace-nowrap px-2 md:px-4 py-1 font-semibold rounded-lg transition-all duration-200 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`;
 
     let typeClasses = '';
 
@@ -29,7 +29,7 @@ const Btn = ({
             break;
     }
 
-    const classes = `${baseClasses} ${typeClasses} ${className}`;
+    const classes = `${className} ${baseClasses} ${typeClasses}`;
 
     if (href) {
         // Render as an anchor tag (or router Link in a real project)
