@@ -33,7 +33,7 @@ const MobileResponsiveTable = ({
   const renderMobileView = () => {
     if (loading) {
       return Array.from({ length: 3 }).map((_, index) => (
-        <div key={`mobile-skeleton-${index}`} className="mb-3 p-4 border rounded-lg">
+        <div key={`mobile-skeleton-${index}`} className="mb-3 p-4 ring ring-primary/30 rounded-lg">
           <div className="space-y-2">
             {columns.slice(0, 3).map((col, colIndex) => (
               <div key={`skeleton-mobile-${index}-${colIndex}`} className="flex justify-between">
@@ -71,13 +71,13 @@ const MobileResponsiveTable = ({
     return data.map((row, index) => (
       <div
         key={row[rowKey] || index}
-        className="mb-3 border rounded-lg overflow-hidden"
+        className="mb-3 ring ring-primary/30 rounded-lg overflow-hidden"
       >
         <div 
-          className={`p-4 ${expandable ? 'cursor-pointer' : ''}`}
+          className={`px-2 py-1.5 ${expandable ? 'cursor-pointer' : ''}`}
           onClick={() => expandable && toggleRow(row[rowKey] || index)}
         >
-          <div className="flex justify-between items-start mb-2">
+          <div className="flex flex-wrap justify-between items-start mb-2">
             <div className="flex-1">
               <div className="font-medium text-gray-900">
                 {columns[0].render ? columns[0].render(row) : row[columns[0].dataIndex]}
@@ -98,14 +98,14 @@ const MobileResponsiveTable = ({
           </div>
           
           {/* Additional fields as badges or labels */}
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="flex flex-wrap gap-3 items-center mt-2">
             {columns.slice(2).map((column, colIndex) => {
               if (column.hideOnMobile) return null;
               const value = column.render ? column.render(row) : row[column.dataIndex];
               if (!value) return null;
               
               return (
-                <div key={`mobile-badge-${colIndex}`} className="text-xs">
+                <div key={`mobile-badge-${colIndex}`} className="text-xs ring rounded-md p-1 h-12">
                   <span className="text-gray-500">{column.title}: </span>
                   <span className="font-medium">{value}</span>
                 </div>
@@ -116,7 +116,7 @@ const MobileResponsiveTable = ({
         
         {/* Expanded content on mobile */}
         {expandable && expandedRows[row[rowKey] || index] && renderExpandedContent && (
-          <div className="border-t p-4 bg-gray-50">
+          <div className="border-t border-secondary p-4 bg-gray-50">
             {renderExpandedContent(row)}
           </div>
         )}

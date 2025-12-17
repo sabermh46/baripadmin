@@ -127,7 +127,7 @@ const NotificationsPage = () => {
     }
 
     return (
-            <div className="mx-auto px-0 sm:px-6 lg:px-8 py-0 md:py-4 relative">
+            <div className="mx-auto px-0 py-0 md:py-4 relative">
                 {/* Header */}
                 <div className="flex flex-wrap items-center justify-between mb-4">
                     <div>

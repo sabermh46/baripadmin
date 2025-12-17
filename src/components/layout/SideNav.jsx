@@ -104,13 +104,13 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
                 className={`text-xl text-primary p-1 group-hover:text-white duration-300 transition-colors 
                           ${
                             isActive
-                              ? "text-white bg-primary-500 rounded-full"
+                              ? "text-white bg-primary-500 rounded-lg"
                               : ""
                           }`}
               >
                 {item.icon}
               </span>
-              <span className={`group-hover:text-white ${isActive ? "font-bold text-primary" : ""}`}
+              <span className={`group-hover:text-white ${isActive ? "font-bold text-primary font-poppins" : ""}`}
               >{item.label}</span>
             </Link>
           );

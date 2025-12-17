@@ -8,7 +8,6 @@ export const staffApi = baseApi.injectEndpoints({
     // Handles search, pagination, and limits via query parameters
     getStaffList: builder.query({
       query: ({ search = "", page = 1, limit = 20 } = {}) => ({
-        // 💡 Route: /admin/permissions/staff (Assuming a prefix)
         url: `/admin/permissions/staff?search=${search}&page=${page}&limit=${limit}`,
         method: "GET",
       }),
@@ -76,7 +75,6 @@ export const staffApi = baseApi.injectEndpoints({
     // PUT /staff/:staffId/status
     updateStaffStatus: builder.mutation({
       query: ({ staffId, status }) => ({
-        // Expects { staffId: string, status: 'active' | 'inactive' }
         url: `/admin/permissions/staff/${staffId}/status`,
         method: "PUT",
         data: { status },
@@ -91,12 +89,10 @@ export const staffApi = baseApi.injectEndpoints({
     // POST /staff/:staffId/permissions
     grantPermission: builder.mutation({
       query: ({ staffId, permissionSlug }) => ({
-        // Expects { staffId: string, permissionSlug: string }
         url: `/admin/permissions/staff/${staffId}/permissions`,
         method: "POST",
         data: { permissionSlug },
       }),
-      // Invalidates specific staff details which contain permission lists
       invalidatesTags: (result, error, { staffId }) => [
         { type: "Staff", id: staffId },
         { type: "PermissionHistory", id: staffId },
@@ -106,7 +102,6 @@ export const staffApi = baseApi.injectEndpoints({
     // DELETE /staff/:staffId/permissions/:permissionId
     revokePermission: builder.mutation({
       query: ({ staffId, permissionId }) => ({
-        // Expects { staffId: string, permissionId: string }
         url: `/admin/permissions/staff/${staffId}/permissions/${permissionId}`,
         method: "DELETE",
       }),
@@ -119,11 +114,10 @@ export const staffApi = baseApi.injectEndpoints({
 
     // POST /staff/:staffId/permissions/bulk
     bulkGrantPermissions: builder.mutation({
-      query: ({ staffId, permissionSlugs }) => ({
-        // Expects { staffId: string, permissionSlugs: string[] }
+      query: ({ staffId, permissionIds }) => ({
         url: `/admin/permissions/staff/${staffId}/permissions/bulk`,
         method: "POST",
-        data: { permissionSlugs },
+        data: { permissionIds },
       }),
       invalidatesTags: (result, error, { staffId }) => [
         { type: "Staff", id: staffId },
@@ -134,7 +128,6 @@ export const staffApi = baseApi.injectEndpoints({
     // DELETE /staff/:staffId/permissions/bulk
     bulkRevokePermissions: builder.mutation({
       query: ({ staffId, permissionIds }) => ({
-        // Expects { staffId: string, permissionIds: string[] }
         url: `/admin/permissions/staff/${staffId}/permissions/bulk`,
         method: "DELETE",
         data: { permissionIds }, // DELETE body usually works with custom baseQuery/Axios
@@ -147,15 +140,14 @@ export const staffApi = baseApi.injectEndpoints({
 
     // POST /permissions/copy
     copyPermissions: builder.mutation({
-      query: ({ sourceStaffId, targetStaffIds }) => ({
-        // Expects { sourceStaffId: string, targetStaffIds: string[] }
+      query: ({ sourceStaffId, targetStaffId }) => ({
         url: `/admin/permissions/copy`,
         method: "POST",
-        data: { sourceStaffId, targetStaffIds },
+        data: { sourceStaffId, targetStaffId },
       }),
       // Invalidate all target staff details after copy operation
-      invalidatesTags: (result, error, { targetStaffIds }) => [
-        ...targetStaffIds.map((id) => ({ type: "Staff", id })),
+      invalidatesTags: (result, error, { targetStaffId }) => [
+        { type: "Staff", id: targetStaffId },
         // Optionally invalidate list if permissions affect list display
         { type: "Staff", id: "LIST" },
       ],

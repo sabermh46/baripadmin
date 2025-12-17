@@ -33,7 +33,7 @@ const Table = ({
     <div className={`overflow-x-auto rounded-lg border border-gray-200 w-full ${className}`}>
       <div className="inline-block align-middle w-full">
         <div className="overflow-x-auto shadow-sm">
-          <table className="w-full max-w-100 divide-y divide-gray-200">
+          <table className="min-w-full max-w-full divide-y divide-gray-200">
             <thead className="bg-primary">
               <tr>
                 {columns.map((column, index) => (

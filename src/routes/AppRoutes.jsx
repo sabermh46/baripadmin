@@ -11,12 +11,12 @@ import PublicHome from '../pages/PublicHome'
 import NotificationPage from '../pages/Notification';
 import ComingSoonPage from '../pages/utility/ComingSoonPage';
 import AccessDeniedPage from '../pages/utility/AccessDeniedPage';
-import AdminSettingsPage from '../pages/Admin';
 import GenerateToken from '../pages/Admin/userBased/GenerateToken';
 import ViewAllStaff from '../pages/Admin/staff/ViewAllStaff';
 import StaffPage from '../pages/Admin/staff';
 import { LoaderMinimal } from '../components/common/RouteLoader';
 import { Loader } from 'lucide-react';
+import SystemSettings from '../pages/Admin/SystemSettings';
 
 
 
@@ -221,7 +221,7 @@ const AppRoutes = () => {
             {/* ===== ADMIN-SPECIFIC ROUTES ===== */}
             <Route path="admin/settings" element={
               <ProtectedRoute roles={['web_owner']}>
-                <AdminSettingsPage />
+                <SystemSettings />
               </ProtectedRoute>
             } />
             <Route path="admin/generate-token" element={
@@ -230,14 +230,9 @@ const AppRoutes = () => {
               </ProtectedRoute>
             } />
 
-            <Route path="admin/view/all-staff" element={
-              <ProtectedRoute roles={['web_owner']}>
-                <ViewAllStaff />
-              </ProtectedRoute>
-            } />
             <Route path="admin/staff" element={
               <ProtectedRoute roles={['web_owner']}>
-                <StaffPage />
+                <ViewAllStaff />
               </ProtectedRoute>
             } />
         </Route>
