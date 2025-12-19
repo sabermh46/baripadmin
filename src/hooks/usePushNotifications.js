@@ -1,3 +1,4 @@
+// src/hooks/usePushNotifications.js (updated)
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useAppSelector } from ".";
 import { toast } from "react-toastify";
@@ -12,8 +13,9 @@ const usePushNotifications = () => {
     const [subscription, setSubscription] = useState(null);
     const [isInitialized, setIsInitialized] = useState(false);
     
-    // Use refs to prevent infinite loops
+    // Use refs to prevent infinite loops and multiple attempts
     const initStartedRef = useRef(false);
+    const subscriptionAttemptRef = useRef(false); // Track if we've attempted subscription
     const permissionRef = useRef(permission);
     const isSubscribedRef = useRef(isSubscribed);
 
@@ -61,6 +63,17 @@ const usePushNotifications = () => {
 
     const registerServiceWorker = useCallback(async () => {
         try {
+            // Check if already registered
+            const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+            const existingRegistration = existingRegistrations.find(reg => 
+                reg.active && reg.active.scriptURL.includes('/sw.js')
+            );
+
+            if (existingRegistration) {
+                console.log('Service worker already registered');
+                return existingRegistration;
+            }
+
             const registration = await navigator.serviceWorker.register('/sw.js', {
                 scope: '/'
             });
@@ -81,6 +94,7 @@ const usePushNotifications = () => {
             const existingSubscription = await registration.pushManager.getSubscription();
 
             if (existingSubscription) {
+                console.log('Found existing subscription:', existingSubscription.endpoint);
                 setSubscription(existingSubscription);
                 setIsSubscribed(true);
                 isSubscribedRef.current = true;
@@ -99,12 +113,21 @@ const usePushNotifications = () => {
             toast.error('Push notifications are not supported in this browser.');
             return false;
         }
+        
         if (permissionRef.current === 'denied') {
             toast.error('Push notification permission was denied.');
             return false;
         }
 
+        // Prevent multiple concurrent subscription attempts
+        if (subscriptionAttemptRef.current) {
+            console.log('Subscription attempt already in progress');
+            return false;
+        }
+
         try {
+            subscriptionAttemptRef.current = true;
+            
             let notificationPermission = permissionRef.current;
             if (notificationPermission === 'default') {
                 notificationPermission = await Notification.requestPermission();
@@ -114,11 +137,52 @@ const usePushNotifications = () => {
 
             if (notificationPermission !== 'granted') {
                 toast.error('Push notification permission was denied.');
+                subscriptionAttemptRef.current = false;
                 return false;
             }
 
             const registration = await navigator.serviceWorker.ready;
 
+            // Check if we already have a subscription
+            const existing = await registration.pushManager.getSubscription();
+            if (existing) {
+                console.log('Already subscribed, updating subscription...');
+                setSubscription(existing);
+                setIsSubscribed(true);
+                isSubscribedRef.current = true;
+                
+                // Convert existing subscription to sendable format
+                const subscriptionData = {
+                    endpoint: existing.endpoint,
+                    expirationTime: existing.expirationTime,
+                    keys: {
+                        p256dh: existing.getKey ? 
+                            btoa(String.fromCharCode.apply(null, new Uint8Array(existing.getKey('p256dh')))) :
+                            existing.keys.p256dh,
+                        auth: existing.getKey ? 
+                            btoa(String.fromCharCode.apply(null, new Uint8Array(existing.getKey('auth')))) :
+                            existing.keys.auth
+                    }
+                };
+
+                // Update the subscription on server
+                await axios.post(
+                    `${import.meta.env.VITE_APP_API_URL}/push/subscribe`,
+                    subscriptionData,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                toast.success('Push subscription updated.');
+                subscriptionAttemptRef.current = false;
+                return true;
+            }
+
+            // Create new subscription
             const newSubscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(publicKey)
@@ -139,8 +203,8 @@ const usePushNotifications = () => {
             };
 
             const response = await axios.post(
-                `${import.meta.env.VITE_APP_API_URL}/push/subscribe`, // Note: /api/push
-                subscriptionData, // Send directly, not wrapped
+                `${import.meta.env.VITE_APP_API_URL}/push/subscribe`,
+                subscriptionData,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -155,24 +219,52 @@ const usePushNotifications = () => {
             setIsSubscribed(true);
             isSubscribedRef.current = true;
             toast.success('Subscribed to push notifications successfully.');
+            subscriptionAttemptRef.current = false;
             return true;
         } catch (error) {
             console.error('Subscription error:', error);
             if (error.response) {
                 console.error('Server response:', error.response.data);
+                // If it's a 409 conflict or similar, we might already be subscribed
+                if (error.response.status === 409 || error.response.data?.error?.includes('already exists')) {
+                    // Check if we actually have a subscription
+                    const registration = await navigator.serviceWorker.ready;
+                    const existing = await registration.pushManager.getSubscription();
+                    if (existing) {
+                        setSubscription(existing);
+                        setIsSubscribed(true);
+                        isSubscribedRef.current = true;
+                        toast.success('Already subscribed to push notifications.');
+                    }
+                }
+            } else {
+                toast.error('Failed to subscribe to notifications');
             }
-            toast.error('Failed to subscribe to notifications');
+            subscriptionAttemptRef.current = false;
             return false;
         }
     }, [isSupported, publicKey, token]);
 
     const unsubscribe = useCallback(async () => {
-        if (!subscription) return false;
+        if (!subscription) {
+            // Check if we have a subscription first
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const existing = await registration.pushManager.getSubscription();
+                if (!existing) {
+                    setIsSubscribed(false);
+                    isSubscribedRef.current = false;
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error checking subscription:', error);
+            }
+            return false;
+        }
 
-        await subscription.unsubscribe();
-        
         try {
-
+            await subscription.unsubscribe();
+            
             await axios.post(
                 `${import.meta.env.VITE_APP_API_URL}/push/unsubscribe`,
                 { endpoint: subscription.endpoint },
@@ -231,6 +323,7 @@ const usePushNotifications = () => {
                     const existingSub = await checkExistingSubscription();
                     
                     // Only auto-subscribe if not already subscribed AND permission is granted
+                    // AND user hasn't manually toggled
                     if (!existingSub && permissionRef.current === 'granted') {
                         console.log('Auto-subscribing...');
                         await subscribe();
@@ -251,18 +344,12 @@ const usePushNotifications = () => {
         }
     }, [user, token, isSupported, isInitialized, registerServiceWorker, checkExistingSubscription, subscribe]);
 
-    // Cleanup on logout
-    useEffect(() => {
-        if (!user && subscription) {
-            unsubscribe();
-        }
-    }, [user, subscription, unsubscribe]);
-
     // Reset initialization when user logs out
     useEffect(() => {
         if (!user) {
             setIsInitialized(false);
             initStartedRef.current = false;
+            subscriptionAttemptRef.current = false;
         }
     }, [user]);
 

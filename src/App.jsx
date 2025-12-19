@@ -11,6 +11,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import nProgress from 'nprogress';
 import RouteLoader, { LoaderMinimal } from './components/common/RouteLoader.jsx';
 import usePushNotifications from './hooks/usePushNotifications.js';
+import NotificationButton from './NotificationButton.jsx';
 
 nProgress.configure({
     minimum: 0.3,
@@ -127,11 +128,12 @@ const AppContent = () => {
     const { updateAvailable, deferredPrompt: isPromptAvailable } = useAppSelector(state => state.ui);
     const { user } = useAppSelector(state => state.auth);
 
-    const {
-        isSupported,
-        permission,
-        isSubscribed,
-        toggleSubscription
+    const { 
+        isSupported, 
+        permission, 
+        isSubscribed, 
+        toggleSubscription,
+        subscribe 
     } = usePushNotifications();
 
     // Network status
@@ -361,24 +363,7 @@ const AppContent = () => {
             <RouteLoader />
             <AppRoutes />
 
-            {
-                user && permission !== 'granted' && (
-                    <div className='fixed bottom-4 right-4 z-50'>
-                        <button 
-                        className='px-4 cursor-pointer py-2 rounded-lg shadow-lg bg-primary text-black capitalize hover:bg-primary-800 hover:text-white duration-200'
-                        onClick={()=>{
-                            Notification.requestPermission().then(permission => {
-                                console.log('Notification permission:', permission);
-                                if(permission === 'granted'){
-                                    toggleSubscription();
-                                }
-                            })
-                        }}
-                        >
-                            {'enable notifications'}
-                        </button>
-                    </div>)
-            }
+            <NotificationButton />
 
             {/* 3. Render the integrated component, passing the Redux flag */}
             <PwaInstallPrompt isPromptAvailable={isPromptAvailable} />

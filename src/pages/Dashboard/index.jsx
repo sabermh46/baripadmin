@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../hooks';
-import WebOwnerDashboard from './WebOwnerDashboard';
+import SystemDashboard from '../../components/dashboard/SystemDashboard';
+import HouseOwnerComponent from '../../components/houseowner/Dashboard';
 
 const Dashboard = () => {
   const { user, isWebOwner, isHouseOwner, isCaretaker, isStaff } = useAuth();
@@ -8,16 +9,16 @@ const Dashboard = () => {
   return (
     <>
       {
-        isWebOwner && <WebOwnerDashboard />
+        isWebOwner && <SystemDashboard />
       }
       {
-        isHouseOwner && <h2>House Owner Dashboard - Welcome, {user?.name}!</h2>
+        isHouseOwner && <HouseOwnerComponent />
       }
       {
         isCaretaker && <h2>Caretaker Dashboard - Welcome, {user?.name}!</h2>
       }
       {
-        isStaff && <h2>Staff Dashboard - Welcome, {user?.name}!</h2>
+        isStaff && <SystemDashboard />
       }
     </>
   );

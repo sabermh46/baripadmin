@@ -39,39 +39,39 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       path: "/houses",
       label: "Houses",
       icon: <House />,
-      roles: ["web_owner", "house_owner"],
+      roles: ["developer", "web_owner", "house_owner"],
       
     },
     {
       path: "/notification",
       label: "Notification",
       icon: <BellDot />,
-      roles: ["web_owner", "staff", "house_owner"],
+      roles: ["developer", "web_owner", "staff", "house_owner"],
     },
     { path: "/profile", label: "Profile", icon: <CircleUser /> },
     {
       path: "/admin/staff",
       label: "Staffs",
       icon: <Users />,
-      roles: ["web_owner"],
+      roles: ["developer", "web_owner"],
     },
     {
       path: "/caretakers",
       label: "Caretakers",
       icon: <UsersRound />,
-      roles: ["web_owner", "staff", "house_owner"],
+      roles: ["developer", "web_owner", "staff", "house_owner"],
     },
     {
       path: "/admin/users",
       label: "House Owners",
       icon: <BookUser />,
-      roles: ["web_owner", "staff"],
+      roles: ["developer", "web_owner", "staff"],
     },
     {
       path: "/admin/settings",
       label: "Settings",
       icon: <SettingsIcon />,
-      roles: ["web_owner"],
+      roles: ["developer", "web_owner"],
     },
   ];
 

@@ -65,7 +65,7 @@ const Layout = () => {
       
         <div className={`fixed md:hidden inset-0 bg-black/25 z-30 duration-300 ${ isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none' }`}
         onClick={()=>setIsMobileMenuOpen(false)}>
-          <div onClick={(e)=>e.stopPropagation()} className={`md:hidden max-w-[80%] !min-w-[250px] bg-surface z-50 py-5 flex flex-col gap-2 shadow-2xl ${ isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full' }  fixed top-0 left-0 h-full w-full duration-300 transition-transform`}>
+          <div onClick={(e)=>e.stopPropagation()} className={`md:hidden max-w-80 w-[80%] !min-w-[250px] bg-surface z-50 py-5 flex flex-col gap-2 shadow-2xl ${ isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full' }  fixed top-0 left-0 h-full w-full duration-300 transition-transform`}>
             <SideNav isMobileMenuOpen={isMobileMenuOpen} onClicked={setIsMobileMenuOpen} />
           </div>
         </div>
