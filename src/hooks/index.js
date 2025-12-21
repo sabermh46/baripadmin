@@ -6,10 +6,10 @@ export const useAppDispatch = () => useDispatch();
 export const useAppSelector = useSelector; // No need for TypedUseSelectorHook in JS
 
 // Auth hook
-export const useAuth = () => {
+export const 
+useAuth = () => {
   const { user, isAuthenticated, isLoading } = useAppSelector(state => state.auth);
-  const dispatch = useAppDispatch();
-  console.log(user);
+
   
 
   const hasPermission = (permissionKey) => {

@@ -363,7 +363,9 @@ const AppContent = () => {
             <RouteLoader />
             <AppRoutes />
 
-            <NotificationButton />
+            {
+                user?.email && <NotificationButton />
+            }
 
             {/* 3. Render the integrated component, passing the Redux flag */}
             <PwaInstallPrompt isPromptAvailable={isPromptAvailable} />

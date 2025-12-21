@@ -17,6 +17,11 @@ import StaffPage from '../pages/Admin/staff';
 import { LoaderMinimal } from '../components/common/RouteLoader';
 import { Loader } from 'lucide-react';
 import SystemSettings from '../pages/Admin/SystemSettings';
+import HouseOwnersPage from '../pages/Admin/HouseOwner';
+import HousesPage from '../pages/House';
+import CreateHouseForm from '../components/admin/house/CreateHouseForm';
+import HouseDetails from '../components/admin/house/HouseDetails';
+import HouseEditForm from '../components/admin/house/HouseEditForm';
 
 
 
@@ -174,6 +179,8 @@ const AppRoutes = () => {
           </PublicRoute>
         } />
         <Route path="/auth/success" element={<AuthSuccess />} />
+
+
         
         {/* Protected Routes 78with Layout */}
         <Route element={
@@ -206,6 +213,27 @@ const AppRoutes = () => {
             </ProtectedRoute>
           } /> */}
 
+            <Route path="/houses" element={
+              <ProtectedRoute roles={['web_owner', 'house_owner', 'staff']}>
+                <HousesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/houses/create" element={
+              <ProtectedRoute roles={['web_owner', 'staff']}>
+                <CreateHouseForm />
+              </ProtectedRoute>
+            } />
+            <Route path="/houses/:id" element={
+              <ProtectedRoute roles={['web_owner', 'staff']}>
+                <HouseDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/houses/:id/edit" element={
+              <ProtectedRoute roles={['web_owner', 'staff']}>
+                <HouseEditForm />
+              </ProtectedRoute>
+            } />
+
             {/* ===== STAFF-SPECIFIC ROUTES ===== */}
             <Route path="staff/audit-logs" element={
               <ProtectedRoute roles={['staff', 'web_owner']}>
@@ -233,6 +261,11 @@ const AppRoutes = () => {
             <Route path="admin/staff" element={
               <ProtectedRoute roles={['web_owner']}>
                 <ViewAllStaff />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/house-owners" element={
+              <ProtectedRoute roles={['web_owner']}>
+                <HouseOwnersPage />
               </ProtectedRoute>
             } />
         </Route>

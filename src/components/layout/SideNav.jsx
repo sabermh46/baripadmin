@@ -40,6 +40,7 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       label: "Houses",
       icon: <House />,
       roles: ["developer", "web_owner", "house_owner"],
+      toMatch: ["/houses/create", "/house-owners/houses"]
       
     },
     {
@@ -62,7 +63,7 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       roles: ["developer", "web_owner", "staff", "house_owner"],
     },
     {
-      path: "/admin/users",
+      path: "/admin/house-owners",
       label: "House Owners",
       icon: <BookUser />,
       roles: ["developer", "web_owner", "staff"],
