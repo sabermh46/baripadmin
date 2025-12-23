@@ -3,6 +3,7 @@ import { Home, Plus, X, Save, User, Info, Loader2, Building, MapPin, Layers, Che
 import { useCreateHouseMutation, useGetManagedOwnersQuery } from '../../../store/api/houseApi';
 import { useAuth } from '../../../hooks';
 import Btn from '../../common/Button';
+import { toast } from 'react-toastify';
 
 const CreateHouseForm = ({ onSuccess, onCancel }) => {
   const { user, isWebOwner, isHouseOwner, isCaretaker, isStaff } = useAuth();
@@ -11,6 +12,7 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
     ownerId: '',
     address: '',
     flatCount: 1,
+    name: '',
     metadata: {
       description: '',
       amenities: [],
@@ -43,9 +45,14 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.ownerId) newErrors.ownerId = 'Owner selection is required';
+    if (!formData.name.trim()) newErrors.name = 'House name is required';
     if (!formData.address.trim()) newErrors.address = 'Address is required';
     if (formData.flatCount < 1) newErrors.flatCount = 'Must have at least 1 flat';
+    console.log(newErrors);
     
+    Object.keys(newErrors).length > 0 && toast.error(`${
+        Object.values(newErrors).join(` \n `)
+    }`)
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -103,11 +110,13 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
       const result = await createHouse(formData).unwrap();
       if (result.success) {
         setSuccess(true);
+        toast.success("Property created successfully!");
         reset();
         // Reset form but keep ownerId if user is house owner
         setFormData({
           ownerId: isHouseOwner ? user.id : '',
           address: '',
+          name: '',
           flatCount: 1,
           metadata: { description: '', amenities: [], locationDetails: '' },
           active: false,
@@ -217,6 +226,19 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
+        <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+              <Info size={16} /> House Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all hover:border-gray-300"
+              placeholder="e.g., Near City Bank, Opposite Park"
+            />
+          </div>
         {/* Address Field */}
         <div className="space-y-2">
           <label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
@@ -395,6 +417,7 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
             Cancel
           </Btn>
           <Btn
+          onClick={handleSubmit}
           type="primary"
             disabled={isLoading}
             className='flex gap-2'

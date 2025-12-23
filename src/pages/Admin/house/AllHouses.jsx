@@ -5,7 +5,6 @@ const AllHouses = () => {
   return (
     <div>
         <HouseStats />
-        <HouseList />
     </div>
   )
 }

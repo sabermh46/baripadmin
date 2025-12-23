@@ -19,6 +19,7 @@ const HouseEditForm = () => {
   const [formData, setFormData] = useState({
     address: '',
     flatCount: 1,
+    name: '',
     metadata: {
       description: '',
       amenities: [],
@@ -37,6 +38,7 @@ const HouseEditForm = () => {
       setFormData({
         address: house.address || '',
         flatCount: house.flatCount || 1,
+        name: house.name || '',
         metadata: {
           description: house.metadata?.description || '',
           amenities: house.metadata?.amenities || [],
@@ -169,6 +171,46 @@ const HouseEditForm = () => {
             </div>
           </div>
         )}
+
+        {/* House 'active' Field with two radio */}
+
+        <div className='space-y-2'>
+            <label className="text-sm font-semibold text-text">Property Active</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input name='active'
+                    type="radio"
+                    value="true"
+                    checked={formData.active === true}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-primary"
+                />
+                <span className="text-text">Active</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                <input name='active'
+                    type="radio"
+                    value="false"
+                    checked={formData.active === false}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-primary"
+                />
+                <span className="text-text">Inactive</span>
+              </label>
+            </div>
+        </div>
+
+        <div className="space-y-2">
+            <label className="text-sm font-semibold text-text">House Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full px-4 py-3 bg-background border border-surface rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              placeholder="e.g., Near City Bank"
+            />
+          </div>
 
         {/* Address Field */}
         <div className="space-y-2">

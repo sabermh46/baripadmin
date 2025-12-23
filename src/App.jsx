@@ -355,6 +355,11 @@ const AppContent = () => {
         };
     }, [dispatch]);
 
+    useEffect(() => {
+        window.history.scrollRestoration = 'manual'
+    }, []);
+
+
 
     console.log(user, isSupported, permission, isSubscribed);
     return (

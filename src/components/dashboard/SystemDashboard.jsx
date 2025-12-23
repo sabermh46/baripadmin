@@ -37,7 +37,7 @@ const ChartCard = ({ title, children, className = '' }) => (
   </div>
 );
 
-const RecentActivityItem = ({ type, title, user, time, icon: Icon }) => (
+const RecentActivityItem = ({ type, title, address, user, time, icon: Icon }) => (
   <div className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
     <div className="flex-shrink-0">
       <Icon className="h-5 w-5 text-gray-400" />
@@ -45,7 +45,7 @@ const RecentActivityItem = ({ type, title, user, time, icon: Icon }) => (
     <div className="flex-1 min-w-0">
       <p className="text-sm font-medium text-gray-900 truncate">{title}</p>
       <p className="text-sm text-gray-500 truncate">
-        {type} • {user} • {time}
+        {address} • {user} • {time}
       </p>
     </div>
   </div>
@@ -53,10 +53,6 @@ const RecentActivityItem = ({ type, title, user, time, icon: Icon }) => (
 
 const SystemDashboard = () => {
   const { data, error, isLoading, refetch } = useGetDashboardDataQuery();
-  console.log(data);
-  
-  
-  
   const stats = useMemo(() => [
     { title: 'Total Users', value: data?.quickStats?.totalUsers || 0, icon: Users, color: 'blue' },
     { title: 'Total Houses', value: data?.quickStats?.totalHouses || 0, icon: Home, color: 'green' },
@@ -251,9 +247,10 @@ const SystemDashboard = () => {
               <RecentActivityItem
                 key={index}
                 type="House"
-                title={house.address}
-                user={house.owner?.name}
-                time={new Date(house.createdAt).toLocaleDateString()}
+                title={house?.name}
+                address={house?.address}
+                user={house?.owner?.name}
+                time={new Date(house?.createdAt).toLocaleDateString()}
                 icon={Home}
               />
             ))}

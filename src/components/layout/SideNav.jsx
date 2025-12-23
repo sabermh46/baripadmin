@@ -39,8 +39,8 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       path: "/houses",
       label: "Houses",
       icon: <House />,
-      roles: ["developer", "web_owner", "house_owner"],
-      toMatch: ["/houses/create", "/house-owners/houses"]
+      roles: ["developer", "web_owner", "staff", "house_owner"],
+      toMatch: ["houses", "/houses/create", "/house-owners/houses"]
       
     },
     {
@@ -90,7 +90,11 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
 
       <div className="h-auto flex-1 overflow-y-auto pb-30 mt-14">
         {filteredNavItems.map((item) => {
-          const isActive = currentPath === item.path || (item.toMatch && item.toMatch.includes(currentPath));
+          let isActive = currentPath === item.path || (item.toMatch && item.toMatch.includes(currentPath));
+          if(!isActive) {
+            const path1 = currentPath.split('/')[1];
+            isActive = item.toMatch?.some(tm => tm.includes(path1));
+          }
 
           return (
             <Link

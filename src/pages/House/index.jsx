@@ -13,7 +13,7 @@ const HousesPage = () => {
         isHouseOwner && <HouseOwnerHouses />
       }
       {
-        isWebOwner && <AllHouses />
+        (isWebOwner || isStaff) && <AllHouses />
       }
     </>
   );

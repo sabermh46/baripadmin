@@ -7,11 +7,14 @@ import {
 } from 'lucide-react';
 import { useGetHousesQuery, useDeleteHouseMutation } from '../../../store/api/houseApi';
 import { useAuth } from '../../../hooks';
+import { LoaderMinimal } from '../../common/RouteLoader';
+import { toast } from 'react-toastify';
+import AccessDeniedPage from '../../../pages/utility/AccessDeniedPage';
 // import { formatDate, formatCurrency } from '../../utils/format';
 
 const HouseList = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { isWebOwner, isHouseOwner, isStaff, isCaretaker } = useAuth();
   
   const [filters, setFilters] = useState({
     page: 1,
@@ -22,7 +25,7 @@ const HouseList = () => {
     sortOrder: 'desc'
   });
 
-  const { data, isLoading, isFetching, refetch } = useGetHousesQuery(filters);
+  const { data, isFetching, refetch } = useGetHousesQuery(filters);
   const [deleteHouse] = useDeleteHouseMutation();
 
   const houses = data?.data || [];
@@ -33,13 +36,18 @@ const HouseList = () => {
   };
 
   const handleDelete = async (id, address) => {
-    if (window.confirm(`Are you sure you want to delete "${address}"? This action cannot be undone.`)) {
-      try {
-        await deleteHouse(id).unwrap();
-        refetch();
-      } catch (error) {
-        console.error('Delete failed:', error);
-      }
+    if(isWebOwner) {
+        if (window.confirm(`Are you sure you want to delete "${address}"? This action cannot be undone.`)) {
+            try {
+                await deleteHouse(id).unwrap();
+                refetch();
+            } catch (error) {
+                console.error('Delete failed:', error);
+            }
+        }
+    }
+    if(isHouseOwner) {
+        toast.error("You don't have permission to delete House.");
     }
   };
 
@@ -49,16 +57,7 @@ const HouseList = () => {
     </span>
   );
 
-  if (isLoading) {
-    return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-primary" />
-          <p className="text-subdued">Loading houses...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
@@ -154,6 +153,7 @@ const HouseList = () => {
             <thead className="bg-surface">
               <tr className="border-b border-surface">
                 <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Property</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Address</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Owner</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Flats</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Status</th>
@@ -174,11 +174,16 @@ const HouseList = () => {
                 </tr>
               ) : (
                 houses.map((house) => (
-                  <tr key={house.id} className="hover:bg-surface/50 transition-colors">
+                  <tr key={house?.id} className="hover:bg-surface/50 transition-colors">
                     <td className="py-3 px-4">
                       <div>
-                        <p className="font-medium text-text">{house.address}</p>
-                        <p className="text-xs text-subdued mt-1">{house.uuid}</p>
+                        <p className="font-medium text-text">{house?.name}</p>
+                        <p className="text-xs text-subdued mt-1">{house?.uuid}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div>
+                        <p className="font-medium text-text">{house?.address}</p>
                       </div>
                     </td>
                     <td className="py-3 px-4">
@@ -187,57 +192,57 @@ const HouseList = () => {
                           <Users className="w-3 h-3 text-primary" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-text">{house.owner?.name}</p>
-                          <p className="text-xs text-subdued">{house.owner?.email}</p>
+                          <p className="text-sm font-medium text-text">{house?.owner?.name}</p>
+                          <p className="text-xs text-subdued">{house?.owner?.email}</p>
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                          {house.stats?.flats || 0} flats
+                          {house?.stats?.flats || 0} flats
                         </span>
-                        {house.stats?.caretakers > 0 && (
+                        {house?.stats?.caretakers > 0 && (
                           <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                            {house.stats.caretakers} caretakers
+                            {house?.stats.caretakers} caretakers
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <StatusBadge active={house.active} />
+                      <StatusBadge active={house?.active} />
                     </td>
                     <td className="py-3 px-4 text-sm text-subdued">
-                      {/* {formatDate(house.createdAt)} */}
-                        {new Date(house.createdAt).toLocaleDateString()}
+                      {/* {formatDate(house?.createdAt)} */}
+                        {new Date(house?.createdAt).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => navigate(`/houses/${house.id}`)}
-                          className="p-1.5 text-text hover:text-primary hover:bg-primary/10 rounded transition-colors"
+                          onClick={() => navigate(`/houses/${house?.id}`)}
+                          className="cursor-pointer p-1.5 text-text hover:text-primary hover:bg-primary/10 rounded transition-colors"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => navigate(`/houses/${house.id}/edit`)}
-                          className="p-1.5 text-text hover:text-secondary hover:bg-secondary/10 rounded transition-colors"
+                          onClick={() => navigate(`/houses/${house?.id}/edit`)}
+                          className="cursor-pointer p-1.5 text-text hover:text-secondary hover:bg-secondary/10 rounded transition-colors"
                           title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        {user?.isWebOwner && (
+                        {(isWebOwner) && (
                           <button
-                            onClick={() => handleDelete(house.id, house.address)}
-                            className="p-1.5 text-text hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            onClick={() => handleDelete(house?.id, house?.address)}
+                            className="cursor-pointer p-1.5 text-text hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         )}
                         <button
-                          onClick={() => navigate(`/houses/${house.id}`)}
+                          onClick={() => navigate(`/houses/${house?.id}`)}
                           className="p-1.5 text-text hover:text-primary hover:bg-primary/10 rounded transition-colors"
                           title="More"
                         >

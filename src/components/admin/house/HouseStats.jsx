@@ -4,9 +4,22 @@ import {
   Building, Calendar, MapPin, DollarSign
 } from 'lucide-react';
 import { useGetHouseStatsQuery } from '../../../store/api/houseApi';
+import HouseList from './HouseList';
+import { toast } from 'react-toastify';
+import AccessDeniedPage from '../../../pages/utility/AccessDeniedPage';
+import { LoaderMinimal } from '../../common/RouteLoader';
 
 const HouseStats = () => {
-  const { data, isLoading } = useGetHouseStatsQuery();
+  const { data, isLoading, error } = useGetHouseStatsQuery();
+
+
+  if (error) {
+    toast.error(error?.data?.error || 'Failed to load properties.');
+
+    if (error?.status === 403) {
+      return <AccessDeniedPage />;
+    }
+  }
 
   const stats = data?.data || {
     totalHouses: 0,
@@ -22,12 +35,6 @@ const HouseStats = () => {
         <div>
           <p className="text-sm text-subdued mb-2">{title}</p>
           <p className="text-3xl font-bold text-text">{value}</p>
-          {trend && (
-            <div className={`flex items-center gap-1 mt-2 text-sm ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {trend > 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              <span>{Math.abs(trend)}%</span>
-            </div>
-          )}
         </div>
         <div className={`p-3 rounded-lg ${color === 'blue' ? 'bg-blue-100 text-blue-600' : 
           color === 'green' ? 'bg-green-100 text-green-600' :
@@ -40,18 +47,11 @@ const HouseStats = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 bg-surface rounded-lg w-48 animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-32 bg-surface rounded-xl animate-pulse" />
-          ))}
-        </div>
-      </div>
+      <LoaderMinimal />
     );
   }
 
-  return (
+  return !isLoading && !error && (
     <div className="space-y-6">
       {/* Header */}
       <div>
@@ -111,9 +111,13 @@ const HouseStats = () => {
                     <Building className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-text">{house.address}</p>
+                    <p className='font-medium'>{house.name}</p>
+                    <p className="text-slate-500 flex gap-2 items-center text-sm">
+                        <MapPin className="w-3 h-3" />
+                        {house.address}
+                    </p>
                     <p className="text-sm text-subdued flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
+                      
                       {house.owner?.name || 'Unknown'}
                     </p>
                   </div>
@@ -164,6 +168,9 @@ const HouseStats = () => {
           </div>
         </div>
       )}
+
+
+      <HouseList />
     </div>
   );
 };
