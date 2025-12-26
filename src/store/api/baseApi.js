@@ -32,6 +32,9 @@ axiosInstance.interceptors.response.use(
 
     // ❌ DO NOT retry refresh endpoint itself
     if (originalRequest.url.includes("/auth/refresh")) {
+      // Clear tokens and redirect to login
+      localStorage.clear();
+      window.location.replace("/login");
       return Promise.reject(error);
     }
 
@@ -42,10 +45,16 @@ axiosInstance.interceptors.response.use(
         const refreshToken = localStorage.getItem("refreshToken");
         if (!refreshToken) throw new Error("No refresh token");
 
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_APP_API_URL}/auth/refresh`,
-          { refreshToken }
-        );
+        // ✅ Use plain axios WITHOUT interceptor for refresh call
+        const { data } = await axios({
+          method: 'POST',
+          url: `${import.meta.env.VITE_APP_API_URL}/auth/refresh`,
+          data: { refreshToken: refreshToken },
+          headers: {
+            'Content-Type': 'application/json'
+          }
+          // NO Authorization header, NO withCredentials
+        });
 
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
@@ -53,10 +62,13 @@ axiosInstance.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        localStorage.clear();
-        window.location.replace("/login"); // ✅ replace avoids history loop
-        return Promise.reject(refreshError);
-      }
+  localStorage.clear();
+  return Promise.reject({
+    ...refreshError,
+    isAuthError: true
+  });
+}
+
     }
 
     return Promise.reject(error);
@@ -65,18 +77,15 @@ axiosInstance.interceptors.response.use(
 
 
 // RTK Query wrapper for axios
-const axiosBaseQuery = () => async ({ url, method = 'GET', data, params, headers }) => {
+const axiosBaseQuery = () => async (args, api) => {
   try {
-    const result = await axiosInstance({
-      url,
-      method,
-      data,
-      params,
-      headers,
-    });
+    const result = await axiosInstance(args);
     return { data: result.data };
-  } catch (axiosError) {
-    const err = axiosError; // JS doesn't need 'as AxiosError'
+  } catch (err) {
+    if (err.isAuthError || err.response?.status === 401) {
+      api.dispatch({ type: 'auth/logout' });
+    }
+
     return {
       error: {
         status: err.response?.status,
@@ -85,6 +94,7 @@ const axiosBaseQuery = () => async ({ url, method = 'GET', data, params, headers
     };
   }
 };
+
 
 export const baseApi = createApi({
   reducerPath: 'api',

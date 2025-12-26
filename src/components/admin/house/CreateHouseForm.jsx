@@ -236,7 +236,7 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
               value={formData.name}
               onChange={handleChange}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all hover:border-gray-300"
-              placeholder="e.g., Near City Bank, Opposite Park"
+              placeholder="e.g., Proshanti, Kuhelika"
             />
           </div>
         {/* Address Field */}
