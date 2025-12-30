@@ -16,7 +16,9 @@ import {
   Users,
   ChevronRight,
   ChevronLeft,
-  MoreVertical
+  MoreVertical,
+  HouseHeartIcon,
+  House
 } from 'lucide-react';
 import {
   useGetFlatsQuery,
@@ -26,6 +28,11 @@ import {
 import { format } from 'date-fns';
 import FlatForm from './FlatForm';
 import AssignRenterModal from './AssignRenterModal';
+import RenterForm from '../renters/RenterForm';
+import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
+import { toast } from 'react-toastify';
+import HouseStats from '../admin/house/HouseStats';
+import Btn from '../common/Button';
 
 const FlatList = () => {
   const { houseId } = useParams();
@@ -37,7 +44,12 @@ const FlatList = () => {
   const [openAssignModal, setOpenAssignModal] = useState(false);
   const [selectedFlat, setSelectedFlat] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [showRenterForm, setShowRenterForm] = useState(false);
+  const {data, isLoading: isHouseLoading, error } = useGetHouseDetailsQuery(houseId)
+  
 
+  console.log(houseId);
+  
   const { data: flatsData, isLoading } = useGetFlatsQuery({
     houseId,
     page,
@@ -62,6 +74,12 @@ const FlatList = () => {
     setOpenForm(true);
   };
 
+  const handleAddRenter = () => {
+    // Note: You might need to pass houseOwnerId based on your auth context
+    // For now, we'll pass null and let the backend handle it
+    setShowRenterForm(true);
+  };
+
   const handleAssignRenter = (flat) => {
     setSelectedFlat(flat);
     setOpenAssignModal(true);
@@ -72,6 +90,7 @@ const FlatList = () => {
       try {
         await removeRenter(flat.id).unwrap();
       } catch (error) {
+        toast.error(`Failed to remove renter: ${error?.data?.error || error.message}`);
         console.error('Failed to remove renter:', error);
       }
     }
@@ -102,18 +121,33 @@ const FlatList = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-5">
         <div>
-          <h1 className="text-2xl font-bold text-text">Flats Management</h1>
-          <p className="text-subdued">Manage all flats in this house</p>
+          <h1 className="text-2xl font-bold text-slate-600">Flats</h1>
+          <p className="text-black flex gap-2">
+            <House size={20} />
+            {data?.data?.name || 'House'}
+          </p>
         </div>
-        <button
+
+        <div className='inline-flex gap-2.5 flex-wrap'>
+          <Btn
+          type='outline'
+            onClick={handleAddRenter}
+            className="flex items-center gap-2 px-4 py-2"
+          >
+            <Users size={20} />
+            Add New Renter
+          </Btn>
+        <Btn
+        type='primary'
           onClick={() => setOpenForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2"
         >
           <Plus size={20} />
           Add New Flat
-        </button>
+        </Btn>
+        </div>
       </div>
 
       {/* Filters */}
@@ -394,6 +428,12 @@ const FlatList = () => {
         }}
         houseId={houseId}
         flat={selectedFlat}
+      />
+
+      <RenterForm
+        open={showRenterForm}
+        onClose={() => setShowRenterForm(false)}
+        houseOwnerId={data?.data?.owner_id || null}
       />
 
       {/* Assign Renter Modal */}

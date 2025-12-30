@@ -74,7 +74,7 @@ const HouseDetails = () => {
             <ArrowLeft className="w-5 h-5 text-text" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-text">{house.address}</h1>
+            <h1 className="text-2xl font-bold text-text">{house?.name}</h1>
             <p className="text-subdued flex items-center gap-2">
               <Home className="w-4 h-4" />
               Property Details
@@ -252,7 +252,7 @@ const HouseDetails = () => {
                   </div>
                   <span className="text-text">Total Flats</span>
                 </div>
-                <span className="font-bold text-text">{house.stats?.flats || 0}</span>
+                <span className="font-bold text-text">{house?.flats?.length || 0}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -261,7 +261,7 @@ const HouseDetails = () => {
                   </div>
                   <span className="text-text">Caretakers</span>
                 </div>
-                <span className="font-bold text-text">{house.stats?.caretakers || 0}</span>
+                <span className="font-bold text-text">{house?.caretakers?.length || 0}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -270,9 +270,9 @@ const HouseDetails = () => {
                   </div>
                   <span className="text-text">Notices</span>
                 </div>
-                <span className="font-bold text-text">{house.stats?.notices || 0}</span>
+                <span className="font-bold text-text">{house?.notices?.length || 0}</span>
               </div>
-              <div className="flex items-center justify-between">
+              {/* <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg">
                     <DollarSign className="w-4 h-4" />
@@ -280,7 +280,7 @@ const HouseDetails = () => {
                   <span className="text-text">Rent Collected</span>
                 </div>
                 <span className="font-bold text-text">$0</span>
-              </div>
+              </div> */}
             </div>
           </div>
 

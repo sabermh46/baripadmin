@@ -90,14 +90,6 @@ export const flatApi = baseApi.injectEndpoints({
       invalidatesTags: ['Payment', 'Flat'],
     }),
 
-    // Get available renters for a house
-    getAvailableRenters: builder.query({
-      query: (houseId) => ({
-        url: `/houses/${houseId}/available-renters`,
-        method: 'GET',
-      }),
-    }),
-
     // Search flats
     searchFlats: builder.query({
       query: (params) => ({
@@ -137,7 +129,6 @@ export const {
   useRemoveRenterMutation,
   useGetFlatPaymentsQuery,
   useRecordPaymentMutation,
-  useGetAvailableRentersQuery,
   useSearchFlatsQuery,
   useGetFlatFinancialSummaryQuery,
   useSendRentReminderMutation,

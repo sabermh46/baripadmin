@@ -8,6 +8,7 @@ import {
   useCreateFlatMutation,
   useUpdateFlatMutation
 } from '../../store/api/flatApi';
+import { toast } from 'react-toastify';
 
 const flatSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -41,15 +42,26 @@ const FlatForm = ({ open, onClose, houseId, flat }) => {
   const [createFlat] = useCreateFlatMutation();
   const [updateFlat] = useUpdateFlatMutation();
 
-  useEffect(() => {
+useEffect(() => {
     if (flat) {
       reset({
-        name: flat.name || '',
-        number: flat.number || '',
-        rent_amount: flat.rent_amount || '',
-        should_pay_rent_day: flat.should_pay_rent_day || 10,
-        late_fee_percentage: flat.late_fee_percentage || 5,
-        metadata: flat.metadata || '',
+        name: flat.name ?? '',
+        number: flat.number ?? '',
+        rent_amount: flat.rent_amount ?? '',
+        // Use ?? to allow 0 or other falsy but valid numbers
+        should_pay_rent_day: flat.should_pay_rent_day ?? 10,
+        late_fee_percentage: flat.late_fee_percentage ?? 5,
+        metadata: flat.metadata ?? '',
+      });
+    } else {
+      // It's good practice to reset to empty/defaults when not editing
+      reset({
+        name: '',
+        number: '',
+        rent_amount: '',
+        should_pay_rent_day: 10,
+        late_fee_percentage: 5,
+        metadata: '',
       });
     }
   }, [flat, reset]);
@@ -61,9 +73,11 @@ const FlatForm = ({ open, onClose, houseId, flat }) => {
       } else {
         await createFlat({ houseId, ...data }).unwrap();
       }
+      toast.success(`Flat ${isEdit ? 'updated' : 'created'} successfully`);
       onClose();
       reset();
     } catch (error) {
+      toast.error(`Failded to save flat: ${error?.data?.error || error.message}`);
       console.error('Failed to save flat:', error);
     }
   };

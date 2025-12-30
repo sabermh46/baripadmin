@@ -2,24 +2,41 @@
 import React, { useState } from 'react';
 import { Search, X, User } from 'lucide-react';
 import { useAssignRenterMutation } from '../../store/api/flatApi';
-import { useGetAvailableRentersQuery } from '../../store/api/flatApi';
+import { useGetAvailableRentersQuery } from '../../store/api/renterApi'; // Fixed import
 import { format } from 'date-fns';
+import { toast } from 'react-toastify'; // Add toast
 
 const AssignRenterModal = ({ open, onClose, flat }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRenter, setSelectedRenter] = useState(null);
 
-  const { data: availableRenters = [], isLoading } = useGetAvailableRentersQuery(
-    flat?.house_id,
-    { skip: !flat || !open }
+  // Fixed: Use the correct query and pass params as object
+  const { 
+    data: response, 
+    isLoading, 
+    refetch 
+  } = useGetAvailableRentersQuery(
+    { 
+      houseId: flat?.house_id,
+      search: searchTerm 
+    }, 
+    { 
+      skip: !flat || !open,
+      refetchOnMountOrArgChange: true 
+    }
   );
+
+  // Extract renters from response - handle different response structures
+  const availableRenters = response?.data || response || [];
 
   const [assignRenter, { isLoading: isAssigning }] = useAssignRenterMutation();
 
+  // Filter renters client-side if backend doesn't support search param
   const filteredRenters = availableRenters.filter(renter =>
     renter.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     renter.phone?.includes(searchTerm) ||
-    renter.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    renter.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    renter.nid?.includes(searchTerm)
   );
 
   const calculateNextDueDate = () => {
@@ -47,12 +64,20 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
         flatId: flat.id,
         renterId: selectedRenter.id
       }).unwrap();
+      
+      toast.success(`Renter "${selectedRenter.name}" assigned to flat successfully`);
       onClose();
       setSelectedRenter(null);
       setSearchTerm('');
     } catch (error) {
       console.error('Failed to assign renter:', error);
+      toast.error(`Failed to assign renter: ${error?.data?.error || error.message}`);
     }
+  };
+
+  const handleRefresh = () => {
+    refetch();
+    toast.info('Refreshing available renters...');
   };
 
   const nextDueDate = calculateNextDueDate();
@@ -77,7 +102,16 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
         <div className="p-6 space-y-6">
           {/* Flat Details */}
           <div className="bg-subdued/5 rounded-lg p-4">
-            <h3 className="font-medium text-text mb-3">Flat Details</h3>
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="font-medium text-text">Flat Details</h3>
+              <button
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="text-sm text-primary hover:text-primary/80 disabled:opacity-50"
+              >
+                Refresh List
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-subdued">Name</p>
@@ -110,44 +144,75 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
-                placeholder="Type name, phone, or email..."
+                placeholder="Type name, phone, email, or NID..."
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-subdued hover:text-text"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Renter List */}
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                <p className="text-sm text-subdued">Loading available renters...</p>
               </div>
             ) : filteredRenters.length === 0 ? (
               <div className="text-center py-8 text-subdued">
-                {searchTerm ? 'No renters found matching your search' : 'No available renters found'}
+                <User className="mx-auto mb-3 text-subdued/50" size={48} />
+                <p className="mb-2">
+                  {searchTerm ? 'No renters found matching your search' : 'No available renters found'}
+                </p>
+                <p className="text-sm">
+                  {searchTerm ? 'Try a different search term' : 'All renters are currently assigned or no renters exist'}
+                </p>
               </div>
             ) : (
               filteredRenters.map((renter) => (
                 <div
                   key={renter.id}
                   onClick={() => setSelectedRenter(renter)}
-                  className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
                     selectedRenter?.id === renter.id
-                      ? 'border-primary bg-primary/5'
-                      : 'border-subdued/20 hover:bg-subdued/5'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-subdued/20 hover:bg-subdued/5 hover:border-subdued/40'
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                       <User className="text-primary" size={20} />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-text">{renter.name}</p>
-                      <div className="flex flex-wrap gap-3 mt-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <p className="font-medium text-text truncate">{renter.name}</p>
+                        {renter.status === 'inactive' && (
+                          <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1 mt-1">
                         {renter.phone && (
-                          <span className="text-sm text-subdued">{renter.phone}</span>
+                          <span className="text-sm text-subdued truncate">
+                            📱 {renter.phone}
+                          </span>
                         )}
                         {renter.email && (
-                          <span className="text-sm text-subdued">{renter.email}</span>
+                          <span className="text-sm text-subdued truncate">
+                            ✉️ {renter.email}
+                          </span>
+                        )}
+                        {renter.nid && (
+                          <span className="text-xs text-subdued truncate">
+                            🆔 NID: {renter.nid}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -159,18 +224,34 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
 
           {/* Selected Renter Info */}
           {selectedRenter && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-800 mb-2">Selected Renter</h4>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 animate-in fade-in">
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="font-medium text-blue-800">Selected Renter</h4>
+                <button
+                  onClick={() => setSelectedRenter(null)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <X size={16} />
+                </button>
+              </div>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="text-blue-600" size={24} />
                 </div>
-                <div>
-                  <p className="font-bold text-blue-900">{selectedRenter.name}</p>
-                  <p className="text-sm text-blue-700">
-                    {selectedRenter.phone && `Phone: ${selectedRenter.phone}`}
-                    {selectedRenter.email && ` • Email: ${selectedRenter.email}`}
-                  </p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-blue-900 truncate">{selectedRenter.name}</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedRenter.phone && (
+                      <span className="text-sm text-blue-700">
+                        📱 {selectedRenter.phone}
+                      </span>
+                    )}
+                    {selectedRenter.email && (
+                      <span className="text-sm text-blue-700">
+                        ✉️ {selectedRenter.email}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -182,6 +263,9 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
                       {format(nextDueDate, 'dd MMM yyyy')}
                     </span>
                   </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Amount: <span className="font-semibold">${flat.rent_amount?.toLocaleString()}</span>
+                  </p>
                 </div>
               )}
             </div>
@@ -192,19 +276,20 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
             <button
               onClick={onClose}
               className="px-6 py-2 border border-subdued/30 rounded-lg hover:bg-subdued/10 transition-colors"
+              disabled={isAssigning}
             >
               Cancel
             </button>
             <button
               onClick={handleAssign}
               disabled={!selectedRenter || isAssigning}
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {isAssigning ? (
-                <span className="flex items-center gap-2">
+                <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   Assigning...
-                </span>
+                </>
               ) : (
                 'Assign Renter'
               )}

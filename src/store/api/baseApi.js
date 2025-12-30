@@ -19,6 +19,19 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Automatically handle FormData - remove Content-Type for FormData
+    if (config.data instanceof FormData) {
+      // Remove the Content-Type header so browser sets it with boundary
+      delete config.headers['Content-Type'];
+      
+      // Also ensure we don't have any other JSON-specific headers
+      delete config.headers['Accept'];
+      
+      // If you need to set any specific headers for FormData, do it here
+      // For example, you might want to set a boundary or other headers
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -76,9 +89,22 @@ axiosInstance.interceptors.response.use(
 );
 
 
-// RTK Query wrapper for axios
 const axiosBaseQuery = () => async (args, api) => {
   try {
+    // If body is FormData, we need to handle it specially
+    if (args.body instanceof FormData) {
+      const config = {
+        url: args.url,
+        method: args.method || 'GET',
+        data: args.body,
+        // Don't set headers here - axiosInstance will handle it
+      };
+      
+      const result = await axiosInstance(config);
+      return { data: result.data };
+    }
+    
+    // Normal request handling
     const result = await axiosInstance(args);
     return { data: result.data };
   } catch (err) {
@@ -94,7 +120,6 @@ const axiosBaseQuery = () => async (args, api) => {
     };
   }
 };
-
 
 export const baseApi = createApi({
   reducerPath: 'api',

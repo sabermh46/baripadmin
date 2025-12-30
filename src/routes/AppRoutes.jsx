@@ -24,6 +24,7 @@ import HouseDetails from '../components/admin/house/HouseDetails';
 import HouseEditForm from '../components/admin/house/HouseEditForm';
 import FlatList from '../components/flats/FlatList';
 import FlatDetails from '../components/flats/FlatDetails';
+import RenterList from '../components/renters/RenterList';
 
 
 
@@ -223,6 +224,11 @@ const AppRoutes = () => {
             <Route path="/houses/:houseId/flats" element={
               <ProtectedRoute roles={['web_owner', 'house_owner', 'staff', 'caretaker']}>
                 <FlatList />
+              </ProtectedRoute>
+            } />
+            <Route path="/renters" element={
+              <ProtectedRoute roles={['web_owner', 'house_owner', 'staff', 'caretaker']}>
+                <RenterList />
               </ProtectedRoute>
             } />
             <Route path="/flats/:id" element={
