@@ -6,6 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { useRecordPaymentMutation } from '../../store/api/flatApi';
+import { status } from 'nprogress';
+
+// pending
+//   paid
+//   overdue
+//   partial
+//   cancelled
 
 const paymentSchema = z.object({
   paid_amount: z.coerce.number().positive('Amount must be positive'),
@@ -13,6 +20,8 @@ const paymentSchema = z.object({
   transaction_id: z.string().optional(),
   notes: z.string().optional(),
   paid_date: z.string().default(() => format(new Date(), 'yyyy-MM-dd')),
+  status: z.enum(['pending', 'paid', 'overdue', 'partial', 'cancelled']).default('paid'),
+  calculate_next_payment: z.boolean().default(true),
 });
 
 const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
@@ -32,6 +41,8 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
       transaction_id: '',
       notes: '',
       paid_date: format(new Date(), 'yyyy-MM-dd'),
+      status: 'paid',
+      calculate_next_payment: true,
     }
   });
 
@@ -159,6 +170,21 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
               )}
             </div>
 
+            <div>
+                <label className="block text-sm font-medium text-text mb-2"> Payment Status </label>
+                <select
+                  {...register('status')}
+                  className="w-full px-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="paid">Paid</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="partial">Partial</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+
             {/* Transaction ID */}
             <div>
               <label className="block text-sm font-medium text-text mb-2">
@@ -170,7 +196,8 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
                 placeholder="Optional"
               />
             </div>
-          </div>
+
+          
 
           {/* Notes */}
           <div>
@@ -183,6 +210,27 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
               className="w-full px-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
               placeholder="Additional notes..."
             />
+          </div>
+
+          {/* Next Payment Toggle - Added Here */}
+          <div className="bg-surface border border-subdued/20 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                <Calendar size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text">Schedule Next Payment</p>
+                <p className="text-xs text-subdued">Create invoice for next month</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                {...register('calculate_next_payment')} 
+                className="sr-only peer" 
+              />
+              <div className="w-11 h-6 bg-subdued/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
           </div>
 
           {/* Late Fee Warning */}

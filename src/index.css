@@ -27,7 +27,7 @@
 
   /* Neutral Colors */
   --color-surface: #ffffff;
-  --color-background: #f8fafc;
+  --color-background: #f2f2f2;
   --color-subdued: #64748b;
   --color-text: #18243f;
 }
@@ -125,4 +125,9 @@ body {
 @keyframes glow {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+input:disabled {
+  color: gray;
+  background: #c9c9c9;
 }

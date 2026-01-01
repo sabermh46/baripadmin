@@ -7,11 +7,12 @@ import {
 } from 'lucide-react';
 import { useGetHouseDetailsQuery, useUpdateHouseMutation } from '../../../store/api/houseApi';
 import { useAuth } from '../../../hooks';
+import { is } from 'zod/v4/locales';
 
 const HouseEditForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isWebOwner, isHouseOwner, isCaretaker } = useAuth();
 
   const { data, isLoading } = useGetHouseDetailsQuery(id);
   const [updateHouse, { isLoading: isUpdating, error }] = useUpdateHouseMutation();
@@ -151,9 +152,9 @@ const HouseEditForm = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-surface border border-surface rounded-xl p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-surface border border-surface rounded-md p-6 space-y-6">
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-3">
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-center gap-3">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <div>
               <p className="font-medium">Update Failed</p>
@@ -163,7 +164,7 @@ const HouseEditForm = () => {
         )}
 
         {success && (
-          <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-center gap-3 animate-fade-in">
+          <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-md flex items-center gap-3 animate-fade-in">
             <CheckCircle className="w-5 h-5 flex-shrink-0" />
             <div>
               <p className="font-medium">Success!</p>
@@ -207,7 +208,7 @@ const HouseEditForm = () => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-4 py-3 bg-background border border-surface rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              className="w-full px-4 py-3 bg-background border border-surface rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
               placeholder="e.g., Near City Bank"
             />
           </div>
@@ -222,7 +223,7 @@ const HouseEditForm = () => {
             value={formData.address}
             onChange={handleChange}
             rows="2"
-            className={`w-full px-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none ${
+            className={`w-full px-4 py-3 bg-background border rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none ${
               errors.address ? 'border-red-500 bg-red-50' : 'border-surface'
             }`}
             placeholder="Enter complete property address"
@@ -243,24 +244,25 @@ const HouseEditForm = () => {
               name="metadata.locationDetails"
               value={formData.metadata.locationDetails}
               onChange={handleChange}
-              className="w-full px-4 py-3 bg-background border border-surface rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              className="w-full px-4 py-3 bg-background border border-surface rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
               placeholder="e.g., Near City Bank"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-text flex items-center gap-2">
-              <Layers className="w-4 h-4" /> Total Flats *
+            <label className={`text-sm font-semibold flex items-center gap-2 ${(isCaretaker || isWebOwner) ? 'text-gray-400' : 'text-text'}`}>
+              <Layers className="w-4 h-4" /> Max Flat Limit *
             </label>
             <input
               type="number"
               name="flatCount"
               value={formData.flatCount}
               onChange={handleChange}
+              disabled={isCaretaker || isHouseOwner}
               min="1"
-              className={`w-full px-4 py-3 bg-background border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
+              className={`w-full px-4 py-3 bg-background border rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none ${
                 errors.flatCount ? 'border-red-500 bg-red-50' : 'border-surface'
               }`}
-            />
+            /> 
             {errors.flatCount && (
               <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
                 <X className="w-3 h-3" /> {errors.flatCount}
@@ -277,7 +279,7 @@ const HouseEditForm = () => {
             value={formData.metadata.description}
             onChange={handleChange}
             rows="3"
-            className="w-full px-4 py-3 bg-background border border-surface rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
+            className="w-full px-4 py-3 bg-background border border-surface rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
             placeholder="Describe the property features, notes, etc."
           />
         </div>
@@ -285,20 +287,20 @@ const HouseEditForm = () => {
         {/* Amenities */}
         <div className="space-y-2">
           <label className="text-sm font-semibold text-text">Amenities</label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <input
               type="text"
               value={amenityInput}
               onChange={(e) => setAmenityInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddAmenity())}
-              className="flex-1 px-4 py-3 bg-background border border-surface rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              placeholder="Add amenities (Generator, CCTV, Lift)"
+              className="flex-1 px-4 py-3 bg-background border border-surface rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              placeholder="Generator, CCTV, Lift, etc."
             />
             <button
               type="button"
               onClick={handleAddAmenity}
               disabled={!amenityInput.trim()}
-              className="px-4 py-3 bg-text text-white rounded-xl hover:bg-text/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="px-4 py-3 bg-text text-white rounded-md hover:bg-text/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               Add
             </button>
@@ -357,19 +359,19 @@ const HouseEditForm = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-6 border-t border-surface">
+        <div className="flex items-center justify-end gap-3 pt-6 border-t border-black/20 text-xs md:text-base">
           <button
             type="button"
             onClick={() => navigate(`/houses/${id}`)}
             disabled={isUpdating}
-            className="px-6 py-3 text-text hover:bg-surface rounded-xl transition-colors font-medium disabled:opacity-50"
+            className="px-6 py-3 text-text hover:bg-surface rounded-md transition-colors font-medium disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isUpdating}
-            className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 py-2 bg-primary text-white rounded-sm hover:bg-primary/90 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUpdating ? (
               <>

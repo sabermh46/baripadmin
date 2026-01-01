@@ -39,7 +39,7 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       path: "/houses",
       label: "Houses",
       icon: <House />,
-      roles: ["developer", "web_owner", "staff", "house_owner"],
+      roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
       toMatch: ["houses", "/houses/create", "/house-owners/houses"]
       
     },

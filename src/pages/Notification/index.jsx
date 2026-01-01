@@ -83,7 +83,7 @@ const NotificationsPage = () => {
             case 'warning': return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
             case 'error': return <XCircle className="w-5 h-5 text-red-500" />;
             case 'info': 
-            default: return <Info className="w-5 h-5 text-blue-500" />;
+            default: return <Info className="w-5 h-5 text-primary-500" />;
         }
     };
 
@@ -101,7 +101,7 @@ const NotificationsPage = () => {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
                     <p className="mt-4 text-gray-600">Loading notifications...</p>
                 </div>
             </div>
@@ -117,7 +117,7 @@ const NotificationsPage = () => {
                     <p className="mt-2 text-gray-600">{error}</p>
                     <button
                         onClick={refresh}
-                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="mt-4 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
                     >
                         Try Again
                     </button>
@@ -160,7 +160,7 @@ const NotificationsPage = () => {
                         onClick={() => handleFilterChange('unread', !filters.unread)}
                         className={`px-3 py-1 rounded-full text-sm font-medium ${
                             filters.unread
-                                ? 'bg-blue-100 text-blue-700'
+                                ? 'bg-blue-100 text-primary-700'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
@@ -247,7 +247,7 @@ const NotificationsPage = () => {
                         {notifications.map((notification) => (
                             <div
                                 key={notification.id}
-                                className={`bg-white rounded-lg shadow border ${getTypeColor(notification.type)} ${
+                                className={`bg-surface rounded-lg shadow ${getTypeColor(notification.type)} ${
                                     !notification.read ? 'border-l-4 border-l-primary' : ''
                                 }`}
                             >
@@ -317,7 +317,7 @@ const NotificationsPage = () => {
                         <button
                             onClick={loadMore}
                             disabled={loading}
-                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                         >
                             {loading ? 'Loading...' : 'Load More'}
                         </button>

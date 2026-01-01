@@ -217,8 +217,18 @@ const AppRoutes = () => {
           } /> */}
 
             <Route path="/houses" element={
-              <ProtectedRoute roles={['web_owner', 'house_owner', 'staff']}>
+              <ProtectedRoute roles={['web_owner', 'house_owner', 'staff', 'caretaker']}>
                 <HousesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/houses/:id" element={
+              <ProtectedRoute roles={['web_owner','house_owner', 'staff', 'caretaker']}>
+                <HouseDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/houses/:id/edit" element={
+              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner']}>
+                <HouseEditForm />
               </ProtectedRoute>
             } />
             <Route path="/houses/:houseId/flats" element={
@@ -239,16 +249,6 @@ const AppRoutes = () => {
             <Route path="/houses/create" element={
               <ProtectedRoute roles={['web_owner', 'staff']}>
                 <CreateHouseForm />
-              </ProtectedRoute>
-            } />
-            <Route path="/houses/:id" element={
-              <ProtectedRoute roles={['web_owner', 'staff']}>
-                <HouseDetails />
-              </ProtectedRoute>
-            } />
-            <Route path="/houses/:id/edit" element={
-              <ProtectedRoute roles={['web_owner', 'staff']}>
-                <HouseEditForm />
               </ProtectedRoute>
             } />
 

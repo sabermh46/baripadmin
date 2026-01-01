@@ -185,46 +185,50 @@ const FlatList = () => {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface rounded-xl p-6 shadow-sm border border-subdued/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-subdued">Total Flats</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
+        <div className="bg-surface rounded-xl p-4 shadow-sm border border-subdued/20">
+          <div className="flex items-center justify-center flex-wrap">
+            <div className='flex justify-center items-center gap-3'>
+              <Home className="text-primary" size={24} />
+              
               <p className="text-3xl font-bold text-text mt-2">{stats.total || 0}</p>
             </div>
-            <Home className="text-primary" size={24} />
+            <p className="text-sm text-subdued text-center">Total Flats</p>
+            
           </div>
         </div>
         
-        <div className="bg-surface rounded-xl p-6 shadow-sm border border-subdued/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-subdued">Vacant Flats</p>
+        <div className="bg-surface rounded-xl p-4 shadow-sm border border-subdued/20">
+          <div className="flex items-center justify-center flex-wrap">
+            <div className='flex justify-center items-center gap-3'>
+              <Home className="text-yellow-600" size={24} />
               <p className="text-3xl font-bold text-yellow-600 mt-2">{stats.vacant || 0}</p>
             </div>
-            <Home className="text-yellow-600" size={24} />
+            <p className="text-sm text-subdued text-center">Vacant Flats</p>
+            
           </div>
         </div>
         
-        <div className="bg-surface rounded-xl p-6 shadow-sm border border-subdued/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-subdued">Occupied Flats</p>
+        <div className="bg-surface rounded-xl p-4 shadow-sm border border-subdued/20">
+          <div className="flex items-center justify-center flex-wrap">
+            <div className='flex justify-center items-center gap-3'>
+              <Users className="text-green-600" size={24} />
+              
               <p className="text-3xl font-bold text-green-600 mt-2">{stats.occupied || 0}</p>
             </div>
-            <Users className="text-green-600" size={24} />
+            <p className="text-sm text-subdued text-center">Occupied Flats</p>
+            
           </div>
         </div>
         
-        <div className="bg-surface rounded-xl p-6 shadow-sm border border-subdued/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-subdued">Occupancy Rate</p>
+        <div className="bg-surface rounded-xl p-4 shadow-sm border border-subdued/20">
+          <div className="flex items-center justify-center flex-wrap">
+            <div className='flex justify-center items-center gap-3'>
+             
               <p className="text-3xl font-bold text-text mt-2">{occupancyRate}%</p>
             </div>
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-primary font-bold">{occupancyRate}%</span>
-            </div>
+             <p className="text-sm text-subdued text-center">Occupancy Rate</p>
+            
           </div>
         </div>
       </div>

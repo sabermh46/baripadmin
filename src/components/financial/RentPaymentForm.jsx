@@ -37,6 +37,7 @@ const rentPaymentSchema = z.object({
   lateFeeAmount: z.coerce.number().min(0).default(0),
   notes: z.string().optional(),
   receiptFile: z.any().optional(),
+  calculateNextPayment: z.boolean().default(true),
 });
 
 const RentPaymentForm = ({ open, onClose, flat, renter }) => {
@@ -62,6 +63,7 @@ const RentPaymentForm = ({ open, onClose, flat, renter }) => {
       status: 'paid',
       lateFeeAmount: 0,
       notes: '',
+      calculateNextPayment: true,
     }
   });
 
@@ -114,6 +116,9 @@ const RentPaymentForm = ({ open, onClose, flat, renter }) => {
         if (data[key] !== undefined && data[key] !== null && data[key] !== '') {
           if (key === 'receiptFile' && receiptFile) {
             formData.append('receipt', receiptFile);
+          } else if (key === 'calculateNextPayment') {
+            // Map the camelCase form key to the snake_case backend key
+            formData.append('calculate_next_payment', data[key]);
           } else if (key !== 'receiptFile') {
             formData.append(key, data[key]);
           }
@@ -145,7 +150,7 @@ const RentPaymentForm = ({ open, onClose, flat, renter }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface rounded-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400">
         <div className="sticky top-0 bg-surface border-b border-subdued/20 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -357,6 +362,26 @@ const RentPaymentForm = ({ open, onClose, flat, renter }) => {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="bg-surface border border-subdued/20 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                <Calendar size={20} />
+                </div>
+                <div>
+                <p className="text-sm font-medium text-text">Schedule Next Payment</p>
+                <p className="text-xs text-subdued">Automatically create next month's pending invoice</p>
+                </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                type="checkbox" 
+                {...register('calculateNextPayment')} 
+                className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-subdued/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
           </div>
 
           {/* Balance Due */}

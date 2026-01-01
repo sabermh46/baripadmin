@@ -42,60 +42,6 @@ const FlatDetails = () => {
     );
   }
 
-//   {
-//   "flat": {
-//     "id": 6,
-//     "uuid": "72330f9c-2776-4e5e-992d-b2485593ac3f",
-//     "number": "103",
-//     "metadata": "{\"notes\":\"nai\",\"createdBy\":2,\"createdAt\":\"2025-12-28T18:59:22.113Z\"}",
-//     "createdAt": "2025-12-28T18:59:22.116Z",
-//     "updatedAt": "2025-12-28T19:08:16.763Z",
-//     "name": "A3",
-//     "last_rent_paid_date": null,
-//     "late_fee_percentage": "2.50",
-//     "rent_amount": "24000.00",
-//     "rent_due_date": "2026-02-11T18:00:00.000Z",
-//     "should_pay_rent_day": 12,
-//     "floor": 0,
-//     "house_id": 1,
-//     "renter_id": 4,
-//     "houseName": "Proshanti",
-//     "houseAddress": "qwertyui",
-//     "ownerId": 3,
-//     "renterName": "Abul",
-//     "renterPhone": "08456789667",
-//     "renterEmail": "renter2@gmail.com",
-//     "renterId": 4
-//   },
-//   "payments": [
-//     {
-//       "id": 4,
-//       "uuid": "6204afc3-1ac3-4085-be81-5c05862e346b",
-//       "flat_id": 6,
-//       "renter_id": 4,
-//       "house_id": 1,
-//       "amount": "24000.00",
-//       "due_date": "2026-02-11T18:00:00.000Z",
-//       "paid_date": null,
-//       "paid_amount": null,
-//       "payment_method": null,
-//       "transaction_id": null,
-//       "status": "pending",
-//       "late_fee_amount": "0.00",
-//       "notes": null,
-//       "created_by": null,
-//       "created_at": "2025-12-28T19:08:16.000Z",
-//       "updated_at": "2025-12-28T19:08:16.000Z"
-//     }
-//   ],
-//   "stats": {
-//     "totalDue": "24000.00",
-//     "totalPaid": null,
-//     "totalLateFees": "0.00",
-//     "pendingCount": 1,
-//     "overdueCount": 0
-//   }
-// }
 
   const flat = flatData?.data?.flat || {};
   const renter = {

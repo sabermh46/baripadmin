@@ -127,6 +127,8 @@ const AppContent = () => {
     const dispatch = useAppDispatch();
     const { updateAvailable, deferredPrompt: isPromptAvailable } = useAppSelector(state => state.ui);
     const { user } = useAppSelector(state => state.auth);
+    console.log(user);
+    
 
     const { 
         isSupported, 

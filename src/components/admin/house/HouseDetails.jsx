@@ -1,5 +1,5 @@
 // src/components/house/HouseDetails.jsx
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import {
   Home, Users, MapPin, Calendar, Edit, Trash2, ArrowLeft,
   Layers, Building, Phone, Mail, AlertCircle, CheckCircle,
@@ -43,22 +43,7 @@ const HouseDetails = () => {
 
   if (error || !house) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <AlertCircle className="w-6 h-6 text-red-600" />
-            <h3 className="text-lg font-medium text-red-800">Property Not Found</h3>
-          </div>
-          <p className="text-red-700 mb-4">The property you're looking for doesn't exist or you don't have permission to view it.</p>
-          <button
-            onClick={() => navigate('/houses')}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Properties
-          </button>
-        </div>
-      </div>
+      <Navigate to="/houses" replace />
     );
   }
 
@@ -127,8 +112,8 @@ const HouseDetails = () => {
         {/* Left Column - Property Info */}
         <div className="lg:col-span-2 space-y-6">
           {/* Property Overview */}
-          <div className="bg-surface border border-surface rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+          <div className="bg-surface border border-black/10 shadow rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-primary mb-4 flex items-center gap-2">
               <Building className="w-5 h-5" />
               Property Overview
             </h2>
@@ -142,10 +127,6 @@ const HouseDetails = () => {
                   <p className="text-sm text-subdued">Location Details</p>
                   <p className="font-medium text-text">{house.metadata?.locationDetails || 'Not specified'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-subdued">Property ID</p>
-                  <p className="font-medium text-text font-mono text-sm">{house.uuid}</p>
-                </div>
               </div>
               <div className="space-y-3">
                 <div>
@@ -155,7 +136,8 @@ const HouseDetails = () => {
                     {house.flatCount}
                   </p>
                 </div>
-                <div>
+                <div className="flex text-sm gap-4">
+                  <div className='flex-1'>
                   <p className="text-sm text-subdued">Created</p>
                   <p className="font-medium text-text flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
@@ -163,7 +145,7 @@ const HouseDetails = () => {
                     {new Date(house.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                <div>
+                <div className='flex-1'>
                   <p className="text-sm text-subdued">Last Updated</p>
                   <p className="font-medium text-text flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
@@ -171,22 +153,52 @@ const HouseDetails = () => {
                     {new Date(house.updatedAt || house.createdAt).toLocaleDateString()}
                   </p>
                 </div>
+                </div>
               </div>
             </div>
           </div>
 
+          <div className="flex flex-wrap gap-4">
+              <Btn
+                onClick={() => navigate(`/houses/${id}/flats`)}
+                className="flex-1"
+                type='primary'
+              >
+                Flats
+                <ChevronRight className="w-4 h-4 text-white" />
+              </Btn>
+              <Btn
+                onClick={() => navigate(`/houses/${id}/caretakers`)}
+                className="flex-1"
+                type='primary'
+              >
+                Care Takers
+                <ChevronRight className="w-4 h-4 text-white" />
+              </Btn>
+              <Btn
+                onClick={() => navigate(`/houses/${id}/notices`)}
+                className="flex-1"
+                type='primary'
+              >
+                Notices
+                <ChevronRight className="w-4 h-4 text-white" />
+              </Btn>
+            </div>
+
+            
+
           {/* Description */}
           {house.metadata?.description && (
-            <div className="bg-surface border border-surface rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-text mb-4">Description</h2>
+            <div className="bg-surface border border-black/10 shadow rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-text mb-4 text-primary">Description</h2>
               <p className="text-text leading-relaxed">{house.metadata.description}</p>
             </div>
           )}
 
           {/* Amenities */}
           {house.metadata?.amenities?.length > 0 && (
-            <div className="bg-surface border border-surface rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-text mb-4">Amenities</h2>
+            <div className="bg-surface border border-black/10 shadow rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-text mb-4 text-primary">Amenities</h2>
               <div className="flex flex-wrap gap-2">
                 {house.metadata.amenities.map((amenity, index) => (
                   <span
@@ -204,8 +216,8 @@ const HouseDetails = () => {
         {/* Right Column - Owner & Stats */}
         <div className="space-y-6">
           {/* Owner Info */}
-          <div className="bg-surface border border-surface rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+          <div className="bg-surface border border-black/10 shadow rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-primary mb-4 flex items-center gap-2">
               <Users className="w-5 h-5" />
               Property Owner
             </h2>
@@ -242,8 +254,8 @@ const HouseDetails = () => {
           </div>
 
           {/* Statistics */}
-          <div className="bg-surface border border-surface rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-text mb-4">Statistics</h2>
+          <div className="bg-surface border border-black/10 shadow rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-primary mb-4">Statistics</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -272,67 +284,6 @@ const HouseDetails = () => {
                 </div>
                 <span className="font-bold text-text">{house?.notices?.length || 0}</span>
               </div>
-              {/* <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg">
-                    <DollarSign className="w-4 h-4" />
-                  </div>
-                  <span className="text-text">Rent Collected</span>
-                </div>
-                <span className="font-bold text-text">$0</span>
-              </div> */}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-surface border border-surface rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-text mb-4">Quick Actions</h2>
-            <div className="space-y-2">
-              <Btn
-                onClick={() => navigate(`/houses/${id}/flats`)}
-                className="w-full px-4 py-3 text-left rounded-lg hover:bg-surface/50 transition-colors flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text">Manage Flats</p>
-                    <p className="text-xs text-subdued">View and edit flats</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-subdued" />
-              </Btn>
-              <Btn
-                onClick={() => navigate(`/houses/${id}/caretakers`)}
-                className="w-full px-4 py-3 text-left rounded-lg hover:bg-surface/50 transition-colors flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 text-green-600 rounded-lg">
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text">Manage Caretakers</p>
-                    <p className="text-xs text-subdued">Assign and manage caretakers</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-subdued" />
-              </Btn>
-              <Btn
-                onClick={() => navigate(`/houses/${id}/notices`)}
-                className="w-full px-4 py-3 text-left rounded-lg hover:bg-surface/50 transition-colors flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
-                    <AlertCircle className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text">View Notices</p>
-                    <p className="text-xs text-subdued">Check property notices</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-subdued" />
-              </Btn>
             </div>
           </div>
         </div>

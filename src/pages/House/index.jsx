@@ -4,18 +4,13 @@ import AllHouses from '../Admin/house/AllHouses';
 import HouseOwnerHouses from '../../components/houseowner/HouseOwnerHouses';
 
 const HousesPage = () => {
-  const { user, isWebOwner, isHouseOwner, isCaretaker, isStaff } = useAuth();
+  const { isWebOwner, isHouseOwner, isCaretaker, isStaff } = useAuth();
   const [houses, setHouses] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   return (
     <>
-      {
-        isHouseOwner && <HouseOwnerHouses />
-      }
-      {
-        (isWebOwner || isStaff) && <AllHouses />
-      }
+      <AllHouses />
     </>
   );
 };

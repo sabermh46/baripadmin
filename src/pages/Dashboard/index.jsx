@@ -4,21 +4,15 @@ import SystemDashboard from '../../components/dashboard/SystemDashboard';
 import HouseOwnerComponent from '../../components/houseowner/Dashboard';
 
 const Dashboard = () => {
-  const { user, isWebOwner, isHouseOwner, isCaretaker, isStaff } = useAuth();
+  const { isWebOwner, isHouseOwner, isCaretaker, isStaff } = useAuth();
 
   return (
     <>
       {
-        isWebOwner && <SystemDashboard />
+        (isWebOwner || isStaff) && <SystemDashboard />
       }
       {
-        isHouseOwner && <HouseOwnerComponent />
-      }
-      {
-        isCaretaker && <h2>Caretaker Dashboard - Welcome, {user?.name}!</h2>
-      }
-      {
-        isStaff && <SystemDashboard />
+        (isHouseOwner || isCaretaker) && <HouseOwnerComponent />
       }
     </>
   );
