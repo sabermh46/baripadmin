@@ -53,10 +53,10 @@ export const flatApi = baseApi.injectEndpoints({
 
     // Assign renter to flat
     assignRenter: builder.mutation({
-      query: ({ flatId, renterId }) => ({
+      query: ({ flatId, renterId, amenities }) => ({
         url: `/flats/${flatId}/renter`,
         method: 'POST',
-        data: { renter_id: renterId },
+        data: { renter_id: renterId, amenities },
       }),
       invalidatesTags: ['Flat'],
     }),

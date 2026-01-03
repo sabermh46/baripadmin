@@ -44,6 +44,9 @@ const RentPaymentForm = ({ open, onClose, flat, renter }) => {
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
+
+  console.log(flat);
+  
   
   const {
     register,

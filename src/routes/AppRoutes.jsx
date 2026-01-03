@@ -25,6 +25,10 @@ import HouseEditForm from '../components/admin/house/HouseEditForm';
 import FlatList from '../components/flats/FlatList';
 import FlatDetails from '../components/flats/FlatDetails';
 import RenterList from '../components/renters/RenterList';
+import testComp from '../components/admin/house/testComp';
+import testComp2 from '../components/admin/house/testComp2';
+import CareTakerPage from '../pages/Caretaker';
+import CaretakerDetails from '../components/caretaker/CaretakerDetails';
 
 
 
@@ -181,6 +185,17 @@ const AppRoutes = () => {
             <SignupPage />
           </PublicRoute>
         } />
+        <Route path='/test' element={
+          <PublicRoute>
+            <testComp/>
+          </PublicRoute>
+        } />
+
+        <Route path='/test2' element={
+          <PublicRoute>
+            <testComp2/>
+          </PublicRoute>
+        } />
         <Route path="/auth/success" element={<AuthSuccess />} />
 
 
@@ -249,6 +264,18 @@ const AppRoutes = () => {
             <Route path="/houses/create" element={
               <ProtectedRoute roles={['web_owner', 'staff']}>
                 <CreateHouseForm />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/caretakers" element={
+              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner']}>
+                <CareTakerPage />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/caretakers/:id/details" element={
+              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner']}>
+                <CaretakerDetails />
               </ProtectedRoute>
             } />
 

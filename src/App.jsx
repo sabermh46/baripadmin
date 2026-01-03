@@ -172,23 +172,78 @@ const AppContent = () => {
     }, [dispatch]);
 
     // Service worker update
-    useEffect(() => {
-        // ... (Service worker update useEffect remains the same)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').then(registration => {
-                registration.addEventListener('updatefound', ()=> {
-                    const newWorker = registration.installing;
-                    if(newWorker) {
-                        newWorker.addEventListener('statechange', ()=> {
-                            if(newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                dispatch(setUpdateAvailable(true));
-                            }
-                        })
-                    }
-                })
-            })
+useEffect(() => {
+  if ('serviceWorker' in navigator) {
+    let registrationRef;
+    
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        registrationRef = registration;
+        
+        // Clear update flag if no waiting worker exists
+        if (!registration.waiting) {
+          dispatch(setUpdateAvailable(false));
         }
-    }, [dispatch])
+        
+        // Check immediately for waiting worker
+        if (registration.waiting) {
+          dispatch(setUpdateAvailable(true));
+        }
+        
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              // Only show update when new worker is installed AND there's an active controller
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                dispatch(setUpdateAvailable(true));
+              }
+              
+              // Clear flag when new worker becomes active
+              if (newWorker.state === 'activated') {
+                dispatch(setUpdateAvailable(false));
+              }
+            });
+          }
+        });
+      })
+      .catch(error => {
+        console.error('Service Worker registration failed:', error);
+      });
+
+    // Listen for controller changes
+    const handleControllerChange = () => {
+      console.log('New service worker has taken control');
+      // Clear the update flag when new controller takes over
+      dispatch(setUpdateAvailable(false));
+    };
+    
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    
+    return () => {
+      if (navigator.serviceWorker) {
+        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      }
+    };
+  }
+}, [dispatch]);
+
+useEffect(() => {
+  if ('serviceWorker' in navigator) {
+    const handleUpdateCompleted = (event) => {
+      if (event.data && event.data.type === 'UPDATE_COMPLETED') {
+        console.log('Update completed, clearing update flag');
+        dispatch(setUpdateAvailable(false));
+      }
+    };
+    
+    navigator.serviceWorker.addEventListener('message', handleUpdateCompleted);
+    
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleUpdateCompleted);
+    };
+  }
+}, [dispatch]);
 
     // In AppContent component - FIXED VERSION
     useEffect(() => {
@@ -361,6 +416,34 @@ const AppContent = () => {
         window.history.scrollRestoration = 'manual'
     }, []);
 
+    // Add this function in your AppContent component
+        const handleUpdateClick = async () => {
+        // Clear the update flag immediately (before reload)
+        dispatch(setUpdateAvailable(false));
+        
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.getRegistration();
+            
+            if (registration && registration.waiting) {
+            // Send message to skip waiting
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            
+            // Wait for controller change
+            await new Promise(resolve => {
+                navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
+            });
+            
+            // Force persist the state before reload
+            await persistor.flush();
+            
+            window.location.reload();
+            } else {
+            // If no waiting worker, just reload
+            window.location.reload();
+            }
+        }
+        };
+
 
 
     console.log(user, isSupported, permission, isSubscribed);
@@ -379,10 +462,10 @@ const AppContent = () => {
             
             <ToastContainer position="bottom-center" autoClose={5000} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
             {updateAvailable && (
-                <div className="fixed bottom-4 left-4 right-4 bg-yellow-500 text-white p-4 rounded-lg shadow-lg z-50 flex justify-between items-center">
+                <div className="fixed bottom-4 max-w-[500px] left-4 right-4 bg-yellow-500 text-white p-4 rounded-lg shadow-lg z-50 flex justify-between items-center">
                     <p className="font-semibold">New version available!</p>
                     <button 
-                        onClick={() => window.location.reload()}
+                        onClick={handleUpdateClick}
                         className="bg-white text-yellow-600 px-4 py-2 rounded font-bold hover:bg-gray-100"
                     >
                         Update Now

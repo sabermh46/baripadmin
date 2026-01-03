@@ -1,13 +1,13 @@
-// src/components/house/HouseEditForm.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Home, Save, X, Building, MapPin, Layers,
-  AlertCircle, CheckCircle, Loader2, ArrowLeft
+  AlertCircle, CheckCircle, Loader2, ArrowLeft, DollarSign
 } from 'lucide-react';
 import { useGetHouseDetailsQuery, useUpdateHouseMutation } from '../../../store/api/houseApi';
 import { useAuth } from '../../../hooks';
-import { is } from 'zod/v4/locales';
+import AmenitiesInput from '../../common/AmenitiesInput';
+import { toast } from 'react-toastify';
 
 const HouseEditForm = () => {
   const { id } = useParams();
@@ -23,27 +23,70 @@ const HouseEditForm = () => {
     name: '',
     metadata: {
       description: '',
-      amenities: [],
+      amenities: [], // Changed to array of objects
       locationDetails: '',
     },
     active: false,
   });
 
-  const [amenityInput, setAmenityInput] = useState('');
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (data?.data) {
       const house = data.data;
+      console.log('House data received:', house); // Debug log
+      // Handle both old and new metadata formats
+      let metadata = {};
+      
+      // If metadata is a string, parse it
+      if (typeof house.metadata === 'string') {
+        try {
+          metadata = JSON.parse(house.metadata);
+          console.log('Parsed metadata:', metadata); // Debug log
+        } catch (e) {
+          console.error('Failed to parse metadata:', e);
+          metadata = {};
+        }
+      } else if (house.metadata && typeof house.metadata === 'object') {
+        metadata = { ...house.metadata };
+      }
+      
+      // Convert old amenities format (array of strings) to new format (array of objects)
+      let amenities = [];
+      if (metadata.amenities && Array.isArray(metadata.amenities)) {
+        amenities = metadata.amenities.map(amenity => {
+          if (typeof amenity === 'string') {
+            // Convert old string format to object format
+            return { name: amenity, charge: 0 };
+          } else if (amenity && typeof amenity === 'object') {
+            // Ensure charge is a number
+            return {
+              name: amenity.name || '',
+              charge: amenity.charge ? parseFloat(amenity.charge) : 0
+            };
+          }
+          return { name: '', charge: 0 };
+        });
+      }
+      
+      console.log('Processed amenities:', amenities); // Debug log
+      
       setFormData({
         address: house.address || '',
         flatCount: house.flatCount || 1,
         name: house.name || '',
         metadata: {
-          description: house.metadata?.description || '',
-          amenities: house.metadata?.amenities || [],
-          locationDetails: house.metadata?.locationDetails || '',
+          description: metadata.description || '',
+          amenities: amenities,
+          locationDetails: metadata.locationDetails || '',
+          // Preserve other metadata fields
+          ...Object.keys(metadata)
+            .filter(key => !['description', 'amenities', 'locationDetails'].includes(key))
+            .reduce((obj, key) => {
+              obj[key] = metadata[key];
+              return obj;
+            }, {})
         },
         active: house.active || false,
       });
@@ -54,6 +97,17 @@ const HouseEditForm = () => {
     const newErrors = {};
     if (!formData.address.trim()) newErrors.address = 'Address is required';
     if (formData.flatCount < 1) newErrors.flatCount = 'Must have at least 1 flat';
+    
+    // Validate amenities
+    if (formData.metadata.amenities && Array.isArray(formData.metadata.amenities)) {
+      const invalidAmenities = formData.metadata.amenities.filter(a => 
+        !a.name || !a.name.trim() || a.charge === undefined || a.charge === null
+      );
+      if (invalidAmenities.length > 0) {
+        newErrors.amenities = 'All amenities must have a name and charge';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -84,22 +138,16 @@ const HouseEditForm = () => {
     }
   };
 
-  const handleAddAmenity = () => {
-    const val = amenityInput.trim();
-    if (val && !formData.metadata.amenities.includes(val)) {
-      setFormData(prev => ({
-        ...prev,
-        metadata: { ...prev.metadata, amenities: [...prev.metadata.amenities, val] }
-      }));
-      setAmenityInput('');
-    }
-  };
-
-  const handleRemoveAmenity = (index) => {
+  const handleAmenitiesChange = (amenities) => {
+    console.log('Amenities changed:', amenities); // Debug log
     setFormData(prev => ({
       ...prev,
-      metadata: { ...prev.metadata, amenities: prev.metadata.amenities.filter((_, i) => i !== index) }
+      metadata: { ...prev.metadata, amenities }
     }));
+    
+    if (errors.amenities) {
+      setErrors(prev => ({ ...prev, amenities: undefined }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -109,6 +157,7 @@ const HouseEditForm = () => {
     try {
       const result = await updateHouse({ id, ...formData }).unwrap();
       if (result.success) {
+        toast.success('Property updated successfully!');
         setSuccess(true);
         setTimeout(() => {
           navigate(`/houses/${id}`);
@@ -118,6 +167,12 @@ const HouseEditForm = () => {
       console.error('Update error:', err);
     }
   };
+
+  // Calculate total amenities charges
+  const totalAmenitiesCharge = formData.metadata.amenities?.reduce(
+    (sum, amenity) => sum + (parseFloat(amenity.charge) || 0), 
+    0
+  ) || 0;
 
   if (isLoading) {
     return (
@@ -174,27 +229,28 @@ const HouseEditForm = () => {
         )}
 
         {/* House 'active' Field with two radio */}
-
         <div className='space-y-2'>
             <label className="text-sm font-semibold text-text">Property Active</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input name='active'
-                    type="radio"
-                    value="true"
-                    checked={formData.active === true}
-                    onChange={handleChange}
-                    className="w-4 h-4 text-primary"
+                <input 
+                  name='active'
+                  type="radio"
+                  value="true"
+                  checked={formData.active === true}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-primary"
                 />
                 <span className="text-text">Active</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                <input name='active'
-                    type="radio"
-                    value="false"
-                    checked={formData.active === false}
-                    onChange={handleChange}
-                    className="w-4 h-4 text-primary"
+                <input 
+                  name='active'
+                  type="radio"
+                  value="false"
+                  checked={formData.active === false}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-primary"
                 />
                 <span className="text-text">Inactive</span>
               </label>
@@ -202,16 +258,16 @@ const HouseEditForm = () => {
         </div>
 
         <div className="space-y-2">
-            <label className="text-sm font-semibold text-text">House Name</label>
+            <label className="text-sm font-semibold text-text">House Name *</label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
               className="w-full px-4 py-3 bg-background border border-surface rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              placeholder="e.g., Near City Bank"
+              placeholder="e.g., Proshanti Villa"
             />
-          </div>
+        </div>
 
         {/* Address Field */}
         <div className="space-y-2">
@@ -245,11 +301,11 @@ const HouseEditForm = () => {
               value={formData.metadata.locationDetails}
               onChange={handleChange}
               className="w-full px-4 py-3 bg-background border border-surface rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              placeholder="e.g., Near City Bank"
+              placeholder="e.g., Near City Bank, Opposite Park"
             />
           </div>
           <div className="space-y-2">
-            <label className={`text-sm font-semibold flex items-center gap-2 ${(isCaretaker || isWebOwner) ? 'text-gray-400' : 'text-text'}`}>
+            <label className={`text-sm font-semibold flex items-center gap-2 ${(isCaretaker || isHouseOwner) ? 'text-gray-400' : 'text-text'}`}>
               <Layers className="w-4 h-4" /> Max Flat Limit *
             </label>
             <input
@@ -284,51 +340,38 @@ const HouseEditForm = () => {
           />
         </div>
 
-        {/* Amenities */}
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-text">Amenities</label>
-          <div className="flex flex-wrap justify-end gap-2">
-            <input
-              type="text"
-              value={amenityInput}
-              onChange={(e) => setAmenityInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddAmenity())}
-              className="flex-1 px-4 py-3 bg-background border border-surface rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              placeholder="Generator, CCTV, Lift, etc."
-            />
-            <button
-              type="button"
-              onClick={handleAddAmenity}
-              disabled={!amenityInput.trim()}
-              className="px-4 py-3 bg-text text-white rounded-md hover:bg-text/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              Add
-            </button>
+        {/* Amenities Section - UPDATED */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-text flex items-center gap-2">
+              <DollarSign className="w-4 h-4" /> Amenities / Service Charges
+            </label>
+            {totalAmenitiesCharge > 0 && (
+              <div className="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">
+                Total: ${totalAmenitiesCharge.toFixed(2)}
+              </div>
+            )}
           </div>
           
-          {formData.metadata.amenities.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {formData.metadata.amenities.map((amenity, index) => (
-                <div
-                  key={index}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm font-medium"
-                >
-                  <span>{amenity}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAmenity(index)}
-                    className="text-primary hover:text-primary/70 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
+          <AmenitiesInput
+            value={formData.metadata.amenities}
+            onChange={handleAmenitiesChange}
+          />
+          
+          {errors.amenities && (
+            <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
+              <X className="w-3 h-3" /> {errors.amenities}
+            </p>
           )}
+          
+          <div className="text-sm text-subdued bg-gray-50 p-3 rounded-md">
+            <p className="font-medium mb-1">Note:</p>
+            <p>These charges will be added to the base rent for flats in this property.</p>
+          </div>
         </div>
 
         {/* Active Status (Web Owner only) */}
-        {user?.isWebOwner && (
+        {isWebOwner && (
           <div className="space-y-2">
             <label className="text-sm font-semibold text-text">Status</label>
             <div className="flex gap-4">

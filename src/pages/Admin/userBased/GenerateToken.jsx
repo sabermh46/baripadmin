@@ -6,18 +6,27 @@ import Btn from '../../../components/common/Button';
 import Modal from '../../../components/common/Modal';
 import Table from '../../../components/common/Table';
 import ConfirmationModal from '../../../components/common/ConfirmationModal';
+import { useAuth } from '../../../hooks';
+import MetadataInput from '../../../components/common/MetaDataInput';
+import { useGetManagedOwnersQuery } from '../../../store/api/houseApi';
 
 const GenerateToken = () => {
+  const { isHouseOwner, isStaff, isWebOwner, user } = useAuth();
   const [generateToken, { isLoading }] = useGenerateTokenMutation();
   const [deleteToken, { isLoading: isDeleting }] = useDeleteTokenMutation();
   const { data: tokensResponse, isLoading: isTokensLoading, refetch } = useGetRegistrationTokensQuery();
-  
+  const { data: managedOwners, isLoading: ownersLoading } = useGetManagedOwnersQuery(undefined, {
+    skip: isHouseOwner,
+  });
+
   const [formData, setFormData] = useState({
     email: '',
     roleSlug: 'house_owner',
     expiresInHours: 24,
-    metadata: '{}'
+    metadata: {}
   });
+
+  
   
   const [validationErrors, setValidationErrors] = useState({});
   const [generatedToken, setGeneratedToken] = useState(null);
@@ -45,6 +54,51 @@ const GenerateToken = () => {
     setModalIsOpen(true);
   };
 
+  const getManagedOwnersOptions = () => {
+    if(!managedOwners?.data) return [];
+
+    return managedOwners.data.map(owner => ({
+      label: `${owner.name} (${owner.email})`,
+      value: owner.id
+    }))
+  }
+
+  const getFixedFields = () => {
+    const fields = [];
+
+    if(formData.roleSlug === 'caretaker') {
+      if(!isHouseOwner){
+        fields.push({
+          label: 'House Owner',
+          key: 'house_owner_id',
+          type: 'select',
+          required: true,
+          options: getManagedOwnersOptions(),
+          description: 'Select the house owner for whom this caretaker will work'
+        })
+      } else if(isHouseOwner){ {
+        fields.push({
+          label: 'House Owner',
+          key: 'house_owner_id',
+          type: 'text',
+          required: true,
+          defaultValue: user?.id?.toString(),
+          disabled: false,
+          description: 'You are the house owner for this caretaker'
+      })
+    }
+
+      
+
+      }
+    }
+
+    return fields;
+  }
+
+  console.log(getFixedFields());
+  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -59,6 +113,12 @@ const GenerateToken = () => {
       }));
     }
   };
+  const handleMetadataChange = (metadata) => {
+    setFormData(prev => ({
+      ...prev,
+      metadata
+    }));
+  }
 
   const validateForm = () => {
     const errors = {};
@@ -81,13 +141,13 @@ const GenerateToken = () => {
     if (isNaN(hours) || hours < 1 || hours > 720) {
       errors.expiresInHours = 'Please enter a value between 1 and 720 hours';
     }
-    
-    // Metadata validation (must be valid JSON)
-    try {
-      JSON.parse(formData.metadata);
-    } catch (error) {
-      errors.metadata = 'Metadata must be valid JSON';
+
+    if (formData.roleSlug === 'caretaker') {
+      if (!formData.metadata.house_owner_id) {
+        errors.metadata = 'house_owner_id is required for caretaker tokens';
+      }
     }
+    
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -105,7 +165,7 @@ const GenerateToken = () => {
       const requestData = {
         ...formData,
         expiresInHours: parseInt(formData.expiresInHours),
-        metadata: JSON.parse(formData.metadata)
+        metadata: formData.metadata
       };
       
       const response = await generateToken(requestData).unwrap();
@@ -416,7 +476,7 @@ const GenerateToken = () => {
           </div>
           
           {/* Metadata Field */}
-          <div>
+          {/* <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">
                 Metadata (JSON) *
@@ -446,6 +506,20 @@ const GenerateToken = () => {
             <p className="text-gray-500 text-sm mt-2">
               Optional JSON metadata that will be stored with the token
             </p>
+          </div> */}
+
+          <div>
+            <MetadataInput
+              value={formData?.metadata}
+              onChange={handleMetadataChange}
+              label="Metadata"
+              fixedFields={getFixedFields()}
+              description="Add metadata for this token"
+              hideFixedFields={formData.roleSlug !== 'caretaker'}
+            />
+            {validationErrors.metadata && (
+              <p className="text-red-500 text-sm mt-2">{validationErrors.metadata}</p>
+            )}
           </div>
           
           {/* Submit Button */}

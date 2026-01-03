@@ -1,16 +1,17 @@
-// components/flats/AssignRenterModal.jsx
-import React, { useState } from 'react';
-import { Search, X, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, X, User, DollarSign, Plus, Trash2 } from 'lucide-react';
 import { useAssignRenterMutation } from '../../store/api/flatApi';
-import { useGetAvailableRentersQuery } from '../../store/api/renterApi'; // Fixed import
+import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import { format } from 'date-fns';
-import { toast } from 'react-toastify'; // Add toast
+import { toast } from 'react-toastify';
+import Btn from '../common/Button';
 
-const AssignRenterModal = ({ open, onClose, flat }) => {
+const AssignRenterModal = ({ open, onClose, flat, houseinfo = null }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRenter, setSelectedRenter] = useState(null);
+  const [amenities, setAmenities] = useState([]);
+  const [showAmenitiesEditor, setShowAmenitiesEditor] = useState(false);
 
-  // Fixed: Use the correct query and pass params as object
   const { 
     data: response, 
     isLoading, 
@@ -26,12 +27,42 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
     }
   );
 
-  // Extract renters from response - handle different response structures
+  // Extract renters from response
   const availableRenters = response?.data || response || [];
 
   const [assignRenter, { isLoading: isAssigning }] = useAssignRenterMutation();
 
-  // Filter renters client-side if backend doesn't support search param
+  // Initialize amenities from house metadata
+  useEffect(() => {
+    if (houseinfo?.metadata && open) {
+      let houseMetadata = {};
+      try {
+        houseMetadata = typeof houseinfo.metadata === 'string'
+          ? JSON.parse(houseinfo.metadata)
+          : houseinfo.metadata || {};
+      } catch (e) {
+        console.error("Error parsing house metadata:", e);
+      }
+      
+      const houseAmenities = houseMetadata.amenities || [];
+      if (Array.isArray(houseAmenities) && houseAmenities.length > 0) {
+        // Convert to array of objects if needed
+        const formattedAmenities = houseAmenities.map(amenity => {
+          if (typeof amenity === 'string') {
+            return { name: amenity, charge: 0 };
+          }
+          return {
+            name: amenity.name || '',
+            charge: parseFloat(amenity.charge) || 0
+          };
+        });
+        setAmenities(formattedAmenities);
+        setShowAmenitiesEditor(true);
+      }
+    }
+  }, [houseinfo, open]);
+
+  // Filter renters client-side
   const filteredRenters = availableRenters.filter(renter =>
     renter.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     renter.phone?.includes(searchTerm) ||
@@ -56,19 +87,60 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
     return dueDate;
   };
 
+  // Calculate totals
+  const baseRent = parseFloat(flat?.rent_amount) || 0;
+  const totalAmenitiesCharge = amenities.reduce(
+    (sum, amenity) => sum + (parseFloat(amenity.charge) || 0), 
+    0
+  );
+  const totalRent = baseRent + totalAmenitiesCharge;
+
+  // Handle amenities changes
+  const handleAddAmenity = () => {
+    setAmenities([...amenities, { name: '', charge: 0 }]);
+  };
+
+  const handleRemoveAmenity = (index) => {
+    const updated = amenities.filter((_, i) => i !== index);
+    setAmenities(updated);
+  };
+
+  const handleAmenityChange = (index, field, value) => {
+    const updated = [...amenities];
+    if (field === 'charge') {
+      updated[index][field] = parseFloat(value) || 0;
+    } else {
+      updated[index][field] = value;
+    }
+    setAmenities(updated);
+  };
+
   const handleAssign = async () => {
     if (!selectedRenter || !flat) return;
     
+    // Validate amenities
+    const invalidAmenities = amenities.filter(a => 
+      !a.name || !a.name.trim() || a.charge === undefined || a.charge === null
+    );
+    
+    if (invalidAmenities.length > 0) {
+      toast.error('Please provide valid name and charge for all amenities');
+      return;
+    }
+
     try {
       await assignRenter({
         flatId: flat.id,
-        renterId: selectedRenter.id
+        renterId: selectedRenter.id,
+        amenities: amenities.filter(a => a.name.trim()) // Only send amenities with names
       }).unwrap();
       
-      toast.success(`Renter "${selectedRenter.name}" assigned to flat successfully`);
+      toast.success(`Renter "${selectedRenter.name}" assigned successfully with amenities charges`);
       onClose();
       setSelectedRenter(null);
       setSearchTerm('');
+      setAmenities([]);
+      setShowAmenitiesEditor(false);
     } catch (error) {
       console.error('Failed to assign renter:', error);
       toast.error(`Failed to assign renter: ${error?.data?.error || error.message}`);
@@ -86,7 +158,7 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-surface border-b border-subdued/20 p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-text">Assign Renter to Flat</h2>
@@ -100,7 +172,7 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Flat Details */}
+          {/* Flat Details & Rent Summary */}
           <div className="bg-subdued/5 rounded-lg p-4">
             <div className="flex justify-between items-start mb-3">
               <h3 className="font-medium text-text">Flat Details</h3>
@@ -112,14 +184,14 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
                 Refresh List
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div>
                 <p className="text-sm text-subdued">Name</p>
                 <p className="font-medium">{flat.number ? `Flat ${flat.number}` : flat.name}</p>
               </div>
               <div>
-                <p className="text-sm text-subdued">Monthly Rent</p>
-                <p className="font-bold">${flat.rent_amount?.toLocaleString()}</p>
+                <p className="text-sm text-subdued">Base Rent</p>
+                <p className="font-bold">${baseRent.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-sm text-subdued">Rent Due Day</p>
@@ -128,6 +200,25 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
               <div>
                 <p className="text-sm text-subdued">Late Fee</p>
                 <p>{flat.late_fee_percentage || 5}%</p>
+              </div>
+            </div>
+            
+            {/* Rent Summary */}
+            <div className="border-t pt-4">
+              <h4 className="font-medium text-text mb-2">Rent Breakdown</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-subdued">Base Rent:</span>
+                  <span className="font-medium">${baseRent.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-subdued">Amenities Charge:</span>
+                  <span className="font-medium">${totalAmenitiesCharge.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-bold text-text">Total Rent:</span>
+                  <span className="font-bold text-primary text-lg">${totalRent.toLocaleString()}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -178,10 +269,13 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
               filteredRenters.map((renter) => (
                 <div
                   key={renter.id}
-                  onClick={() => setSelectedRenter(renter)}
+                  onClick={() => {
+                    setSelectedRenter(renter);
+                    setShowAmenitiesEditor(true);
+                  }}
                   className={`p-4 rounded-lg border cursor-pointer transition-all ${
                     selectedRenter?.id === renter.id
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      ? 'border-primary bg-primary/5'
                       : 'border-subdued/20 hover:bg-subdued/5 hover:border-subdued/40'
                   }`}
                 >
@@ -222,32 +316,110 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
             )}
           </div>
 
+          {/* Amenities Editor */}
+          {selectedRenter && showAmenitiesEditor && (
+            <div className="border rounded-lg p-4 animate-in fade-in">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-medium text-text flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" /> Service Charges & Amenities
+                </h4>
+                <Btn
+                  onClick={handleAddAmenity}
+                  type="outline"
+                >
+                  <Plus className="w-4 h-4" /> Add Custom Charge
+                </Btn>
+              </div>
+              
+              <div className="space-y-3">
+                {amenities.map((amenity, index) => (
+                  <div key={index} className="flex gap-3 items-center">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={amenity.name}
+                        onChange={(e) => handleAmenityChange(index, 'name', e.target.value)}
+                        className="w-full px-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
+                        placeholder="Amenity name"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued">$</span>
+                        <input
+                          type="number"
+                          value={amenity.charge}
+                          onChange={(e) => handleAmenityChange(index, 'charge', e.target.value)}
+                          className="w-full pl-8 pr-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAmenity(index)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                
+                {amenities.length === 0 && (
+                  <div className="text-center py-4 text-subdued">
+                    No amenities added. Add house amenities or custom charges.
+                  </div>
+                )}
+                
+                {/* Total Summary */}
+                {amenities.length > 0 && (
+                  <div className="pt-4 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-subdued">Amenities Total:</span>
+                      <span className="font-bold">${totalAmenitiesCharge.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-sm text-subdued mt-4">
+                <p className="mb-1">Note: These charges will be added to the base rent for this flat.</p>
+                <p>You can modify the default house amenities or add custom charges.</p>
+              </div>
+            </div>
+          )}
+
           {/* Selected Renter Info */}
           {selectedRenter && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 animate-in fade-in">
+            <div className="bg-orange-50 border border-primary-200 rounded-lg p-4 animate-in fade-in">
               <div className="flex justify-between items-start mb-2">
-                <h4 className="font-medium text-blue-800">Selected Renter</h4>
+                <h4 className="font-medium text-primary-800">Selected Renter</h4>
                 <button
-                  onClick={() => setSelectedRenter(null)}
-                  className="text-blue-600 hover:text-blue-800"
+                  onClick={() => {
+                    setSelectedRenter(null);
+                    setShowAmenitiesEditor(false);
+                  }}
+                  className="text-primary-600 hover:text-primary-800"
                 >
                   <X size={16} />
                 </button>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="text-blue-600" size={24} />
+                <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="text-primary-600" size={24} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-blue-900 truncate">{selectedRenter.name}</p>
+                  <p className="font-bold text-primary-900 truncate">{selectedRenter.name}</p>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {selectedRenter.phone && (
-                      <span className="text-sm text-blue-700">
+                      <span className="text-sm text-primary-700">
                         📱 {selectedRenter.phone}
                       </span>
                     )}
                     {selectedRenter.email && (
-                      <span className="text-sm text-blue-700">
+                      <span className="text-sm text-primary-700">
                         ✉️ {selectedRenter.email}
                       </span>
                     )}
@@ -256,16 +428,27 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
               </div>
               
               {nextDueDate && (
-                <div className="mt-3 p-3 bg-white rounded border border-blue-100">
-                  <p className="text-sm text-blue-800">
+                <div className="mt-3 p-3 bg-white rounded border border-primary-100">
+                  <p className="text-sm text-primary-800">
                     First rent payment will be due on{' '}
                     <span className="font-bold">
                       {format(nextDueDate, 'dd MMM yyyy')}
                     </span>
                   </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    Amount: <span className="font-semibold">${flat.rent_amount?.toLocaleString()}</span>
-                  </p>
+                  <div className="space-y-1 mt-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Base Rent:</span>
+                      <span className="font-medium">${baseRent.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Amenities:</span>
+                      <span className="font-medium">${totalAmenitiesCharge.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-bold border-t pt-1">
+                      <span>Total Due:</span>
+                      <span className="text-primary">${totalRent.toLocaleString()}</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -291,7 +474,7 @@ const AssignRenterModal = ({ open, onClose, flat }) => {
                   Assigning...
                 </>
               ) : (
-                'Assign Renter'
+                `Assign Renter ($${totalRent.toLocaleString()})`
               )}
             </button>
           </div>

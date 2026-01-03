@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Plus, X, Save, User, Info, Loader2, Building, MapPin, Layers, CheckCircle } from 'lucide-react';
+import { Home, Plus, X, Save, User, Info, Loader2, Building, MapPin, Layers, CheckCircle, DollarSign } from 'lucide-react';
 import { useCreateHouseMutation, useGetManagedOwnersQuery } from '../../../store/api/houseApi';
 import { useAuth } from '../../../hooks';
 import Btn from '../../common/Button';
 import { toast } from 'react-toastify';
+import AmenitiesInput from '../../common/AmenitiesInput';
 
 const CreateHouseForm = ({ onSuccess, onCancel }) => {
   const { user, isWebOwner, isHouseOwner, isCaretaker, isStaff } = useAuth();
@@ -15,28 +16,21 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
     name: '',
     metadata: {
       description: '',
-      amenities: [],
+      amenities: [], // Changed to array of objects
       locationDetails: '',
+      // Keep other metadata fields as they are
     },
     active: false,
   });
 
-  const [amenityInput, setAmenityInput] = useState('');
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
 
-  // Use managed owners list only if user is staff
-  const { data: managedOwners, isLoading: ownersLoading } = useGetManagedOwnersQuery(undefined, {
-    
-  });
-  console.log('Managed Owners:', managedOwners);
+  const { data: managedOwners, isLoading: ownersLoading } = useGetManagedOwnersQuery(undefined, {});
 
   const [createHouse, { isLoading, error, reset }] = useCreateHouseMutation();
 
-
-
   useEffect(() => {
-    // If the logged-in user is a House Owner, auto-fill their own ID as the owner
     if (isHouseOwner && user?.id) {
       setFormData(prev => ({ ...prev, ownerId: user.id }));
     }
@@ -48,11 +42,21 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
     if (!formData.name.trim()) newErrors.name = 'House name is required';
     if (!formData.address.trim()) newErrors.address = 'Address is required';
     if (formData.flatCount < 1) newErrors.flatCount = 'Must have at least 1 flat';
-    console.log(newErrors);
     
-    Object.keys(newErrors).length > 0 && toast.error(`${
-        Object.values(newErrors).join(` \n `)
-    }`)
+    // Validate amenities (optional)
+    if (formData.metadata.amenities && Array.isArray(formData.metadata.amenities)) {
+      const invalidAmenities = formData.metadata.amenities.filter(a => 
+        !a.name || !a.name.trim() || a.charge === undefined || a.charge === null
+      );
+      if (invalidAmenities.length > 0) {
+        newErrors.amenities = 'All amenities must have a name and charge';
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      toast.error(Object.values(newErrors).join(' \n '));
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -67,7 +71,6 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
         metadata: { ...prev.metadata, [field]: value }
       }));
     } else if (name === 'active') {
-      // Handle active field (boolean)
       setFormData(prev => ({
         ...prev,
         [name]: value === 'true'
@@ -84,22 +87,15 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
     }
   };
 
-  const handleAddAmenity = () => {
-    const val = amenityInput.trim();
-    if (val && !formData.metadata.amenities.includes(val)) {
-      setFormData(prev => ({
-        ...prev,
-        metadata: { ...prev.metadata, amenities: [...prev.metadata.amenities, val] }
-      }));
-      setAmenityInput('');
-    }
-  };
-
-  const handleRemoveAmenity = (index) => {
+  const handleAmenitiesChange = (amenities) => {
     setFormData(prev => ({
       ...prev,
-      metadata: { ...prev.metadata, amenities: prev.metadata.amenities.filter((_, i) => i !== index) }
+      metadata: { ...prev.metadata, amenities }
     }));
+    
+    if (errors.amenities) {
+      setErrors(prev => ({ ...prev, amenities: undefined }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -118,7 +114,11 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
           address: '',
           name: '',
           flatCount: 1,
-          metadata: { description: '', amenities: [], locationDetails: '' },
+          metadata: { 
+            description: '', 
+            amenities: [], // Reset to empty array
+            locationDetails: '' 
+          },
           active: false,
         });
         if (onSuccess) onSuccess(result.data);
@@ -126,11 +126,18 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
       }
     } catch (err) {
       console.error('Submit error:', err);
+      toast.error(err.data?.error || 'Failed to create property');
     }
   };
 
+  // Calculate total amenities charges
+  const totalAmenitiesCharge = formData.metadata.amenities?.reduce(
+    (sum, amenity) => sum + (parseFloat(amenity.charge) || 0), 
+    0
+  ) || 0;
+
   // Permission Check
-  const canCreate = isWebOwner || ( (isStaff || isHouseOwner) && user?.permissions?.includes('houses.create'));
+  const canCreate = isWebOwner || ((isStaff || isHouseOwner) && user?.permissions?.includes('houses.create'));
   
   if (!canCreate) {
     return (
@@ -228,17 +235,25 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
 
         <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-              <Info size={16} /> House Name
+              <Building size={16} /> House Name *
             </label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all hover:border-gray-300"
+              className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all hover:border-gray-300 ${
+                errors.name ? 'border-red-500 bg-red-50' : 'border-gray-200'
+              }`}
               placeholder="e.g., Proshanti, Kuhelika"
             />
+            {errors.name && (
+              <p className="text-red-500 text-xs mt-1 ml-1 flex items-center gap-1">
+                <X size={12} /> {errors.name}
+              </p>
+            )}
           </div>
+
         {/* Address Field */}
         <div className="space-y-2">
           <label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
@@ -311,55 +326,38 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
           />
         </div>
 
-        {/* Amenities Section */}
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-            <Plus size={16} /> Property Amenities
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={amenityInput}
-              onChange={(e) => setAmenityInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddAmenity();
-                }
-              }}
-              className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all hover:border-gray-300"
-              placeholder="e.g., Generator, CCTV, Lift, Parking"
-            />
-            <button
-              type="button"
-              onClick={handleAddAmenity}
-              disabled={!amenityInput.trim()}
-              className="px-5 py-3 bg-gray-900 text-white rounded-xl hover:bg-black transition-all flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus size={18} /> Add
-            </button>
+        {/* Amenities Section - UPDATED */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+              <DollarSign size={16} /> Amenities / Service Charges
+            </label>
+            {totalAmenitiesCharge > 0 && (
+              <div className="text-sm bg-primary-50 text-primary-700 px-3 py-1 rounded-full font-medium">
+                Total: ${totalAmenitiesCharge.toFixed(2)}
+              </div>
+            )}
           </div>
           
-          {/* Amenities Chips */}
-          {formData.metadata.amenities.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {formData.metadata.amenities.map((amenity, index) => (
-                <div
-                  key={index}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-primary-200 text-primary-700 rounded-lg font-medium shadow-sm"
-                >
-                  <span>{amenity}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAmenity(index)}
-                    className="text-primary-400 hover:text-red-500 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
+          <AmenitiesInput
+            value={formData.metadata.amenities}
+            onChange={handleAmenitiesChange}
+          />
+          
+          {errors.amenities && (
+            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <X size={12} /> {errors.amenities}
+            </p>
           )}
+          
+          <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+            <p className="font-medium mb-1">Note:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>These charges will be added to the base rent for each flat</li>
+              <li>Charges can be updated later if needed</li>
+              <li>Each flat can have customized charges if required</li>
+            </ul>
+          </div>
         </div>
 
         {/* Web Owner Only - Status Toggle */}
@@ -417,8 +415,8 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
             Cancel
           </Btn>
           <Btn
-          onClick={handleSubmit}
-          type="primary"
+            onClick={handleSubmit}
+            type="primary"
             disabled={isLoading}
             className='flex gap-2'
           >

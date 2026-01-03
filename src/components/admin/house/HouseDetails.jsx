@@ -8,6 +8,7 @@ import {
 import { useGetHouseDetailsQuery, useDeleteHouseMutation } from '../../../store/api/houseApi';
 import Btn from '../../common/Button';
 import { useAuth } from '../../../hooks';
+import { toast } from 'react-toastify';
 
 const HouseDetails = () => {
   const { id } = useParams();
@@ -42,6 +43,9 @@ const HouseDetails = () => {
   }
 
   if (error || !house) {
+    console.log(error);
+    
+    toast.error(error?.data?.error || 'Failed to load property details. Please try again later.');
     return (
       <Navigate to="/houses" replace />
     );
@@ -205,7 +209,7 @@ const HouseDetails = () => {
                     key={index}
                     className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm font-medium"
                   >
-                    {amenity}
+                    {amenity.name} {amenity.charge ? `: $${amenity.charge.toFixed(2)}` : ''}
                   </span>
                 ))}
               </div>

@@ -64,8 +64,8 @@ const HouseList = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text">Properties</h1>
-          <p className="text-subdued">Manage all properties in the system</p>
+          <h1 className="text-2xl font-bold text-text">House List</h1>
+          <p className="text-subdued">Manage all Houses</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -80,7 +80,7 @@ const HouseList = () => {
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Add Property
+            Add House
           </button>
         </div>
       </div>

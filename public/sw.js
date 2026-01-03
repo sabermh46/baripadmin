@@ -1,4 +1,4 @@
-
+//public/sw.js
 const CACHE_NAME = 'bariporichalona-cache-v1'; 
 
 // List of files to pre-cache (App Shell).
@@ -193,14 +193,17 @@ self.addEventListener('push', function(event) {
 self.addEventListener('message', function(event) {
   console.log('SW Received message:', event.data);
   
-  if (event.data && event.data.type === 'UPDATE_NOTIFICATIONS') {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('SW: Skipping waiting and activating immediately');
+    self.skipWaiting();
+    
+    // Notify all clients that update is happening
     self.clients.matchAll().then(clients => {
       clients.forEach(client => {
-        try {
-          client.postMessage({ type: 'REFRESH_NOTIFICATIONS' });
-        } catch (err) {
-          console.log('Could not forward message:', err);
-        }
+        client.postMessage({ 
+          type: 'UPDATE_COMPLETED', 
+          timestamp: Date.now() 
+        });
       });
     });
   }

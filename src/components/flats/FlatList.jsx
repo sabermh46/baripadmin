@@ -48,7 +48,7 @@ const FlatList = () => {
   const {data, isLoading: isHouseLoading, error } = useGetHouseDetailsQuery(houseId)
   
 
-  console.log(houseId);
+  const { data: houseData, isLoading: isHouseDataLoading } = useGetHouseDetailsQuery(houseId);
   
   const { data: flatsData, isLoading } = useGetFlatsQuery({
     houseId,
@@ -448,6 +448,7 @@ const FlatList = () => {
           setSelectedFlat(null);
         }}
         flat={selectedFlat}
+        houseinfo={houseData?.data || null}
       />
 
       {/* Delete Confirmation Modal */}
