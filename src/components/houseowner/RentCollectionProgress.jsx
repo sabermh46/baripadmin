@@ -1,14 +1,41 @@
 import { ChevronLeft, ChevronRight, Info, Check } from "lucide-react";
 
 export default function RentCollectionProgress({
-  month = 11,
+  month = new Date().getMonth() + 1,
+  year = new Date().getFullYear(),
   houses = [],
-  onMLeftClick = () => {},
-  onMRightClick = () => {},
+  onMonthChange = () => {},
+  maxDate = { month: new Date().getMonth() + 1, year: new Date().getFullYear() }
 }) {
-  const monthName = new Date(0, month - 1).toLocaleString("default", {
+  const monthName = new Date(year, month - 1).toLocaleString("default", {
     month: "long",
   });
+
+  // Check if right arrow should be disabled
+  const isCurrentMonth = month === maxDate.month && year === maxDate.year;
+  
+  // Calculate previous and next month/year
+  const handlePrevious = () => {
+    let prevMonth = month - 1;
+    let prevYear = year;
+    if (prevMonth < 1) {
+      prevMonth = 12;
+      prevYear = year - 1;
+    }
+    onMonthChange(prevMonth, prevYear);
+  };
+
+  const handleNext = () => {
+    if (isCurrentMonth) return; // Disabled for current month
+    
+    let nextMonth = month + 1;
+    let nextYear = year;
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear = year + 1;
+    }
+    onMonthChange(nextMonth, nextYear);
+  };
 
   // tailwind color class map based on % range
   const getIconColorClass = (percent) => {
@@ -27,20 +54,22 @@ export default function RentCollectionProgress({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <button
-          onClick={onMLeftClick}
+          onClick={handlePrevious}
           className="p-1 rounded-full hover:bg-gray-100 active:bg-gray-200"
         >
           <ChevronLeft className="w-8 h-8 text-gray-700" />
         </button>
 
         <h2 className="text-sm font-semibold text-[var(--color-text)]">
-          This Month:{" "}
-          <span className="text-text text-base">{monthName}</span>
+          {monthName} - {year}
         </h2>
 
         <button
-          onClick={onMRightClick}
-          className="p-1 rounded-full hover:bg-gray-100 active:bg-gray-200"
+          onClick={handleNext}
+          disabled={isCurrentMonth}
+          className={`p-1 rounded-full hover:bg-gray-100 active:bg-gray-200 ${
+            isCurrentMonth ? "opacity-50 cursor-not-allowed" : ""
+          }`}
         >
           <ChevronRight className="w-8 h-8 text-gray-700" />
         </button>
@@ -48,10 +77,16 @@ export default function RentCollectionProgress({
 
       {/* List */}
       <div className="space-y-5 font-mooli">
-        {houses.map((h, idx) => {
-          const collectedPercent = Math.round(
-            (h.rent_collected / h.total_flat) * 100
-          );
+        {houses.map((house, idx) => {
+          // Calculate percentage
+          const totalFlats = house.totalFlats || house.total_flat || 0;
+          const rentCollected = house.rentCollected || house.rent_collected || 0;
+          
+          // Handle case when totalFlats is 0 to avoid division by zero
+          const collectedPercent = totalFlats > 0 
+            ? Math.round((rentCollected / totalFlats) * 100)
+            : 0;
+          
           const remainingPercent = 100 - collectedPercent;
           const collectedColor =
             collectedPercent === 100
@@ -60,14 +95,16 @@ export default function RentCollectionProgress({
           const iconColorClass = getIconColorClass(collectedPercent);
 
           return (
-            <div key={idx} className="relative flex gap-2 items-center">
+            <div key={house.houseId || idx} className="relative flex gap-2 items-center">
               {/* House Name */}
               <div className="text-[var(--color-text)] font-medium line-clamp-1 mb-1 max-w-[100px] w-[80px] md:max-w-[250px] lg:max-w-[300px] font-poppins text-sm md:text-base">
-                {h.name.length > 10 ? h.name.slice(0, 8) + "..." : h.name}
+                {house.name && house.name.length > 10 
+                  ? house.name.slice(0, 8) + "..." 
+                  : house.name || `House ${idx + 1}`}
               </div>
 
               {/* Progress Bar */}
-              <div className="relative flex-1 h-6 rounded-full bg-black overflow-hidden flex text-[0.6rem] font-medium">
+              <div className="relative flex-1 h-6 rounded-full bg-primary-200 overflow-hidden flex text-[0.6rem] font-medium">
                 {/* Collected Portion */}
                 <div
                   className={`h-full ${collectedColor} text-white flex items-center justify-center 

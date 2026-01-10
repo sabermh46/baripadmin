@@ -4,6 +4,7 @@ const Btn = ({
     children,
     className = '',
     type = 'normal',
+    submit=false,
     disabled = false,
     href,
     ...rest
@@ -42,7 +43,7 @@ const Btn = ({
 
     // Render as a standard button
     return (
-        <button type="button" className={classes} {...rest}>
+        <button type={submit ? "submit" : "button"} className={classes} {...rest}>
             {children}
         </button>
     );

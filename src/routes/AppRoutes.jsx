@@ -272,6 +272,11 @@ const AppRoutes = () => {
                 <CareTakerPage />
               </ProtectedRoute>
             } />
+            <Route path="/renters" element={
+              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner']}>
+                <RenterList />
+              </ProtectedRoute>
+            } />
 
             <Route path="/caretakers/:id/details" element={
               <ProtectedRoute roles={['web_owner', 'staff', 'house_owner']}>

@@ -169,23 +169,23 @@ const HouseDetails = () => {
                 type='primary'
               >
                 Flats
-                <ChevronRight className="w-4 h-4 text-white" />
+                <ChevronRight className="w-4 h-4" />
               </Btn>
               <Btn
-                onClick={() => navigate(`/houses/${id}/caretakers`)}
+                onClick={() => navigate(`/caretakers`)}
                 className="flex-1"
                 type='primary'
               >
                 Care Takers
-                <ChevronRight className="w-4 h-4 text-white" />
+                <ChevronRight className="w-4 h-4" />
               </Btn>
               <Btn
-                onClick={() => navigate(`/houses/${id}/notices`)}
+                onClick={() => navigate(`/notices`)}
                 className="flex-1"
                 type='primary'
               >
                 Notices
-                <ChevronRight className="w-4 h-4 text-white" />
+                <ChevronRight className="w-4 h-4" />
               </Btn>
             </div>
 

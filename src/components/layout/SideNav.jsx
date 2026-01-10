@@ -13,7 +13,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLogoutMutation } from "../../store/api/authApi";
 import { logout as logoutAction } from '../../store/slices/authSlice';
 import usePushNotifications from "../../hooks/usePushNotifications";
-import { appLogo } from "../../assets";
 
 export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
   const { user } = useAuth();
@@ -40,7 +39,7 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       label: "Houses",
       icon: <House />,
       roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
-      toMatch: ["houses", "/houses/create", "/house-owners/houses"]
+      toMatch: ["houses", "/houses/create", "/house-owners/houses", "/flats"]
       
     },
     {
@@ -67,6 +66,12 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       label: "House Owners",
       icon: <BookUser />,
       roles: ["developer", "web_owner", "staff"],
+    },
+    {
+      path: "/renters",
+      label: "Renters",
+      icon: <Users />,
+      roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
     },
     {
       path: "/admin/settings",

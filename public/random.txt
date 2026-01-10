@@ -1,0 +1,104 @@
+ok, lets discuss a overall project structure.
+also at the knowing stage what can be our questions to client.
+
+1. Making an ai chat bot automations.
+2. Client already has a n8n engine deployed (may be that can connect to the chat's like whatsapp, facebook, instagram)
+
+3. Our task is to design the database and make an interface with next.js (both backend and frontend) and also going to deploy it to AWS.
+
+4. The user(customer of this platform) can be a tenant, a tenant will have (admin, viewer, editor) 3 roles. and admin can add new members
+
+5. users can do based on permission. (agentlist.create, agentlist.view) etc, all event need to have an unique token. that permission can be grant/revoke per user
+
+So, There are 3 main modules. a.Agent Creation (Ai Chat bot). b.Data Source, c.Access Api/Secrets of whatsapp/messenger/instagram
+
+a. Agent Creation
+in the clients figma i can see 8 fields to create an agent.
+1. agent description - text
+2. agent model - select - `
+
+Google Gemini
+
+Gemini 2.5 Flash
+
+Gemini 3 Pro Preview
+
+Gemini 3 Preview
+
+Open Al
+
+GPT -4o
+
+GPT -4 Turbo
+
+GPT -3.5 Turbo
+
+Actions
+
+Configure Credentials (Model) -> im marking it mark-01`
+
+3. agent memory - select - `None
+
+PostgreSQL
+
+-Primary Database
+
+-Analytics Replica
+
+MongoDB
+
+-MongoDB Cluster
+
+-Log Archive
+
+Legacy
+
+-Product Docs (Vector)
+
+Actions
+
+-Configure Credentials (Memory) -> mark-02`
+
+4. Tools / Data Source [As there is another module 'Data Source' user can upload sheets/csv/API/Webhook]
+
+5. Agent Icon - Given bunch of icons [matter of ui just]
+
+6. Agent Instructions - text-area
+
+7. Tools / Data Source instructions
+
+8. Agent Response [here a placeholder was inserted "JSON object containing "next_agent_id" and "reason"."]
+
+And there is a button 'Test Agent' to check the connection is working / credintials are correct.
+
+before going to next module,
+you saw mark-01 and mark-02
+mark-01 has opened a modal (Model Credintial), and that has two form and both has 2 of fields
+Google Gemini [Host, ApiKey]
+OpenAi [Host, ApiKey]
+
+mark-02: clicking mark 2 opens another modal has 2 form with each 1 field.
+ProstgresSQL [Connection String]
+MongoDb [Connection String]
+
+mark-02 has a different view. every chat maybe save to users personal db
+
+Module 2
+Data source
+
+Available data source connectors are [Excel Online, Csv, Api, webhooks]
+1. Google Sheets - fields are - [Connection Name, Redirect Url, Client Id, Client Secret] - there is a button 'Test Connection'
+2. Csv Upload - [Connection Name, File Upload (csv)] - there is a button 'Upload'
+3. Excel Online - fields are - [Connection Name, Redirect Url, Auth Url, Token url, Client Id, Client Secret] - there is a button 'Test Connection'
+3. Api - can upload / fields are - [Connection Name, method, url, header, parameters, body] - there is a button 'Test Connection' and 'Save Api'
+4. Webhook - fields are - [Connection Name, Epath, method, authentication, url(test), url(production)] - there is a button 'Save Webhook'
+
+
+Module 3 - Channels -- like whatsapp, messenger, instagram, email
+1. Whatsapp - fields are - [Connection Name, Client Id, Client Secret, Access Token, Business Account Id] - there is a button 'Test Connection'
+2. Messenger - fields are - [Connection Name, Page id, access token, verify access token] - there is a button 'Test Connection'
+3. Instagram - fields are - [Connection Name, Page id, access token, verify access token] - there is a button 'Test Connection'
+4. Email - fields are - [Connection Name, email provider, redirect url, client id, client secret] - there is a button 'Test Connection'
+
+
+and in other code modules there are payment integration and sunscription management.

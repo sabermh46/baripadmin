@@ -1,4 +1,5 @@
 // api/flatApi.js
+import { get } from 'idb-keyval';
 import { baseApi } from './baseApi';
 
 export const flatApi = baseApi.injectEndpoints({
@@ -53,10 +54,10 @@ export const flatApi = baseApi.injectEndpoints({
 
     // Assign renter to flat
     assignRenter: builder.mutation({
-      query: ({ flatId, renterId, amenities }) => ({
+      query: ({ flatId, renterId, amenities, next_payment_date, advance_payments }) => ({
         url: `/flats/${flatId}/renter`,
         method: 'POST',
-        data: { renter_id: renterId, amenities },
+        data: { renter_id: renterId, amenities, next_payment_date, advance_payments },
       }),
       invalidatesTags: ['Flat'],
     }),
@@ -116,6 +117,21 @@ export const flatApi = baseApi.injectEndpoints({
         data,
       }),
     }),
+    applyAdvancePayment: builder.mutation({
+      query: ({ flatId, advance_payment_id, rent_payment_id, amount }) => ({
+        url: `/flats/${flatId}/apply-advance`,
+        method: 'POST',
+        data: { advance_payment_id, rent_payment_id, amount },
+      }),
+      invalidatesTags: ['Payment', 'Flat'],
+    }),
+    getFlatAdvancePayments: builder.query({
+      query: ({flatId}) => ({
+        url: `/flats/${flatId}/advance-payments`,
+        method: 'GET',
+      }),
+      providesTags: ['AdvancePayment'],
+    }),
   }),
 });
 
@@ -132,4 +148,6 @@ export const {
   useSearchFlatsQuery,
   useGetFlatFinancialSummaryQuery,
   useSendRentReminderMutation,
+  useApplyAdvancePaymentMutation,
+  useGetFlatAdvancePaymentsQuery,
 } = flatApi;

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, AlertCircle, DollarSign, Calendar, Plus, Trash2 } from 'lucide-react';
+import { X, AlertCircle, DollarSign, Calendar, Plus, Trash2, CreditCard, Shield } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { useRecordPaymentMutation } from '../../store/api/flatApi';
+import { toast } from 'react-toastify';
 
 const paymentSchema = z.object({
   paid_amount: z.coerce.number().positive('Amount must be positive'),
@@ -14,14 +15,32 @@ const paymentSchema = z.object({
   paid_date: z.string().default(() => format(new Date(), 'yyyy-MM-dd')),
   status: z.enum(['pending', 'paid', 'overdue', 'partial', 'cancelled']).default('paid'),
   calculate_next_payment: z.boolean().default(true),
+  use_advance_payment: z.boolean().default(false),
 });
 
-const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
+const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] }) => {
   const [lateFee, setLateFee] = useState(0);
   const [amenities, setAmenities] = useState([]);
   const [showAmenitiesEditor, setShowAmenitiesEditor] = useState(false);
+  const [useAdvancePayment, setUseAdvancePayment] = useState(false);
+  const [availableAdvance, setAvailableAdvance] = useState(0);
+  const [selectedAdvancePaymentId, setSelectedAdvancePaymentId] = useState('');
 
-  // 1. Memoize parsedMetadata to prevent the infinite loop
+  // Calculate available advance payments
+  useEffect(() => {
+    const available = advancePayments.reduce((sum, payment) => 
+      sum + (parseFloat(payment.remaining_amount) || 0), 0
+    );
+    setAvailableAdvance(available);
+    
+    // Auto-select the first available advance payment
+    const firstAvailable = advancePayments.find(p => parseFloat(p.remaining_amount) > 0);
+    if (firstAvailable) {
+      setSelectedAdvancePaymentId(firstAvailable.id);
+    }
+  }, [advancePayments]);
+
+  // Memoize parsedMetadata
   const parsedMetadata = useMemo(() => {
     if (!flat?.metadata) return {};
     if (typeof flat.metadata === 'string') {
@@ -35,7 +54,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
     return flat.metadata;
   }, [flat?.metadata]);
 
-  // 2. Derive amenitiesTotal instead of using a separate state/useEffect
+  // Derive amenitiesTotal
   const amenitiesTotal = useMemo(() => {
     return amenities.reduce(
       (sum, amenity) => sum + (parseFloat(amenity.charge) || 0),
@@ -56,13 +75,14 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
         setShowAmenitiesEditor(true);
       }
     }
-  }, [open, parsedMetadata]); // parsedMetadata is now stable due to useMemo
+  }, [open, parsedMetadata]);
 
   const {
     register,
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm({
     resolver: zodResolver(paymentSchema),
@@ -74,6 +94,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
       paid_date: format(new Date(), 'yyyy-MM-dd'),
       status: 'paid',
       calculate_next_payment: true,
+      use_advance_payment: false,
     }
   });
 
@@ -106,6 +127,9 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
   }, [paidDate, flat?.rent_due_date, flat?.late_fee_percentage, baseRent]);
 
   const totalAmount = parseFloat(paidAmount) + lateFee + amenitiesTotal;
+  const selectedAdvancePayment = advancePayments.find(p => p.id === selectedAdvancePaymentId);
+  const advanceAvailable = selectedAdvancePayment ? parseFloat(selectedAdvancePayment.remaining_amount) : 0;
+  const amountAfterAdvance = Math.max(totalAmount - Math.min(advanceAvailable, totalAmount), 0);
 
   const handleAddAmenity = () => {
     setAmenities([...amenities, { name: '', charge: 0 }]);
@@ -130,30 +154,39 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
         amenities: amenities.filter(a => a.name.trim()),
         base_rent: parseFloat(paidAmount) || 0,
         amenities_total: amenitiesTotal,
-        late_fee: lateFee
+        late_fee: lateFee,
+        use_advance_payment: useAdvancePayment,
+        advance_payment_id: useAdvancePayment ? selectedAdvancePaymentId : undefined
       };
       
       await recordPayment(paymentData).unwrap();
+      
+      toast.success(
+        useAdvancePayment 
+          ? `Payment recorded successfully. $${Math.min(advanceAvailable, totalAmount).toLocaleString()} applied from advance payment.`
+          : 'Payment recorded successfully.'
+      );
+      
       onClose();
       reset();
       setAmenities([]);
       setLateFee(0);
       setShowAmenitiesEditor(false);
+      setUseAdvancePayment(false);
     } catch (error) {
       console.error('Failed to record payment:', error);
+      toast.error(`Failed to record payment: ${error?.data?.error || error.message}`);
     }
   };
 
   if (!open || !flat) return null;
 
-  // ... (rest of your JSX remains exactly the same)
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-surface rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-surface border-b border-subdued/20 p-6">
+        <div className="sticky top-0 bg-surface/30 backdrop-blur-sm border-b z-50 border-subdued/20 p-4 ">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-text">Record Rent Payment</h2>
+            <h2 className="text-sm md:text-xl font-bold text-text">Record Rent Payment</h2>
             <button
               onClick={onClose}
               className="p-2 hover:bg-subdued/10 rounded-lg transition-colors"
@@ -268,6 +301,69 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
             />
           </div>
 
+          {/* Advance Payment Section */}
+          {availableAdvance > 0 && (
+            <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-medium text-green-800 flex items-center gap-2">
+                  <Shield className="w-4 h-4" /> Advance Payment Available
+                </h4>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-green-700">${availableAdvance.toLocaleString()}</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={useAdvancePayment}
+                      onChange={(e) => setUseAdvancePayment(e.target.checked)}
+                      className="sr-only peer" 
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                  </label>
+                </div>
+              </div>
+              
+              {useAdvancePayment && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-green-700 mb-2">
+                      Select Advance Payment
+                    </label>
+                    <select
+                      value={selectedAdvancePaymentId}
+                      onChange={(e) => setSelectedAdvancePaymentId(e.target.value)}
+                      className="w-full px-4 py-2 bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                    >
+                      {advancePayments
+                        .filter(p => parseFloat(p.remaining_amount) > 0)
+                        .map(payment => (
+                          <option key={payment.id} value={payment.id}>
+                            ${payment.remaining_amount?.toLocaleString()} available (Paid: {format(new Date(payment.payment_date), 'dd MMM yyyy')})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  
+                  {selectedAdvancePayment && (
+                    <div className="p-3 bg-white border border-green-300 rounded-lg">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-700">Selected Advance:</span>
+                          <span className="font-bold">${selectedAdvancePayment.remaining_amount?.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-700">Amount to Use:</span>
+                          <span className="font-bold">
+                            ${Math.min(advanceAvailable, totalAmount).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Amenities Editor Section */}
           <div className="border border-subdued/20 rounded-lg p-4">
             <div className="flex justify-between items-center mb-4">
@@ -302,7 +398,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
                       <input
                         type="text"
                         value={amenity.name}
-                        onChange={(e) => handleAmenityChange(index, 'name', e.target.value)} // Disable name editing if it's from default
+                        onChange={(e) => handleAmenityChange(index, 'name', e.target.value)}
                         className={`w-full px-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none ${
                           !amenity.name ? 'bg-gray-100 text-gray-500' : ''
                         }`}
@@ -390,10 +486,33 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
                 </div>
               )}
               
+              {/* Advance Payment Application */}
+              {useAdvancePayment && (
+                <>
+                  <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
+                    <span className="text-green-700">Total Before Advance:</span>
+                    <span className="font-bold text-green-700">${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-700">Advance Payment Applied:</span>
+                    <span className="font-bold text-green-700">-${Math.min(advanceAvailable, totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                </>
+              )}
+              
               <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
-                <span className="font-bold text-gray-900">Total Amount:</span>
-                <span className="font-bold text-lg text-gray-900">
-                  ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="font-bold text-gray-900">
+                  {useAdvancePayment ? 'Amount to Pay Now:' : 'Total Amount:'}
+                </span>
+                <span className={`font-bold text-lg ${
+                  useAdvancePayment && amountAfterAdvance === 0 
+                    ? 'text-green-700' 
+                    : 'text-gray-900'
+                }`}>
+                  ${useAdvancePayment 
+                    ? amountAfterAdvance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  }
                 </span>
               </div>
             </div>
@@ -460,7 +579,11 @@ const RecordPaymentModal = ({ open, onClose, flat, renter }) => {
                   Recording Payment...
                 </span>
               ) : (
-                `Record Payment ($${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                `Record Payment ($${
+                  useAdvancePayment 
+                    ? amountAfterAdvance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                })`
               )}
             </button>
           </div>
