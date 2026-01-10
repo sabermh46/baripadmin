@@ -1,5 +1,5 @@
 // pages/RenterList.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   useGetRentersQuery, 
   useDeleteRenterMutation 
@@ -19,12 +19,20 @@ import {
 import Btn from '../common/Button';
 import Table from '../common/Table';
 import ConfirmationModal from '../common/ConfirmationModal';
+import { useLocation, useParams } from 'react-router-dom';
 
 const RenterList = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedRenter, setSelectedRenter] = useState(null);
+  const location = useLocation();
+const queryParams = new URLSearchParams(location.search);
+const view = queryParams.get('view');
+  console.log(view);
+  
+  
+  
   
   // Modal states
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -32,6 +40,15 @@ const RenterList = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   
+  useEffect(() => {
+    //check view is a number and then open the view renter modal
+    setTimeout(() => {
+      if (view && !isNaN(view)) {
+        setSelectedRenter({id: parseInt(view)});
+        setViewModalOpen(true);
+      }
+    }, 500);
+  }, [view]);
   // API hooks
   const { data, isLoading, refetch } = useGetRentersQuery({
     page,

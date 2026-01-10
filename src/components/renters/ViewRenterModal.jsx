@@ -123,7 +123,6 @@ const ViewRenterModal = ({ isOpen, onClose, renterId }) => {
                         className="w-full h-48 object-contain rounded"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = '/placeholder-image.jpg';
                         }}
                       />
                       <a 
@@ -149,7 +148,6 @@ const ViewRenterModal = ({ isOpen, onClose, renterId }) => {
                         className="w-full h-48 object-contain rounded"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = '/placeholder-image.jpg';
                         }}
                       />
                       <a 

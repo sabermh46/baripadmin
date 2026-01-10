@@ -13,6 +13,7 @@ import HomeIcon from "../../assets/icons/houses.svg";
 import Flats from "../../assets/icons/flats.svg";
 import Renters from "../../assets/icons/renter.svg";
 import CareTaker from "../../assets/icons/caretaker.svg";
+import { Link } from "react-router-dom";
 import { RefreshCcw as RefreshIcon } from 'lucide-react';
 import { 
   useGetHouseOwnerDashboardDataQuery,
@@ -207,37 +208,12 @@ const HouseOwnerComponent = () => {
 
       <UpcomingPayments payments={upcomingPayments} />
       
-
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Monthly Rent Collection</h3>
-          <MonthlyChart data={charts.monthlyRentCollection} />
-        </div>
-        
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Flat Occupancy</h3>
-          <OccupancyChart data={charts.flatOccupancy} />
-        </div>
-        
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Expense Breakdown</h3>
-          <ExpenseChart data={charts.expenseBreakdown} />
-        </div>
-        
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Rent Collection by House</h3>
-          <CollectionByHouseChart data={charts.rentCollectionByHouse} />
-        </div>
-      </div>
-
       {/* Recent Houses */}
-      <div className="bg-white rounded-xl p-4 border border-gray-200">
+      <div className="bg-white rounded-xl p-4 border border-gray-200 mt-4">
         <h3 className="text-lg font-bold text-gray-800 mb-4">Your Houses</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {houses.slice(0, 6).map((house) => (
-            <div key={house.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors">
+            <Link to={`/houses/${house.id}`}  key={house.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors">
               <h4 className="font-bold text-gray-800">{house.name}</h4>
               <p className="text-sm text-gray-600 mt-1">{house.address}</p>
               <div className="flex items-center justify-between mt-3">
@@ -248,10 +224,33 @@ const HouseOwnerComponent = () => {
                 </span>
                 <span className="text-sm text-gray-700">{house.flatCount} flats</span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
+
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Monthly Rent Collection</h3>
+          <MonthlyChart data={charts.monthlyRentCollection} />
+        </div>
+        
+        <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <OccupancyChart data={charts.flatOccupancy} />
+        </div>
+        
+        <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <ExpenseChart data={charts.expenseBreakdown} />
+        </div>
+        
+        <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <CollectionByHouseChart data={charts.rentCollectionByHouse} />
+        </div>
+      </div>
+
+      
     </div>
   );
 };

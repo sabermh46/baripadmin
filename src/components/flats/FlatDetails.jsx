@@ -1,6 +1,6 @@
 // components/flats/FlatDetails.jsx
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Edit, DollarSign, Calendar, User, Phone, Mail,
   Clock, AlertCircle, FileText, CreditCard, History,
@@ -311,7 +311,7 @@ const FlatDetails = () => {
                   <User size={20} /> Renter Information
                 </h2>
                 {flat.renter_id ? (
-                  <div className="space-y-4">
+                  <Link to={`/renters?view=${flat.renter_id}`} className="space-y-4">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
                         {renter.name?.charAt(0)}
@@ -343,7 +343,7 @@ const FlatDetails = () => {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </Link>
                 ) : (
                   <div className="text-center py-6">
                     <p className="text-subdued mb-4">No renter assigned to this flat.</p>
