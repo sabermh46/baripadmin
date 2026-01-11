@@ -20,7 +20,7 @@ export const houseApi = baseApi.injectEndpoints({
         params: { page, limit, search, ownerId, sortBy, sortOrder },
       }),
       providesTags: ['Houses'],
-    }),
+    }), //useGetHousesQuery
 
     // Get house details
     getHouseDetails: builder.query({

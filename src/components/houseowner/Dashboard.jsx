@@ -53,17 +53,17 @@ const HouseOwnerComponent = () => {
     const rentProgress = dashboardData.rentCollectionProgress;
     const houses = [];
     
-    // Extract data for the selected month from each house's monthly data
     Object.keys(rentProgress).forEach(houseId => {
       const houseMonthsData = rentProgress[houseId];
-      const currentMonthData = houseMonthsData.find(
-        data => data.month === selectedMonth && data.year === selectedYear
-      );
+      // Ensure houseMonthsData is an array before calling .find()
+      const currentMonthData = Array.isArray(houseMonthsData) 
+        ? houseMonthsData.find(data => data.month === selectedMonth && data.year === selectedYear)
+        : null;
       
       if (currentMonthData) {
         houses.push({
           ...currentMonthData,
-          totalFlats: currentMonthData.total_flat || 0, // Rename for consistency
+          totalFlats: currentMonthData.total_flat || 0,
           rentCollected: currentMonthData.rent_collected || 0
         });
       }
@@ -92,7 +92,7 @@ const HouseOwnerComponent = () => {
     setSelectedYear(year);
   };
 
-  if (isLoading || !dashboardData) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -100,55 +100,61 @@ const HouseOwnerComponent = () => {
     );
   }
 
-  const { summary, rentCollectionProgress, currentMonthRentCollection, upcomingPayments, charts, houses } = dashboardData;
+  // Safe destructuring with default values to prevent "cannot destructure property of undefined"
+  const { 
+    summary = {}, 
+    upcomingPayments = [], 
+    charts = {}, 
+    houses = [] 
+  } = dashboardData || {};
 
-  // Format stats for StatsCardGrid
+  // Format stats for StatsCardGrid with fallbacks
   const stats = [
     { 
       label: "Total Houses", 
-      value: summary.totalHouses, 
+      value: summary?.totalHouses ?? 0, 
       icon: HomeIcon,
-      subtext: `${summary.activeHouses} active, ${summary.inactiveHouses} inactive`
+      subtext: `${summary?.activeHouses ?? 0} active, ${summary?.inactiveHouses ?? 0} inactive`
     },
     { 
       label: "Total Flats", 
-      value: summary.totalFlats, 
+      value: summary?.totalFlats ?? 0, 
       icon: Flats,
-      subtext: `${summary.occupiedFlats} occupied, ${summary.vacantFlats} vacant`
+      subtext: `${summary?.occupiedFlats ?? 0} occupied, ${summary?.vacantFlats ?? 0} vacant`
     },
     { 
       label: "Active Renters", 
-      value: summary.totalRenters, 
+      value: summary?.totalRenters ?? 0, 
       icon: Renters,
-      subtext: `${summary.activeRenters} active, ${summary.inactiveRenters} inactive`
+      subtext: `${summary?.activeRenters ?? 0} active, ${summary?.inactiveRenters ?? 0} inactive`
     },
     { 
       label: "Caretakers", 
-      value: summary.assignedCaretakers, 
+      value: summary?.assignedCaretakers ?? 0, 
       icon: CareTaker,
       subtext: "Assigned to your houses"
     },
   ];
 
-  // Calculate profit stats
+  // Fix for: "Uncaught TypeError: can't access property toLocaleString"
   const profitStats = [
     {
       label: "Monthly Rent",
-      value: `$${summary.monthlyRentCollection.toLocaleString()}`,
-      trend: summary.monthlyRentCollection > 0 ? 'up' : 'neutral',
+      value: `$${(summary?.monthlyRentCollection ?? 0).toLocaleString()}`,
+      trend: (summary?.monthlyRentCollection ?? 0) > 0 ? 'up' : 'neutral',
       change: "Current month"
     },
     {
       label: "Expenses",
-      value: `$${summary.monthlyExpenses.toLocaleString()}`,
-      trend: summary.monthlyExpenses > 0 ? 'down' : 'neutral',
+      value: `$${(summary?.monthlyExpenses ?? 0).toLocaleString()}`,
+      trend: (summary?.monthlyExpenses ?? 0) > 0 ? 'down' : 'neutral',
       change: "Current month"
     },
     {
       label: "Monthly Profit",
-      value: `$${summary.monthlyProfit.toLocaleString()}`,
-      trend: summary.monthlyProfit > 0 ? 'up' : summary.monthlyProfit < 0 ? 'down' : 'neutral',
-      change: `Occupancy: ${summary.occupancyRate}%`
+      value: `$${(summary?.monthlyProfit ?? 0).toLocaleString()}`,
+      trend: (summary?.monthlyProfit ?? 0) > 0 ? 'up' : (summary?.monthlyProfit ?? 0) < 0 ? 'down' : 'neutral',
+      change: `Occupancy: ${summary?.occupancyRate ?? 0}%`
     }
   ];
 
@@ -159,7 +165,7 @@ const HouseOwnerComponent = () => {
         <div className="">
           <h2 className="text-sm text-slate-700 font-semibold ">
             Welcome back, {" "}
-            <span className="text-base font-mooli text-primary">{user?.name}</span>
+            <span className="text-base font-mooli text-primary">{user?.name || 'User'}</span>
           </h2>
         </div>
         
@@ -211,22 +217,26 @@ const HouseOwnerComponent = () => {
       {/* Recent Houses */}
       <div className="bg-white rounded-xl p-4 border border-gray-200 mt-4">
         <h3 className="text-lg font-bold text-gray-800 mb-4">Your Houses</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {houses.slice(0, 6).map((house) => (
-            <Link to={`/houses/${house.id}`}  key={house.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors">
-              <h4 className="font-bold text-gray-800">{house.name}</h4>
-              <p className="text-sm text-gray-600 mt-1">{house.address}</p>
-              <div className="flex items-center justify-between mt-3">
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  house.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {house.active ? 'Active' : 'Inactive'}
-                </span>
-                <span className="text-sm text-gray-700">{house.flatCount} flats</span>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {houses.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {houses.slice(0, 6).map((house) => (
+              <Link to={`/houses/${house.id}`}  key={house.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors">
+                <h4 className="font-bold text-gray-800">{house.name}</h4>
+                <p className="text-sm text-gray-600 mt-1">{house.address}</p>
+                <div className="flex items-center justify-between mt-3">
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    house.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {house.active ? 'Active' : 'Inactive'}
+                  </span>
+                  <span className="text-sm text-gray-700">{house.flatCount || 0} flats</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-4">No houses found.</p>
+        )}
       </div>
 
 
@@ -234,23 +244,24 @@ const HouseOwnerComponent = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         <div className="bg-white rounded-xl p-4 border border-gray-200">
           <h3 className="text-lg font-bold text-gray-800 mb-4">Monthly Rent Collection</h3>
-          <MonthlyChart data={charts.monthlyRentCollection} />
+          <MonthlyChart data={charts?.monthlyRentCollection || []} />
         </div>
         
         <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <OccupancyChart data={charts.flatOccupancy} />
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Flat Occupancy</h3>
+          <OccupancyChart data={charts?.flatOccupancy || []} />
         </div>
         
         <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <ExpenseChart data={charts.expenseBreakdown} />
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Expense Breakdown</h3>
+          <ExpenseChart data={charts?.expenseBreakdown || []} />
         </div>
         
         <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <CollectionByHouseChart data={charts.rentCollectionByHouse} />
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Collection By House</h3>
+          <CollectionByHouseChart data={charts?.rentCollectionByHouse || []} />
         </div>
       </div>
-
-      
     </div>
   );
 };

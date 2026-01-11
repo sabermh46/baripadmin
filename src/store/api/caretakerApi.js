@@ -13,7 +13,7 @@ export const caretakerApi = baseApi.injectEndpoints({
         params,
       }),
       providesTags: ['Caretaker'],
-    }),
+    }), //useGetCaretakersQuery
 
     // Get caretaker details with permissions
     getCaretakerDetails: builder.query({
