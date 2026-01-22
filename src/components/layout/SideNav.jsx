@@ -13,9 +13,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLogoutMutation } from "../../store/api/authApi";
 import { logout as logoutAction } from '../../store/slices/authSlice';
 import usePushNotifications from "../../hooks/usePushNotifications";
+import { useTranslation } from "react-i18next";
 
 export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
     const { unsubscribe, subscription } = usePushNotifications();
   const dispatch = useAppDispatch();
@@ -32,11 +34,23 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       console.error('Logout failed:', error);
     }
   };
+
+  //update the labels with ` "dashboard": "Dashboard",
+        // "houses": "Houses",
+        // "notification": "Notification",
+        // "profile": "Profile",
+        // "staffs": "Staffs",
+        // "caretakers": "Caretakers",
+        // "house_owners": "House Owners",
+        // "renters": "Renters",
+        // "settings": "Settings"`
+
+
   const navItems = [
-    { path: "/dashboard", label: "Dashboard", icon: <LayoutDashboard />, toMatch: ["/admin/generate-token"] },
+    { path: "/dashboard", label: t("dashboard"), icon: <LayoutDashboard />, toMatch: ["/admin/generate-token"] },
     {
       path: "/houses",
-      label: "Houses",
+      label: t("houses"),
       icon: <House />,
       roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
       toMatch: ["houses", "/houses/create", "/house-owners/houses", "/flats"]
@@ -44,38 +58,38 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
     },
     {
       path: "/notification",
-      label: "Notification",
+      label: t("notification"),
       icon: <BellDot />,
       roles: ["developer", "web_owner", "staff", "house_owner"],
     },
-    { path: "/profile", label: "Profile", icon: <CircleUser /> },
+    { path: "/profile", label: t("profile"), icon: <CircleUser /> },
     {
       path: "/admin/staff",
-      label: "Staffs",
+      label: t("staffs"),
       icon: <Users />,
       roles: ["developer", "web_owner"],
     },
     {
       path: "/caretakers",
-      label: "Caretakers",
+      label: t("caretakers"),
       icon: <UsersRound />,
       roles: ["developer", "web_owner", "staff", "house_owner"],
     },
     {
       path: "/admin/house-owners",
-      label: "House Owners",
+      label: t("house_owners"),
       icon: <BookUser />,
       roles: ["developer", "web_owner", "staff"],
     },
     {
       path: "/renters",
-      label: "Renters",
+      label: t("renters"),
       icon: <Users />,
       roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
     },
     {
       path: "/admin/settings",
-      label: "Settings",
+      label: t("settings"),
       icon: <SettingsIcon />,
       roles: ["developer", "web_owner"],
     },

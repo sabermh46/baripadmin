@@ -5,6 +5,7 @@ import { appLogo } from '../assets';
 import NotificationIcon from './notifications/NotificationIcon';
 import SideNav from './layout/SideNav';
 import { Menu, X } from 'lucide-react';
+import LanguageSwitcher from './common/LanguageSwitcher';
 
 const Layout = () => {
   const { user } = useAuth();
@@ -40,8 +41,9 @@ const Layout = () => {
           </div>
           <div className='flex gap-3'>
             <div className="flex items-center gap-4">
-            <NotificationIcon />
-          </div>
+              <LanguageSwitcher />
+              <NotificationIcon />
+            </div>
           <button
             className="md:hidden bg-transparent border-none text-2xl cursor-pointer"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

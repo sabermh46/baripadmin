@@ -10,6 +10,7 @@ import { Users, Home, Building, Users as Staff, Shield, Activity, DollarSign, Tr
 import { LoaderMinimal } from '../common/RouteLoader';
 import Btn from '../common/Button';
 import { useAuth } from '../../hooks';
+import { useTranslation } from 'react-i18next';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
@@ -53,6 +54,8 @@ const RecentActivityItem = ({ type, title, address, user, time, icon: Icon }) =>
 
 const SystemDashboard = () => {
   const { data, error, isLoading, refetch } = useGetDashboardDataQuery();
+
+  const {t} = useTranslation();
   const stats = useMemo(() => [
     { title: 'Total Users', value: data?.quickStats?.totalUsers || 0, icon: Users, color: 'blue' },
     { title: 'Total Houses', value: data?.quickStats?.totalHouses || 0, icon: Home, color: 'green' },
@@ -91,7 +94,7 @@ const SystemDashboard = () => {
       {/* Header */}
 
       <div className='font-bold font-oswald text-sm text-slate-800'>
-                  Hello, <span className='text-primary font-mooli'>{ user?.name }!</span>
+                  {t('welcome')}, <span className='text-primary font-mooli'>{ user?.name }!</span>
               </div>
 
       <div className="flex gap-4 flex-wrap justify-between mb-6">

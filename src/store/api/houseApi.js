@@ -65,9 +65,10 @@ export const houseApi = baseApi.injectEndpoints({
 
     // Get managed house owners (for staff)
     getManagedOwners: builder.query({
-      query: () => ({
+      query: ({ search, limit = 10, page = 1 }) => ({
         url: '/houses/owners/managed',
         method: 'GET',
+        params: { search, limit, page },
       }),
       providesTags: ['ManagedOwners'],
     }),

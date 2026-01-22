@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Upload, User, Phone, Mail, IdCard, Form } from 'lucide-react';
+import { X, Upload, User, Phone, Mail, IdCard, Form, Search } from 'lucide-react';
 import {
   useCreateRenterMutation,
   useUpdateRenterMutation
 } from '../../store/api/renterApi';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../hooks';
+import { useGetManagedOwnersQuery } from '../../store/api/houseApi';
 
 const renterSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -17,6 +19,7 @@ const renterSchema = z.object({
   nid: z.string().optional(),
   status: z.enum(['active', 'inactive']).default('active'),
   metadata: z.string().optional(),
+  houseOwnerId: z.string(),
 });
 
 const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
@@ -25,6 +28,16 @@ const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
   const [nidBackImage, setNidBackImage] = useState(null);
   const [nidFrontPreview, setNidFrontPreview] = useState(null);
   const [nidBackPreview, setNidBackPreview] = useState(null);
+  const [ownerSearch, setOwnerSearch] = useState('');
+  
+  const { isHouseOwner, isStaff, isWebOwner, user } = useAuth();
+
+  // 2. Updated Query to include search param
+  const { data: managedOwners, isLoading: ownersLoading } = useGetManagedOwnersQuery(
+    { search: ownerSearch }, 
+    { skip: isHouseOwner }
+  );
+    
 
   const {
     register,
@@ -41,6 +54,7 @@ const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
       nid: '',
       status: 'active',
       metadata: '',
+      houseOwnerId: houseOwnerId || ''
     }
   });
 
@@ -57,6 +71,7 @@ const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
         nid: renter.nid || '',
         status: renter.status || 'active',
         metadata: renter.metadata || '',
+        houseOwnerId: renter.houseOwnerId || '',
       });
       
       // Set previews for existing images
@@ -115,6 +130,8 @@ const removeFile = (setImage, setPreview, inputName) => {
       // Append houseOwnerId if provided
       if (houseOwnerId) {
         formData.append('houseOwnerId', houseOwnerId);
+      } else if (isHouseOwner) {
+        formData.append('houseOwnerId', user.id);
       }
 
       // Append files if selected
@@ -262,6 +279,43 @@ const removeFile = (setImage, setPreview, inputName) => {
               </select>
             </div>
           </div>
+
+          {(!houseOwnerId && (isStaff || isWebOwner || (!isStaff && !isWebOwner && !isHouseOwner))) && (
+            <div className="bg-subdued/5 p-4 rounded-lg border border-subdued/20 space-y-3">
+              <label className="block text-sm font-medium text-text">
+                Assign House Owner *
+              </label>
+              
+              {/* Search Field */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-subdued" size={16} />
+                <input 
+                  type="text"
+                  placeholder="Search owners by name or email..."
+                  className="w-full pl-10 pr-4 py-2 text-sm bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 outline-none"
+                  value={ownerSearch}
+                  onChange={(e) => setOwnerSearch(e.target.value)}
+                />
+              </div>
+
+              {/* Selection Field */}
+              <select
+                {...register('houseOwnerId', { required: !houseOwnerId })}
+                className="w-full px-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 outline-none"
+                disabled={ownersLoading}
+              >
+                <option value="">{ownersLoading ? 'Loading owners...' : 'Select House Owner'}</option>
+                {managedOwners?.data?.map(owner => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.name} ({owner.email})
+                  </option>
+                ))}
+              </select>
+              {errors.houseOwnerId && (
+                <p className="text-xs text-red-600">Please select an owner</p>
+              )}
+            </div>
+          )}
 
           {/* NID Images Upload */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

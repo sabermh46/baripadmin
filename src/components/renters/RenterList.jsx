@@ -20,16 +20,21 @@ import Btn from '../common/Button';
 import Table from '../common/Table';
 import ConfirmationModal from '../common/ConfirmationModal';
 import { useLocation, useParams } from 'react-router-dom';
+import RenterForm from './RenterForm';
 
 const RenterList = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedRenter, setSelectedRenter] = useState(null);
+  const [createRenterFormOpen, setCreateRenterFormOpen] = useState(false);
   const location = useLocation();
 const queryParams = new URLSearchParams(location.search);
 const view = queryParams.get('view');
   console.log(view);
+  const openCreateRenterForm = () => {
+    setCreateRenterFormOpen(true);
+  }
   
   
   
@@ -271,13 +276,10 @@ const view = queryParams.get('view');
         </>
       )}
 
-      <CreateRenterModal
-        isOpen={createModalOpen}
+      <RenterForm 
+        open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onSuccess={() => {
-          refetch();
-          setCreateModalOpen(false);
-        }}
+        houseOwnerId={null}
       />
 
       <ConfirmationModal
