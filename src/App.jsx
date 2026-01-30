@@ -12,6 +12,7 @@ import nProgress from 'nprogress';
 import RouteLoader, { LoaderMinimal } from './components/common/RouteLoader.jsx';
 import usePushNotifications from './hooks/usePushNotifications.js';
 import NotificationButton from './NotificationButton.jsx';
+import { useTranslation } from 'react-i18next';
 
 nProgress.configure({
     minimum: 0.3,
@@ -28,6 +29,7 @@ let globalDeferredPrompt = null;
 const PwaInstallPrompt = ({ isPromptAvailable }) => {
     const dispatch = useAppDispatch();
     const [isVisible, setIsVisible] = useState(true);
+    const { t } = useTranslation();
 
     const handleInstall = useCallback(async () => {
         // Access globalDeferredPrompt directly from the closure scope
@@ -87,11 +89,8 @@ const PwaInstallPrompt = ({ isPromptAvailable }) => {
                 
                 <div className="flex-1">
                     <h4 className="mb-1 font-semibold text-lg">
-                        Install Barip App
+                        {t('install_our_app')}
                     </h4>
-                    <p className="text-sm text-gray-600">
-                        Install the app for a better experience with offline access
-                    </p>
                 </div>
                 
                 <div className="flex gap-2 w-full sm:w-auto">
@@ -99,21 +98,21 @@ const PwaInstallPrompt = ({ isPromptAvailable }) => {
                         onClick={handleInstall} 
                         className="
                             flex-1 px-4 py-2 rounded-lg text-white 
-                            bg-blue-600 hover:bg-blue-700 
+                            bg-primary-600 hover:bg-primary-700 
                             font-medium transition-colors
                         "
                     >
-                        Install
+                        {t('install')}
                     </button>
                     <button 
                         onClick={handleDismiss} 
                         className="
                             flex-1 px-4 py-2 rounded-lg font-medium 
-                            text-blue-600 border border-blue-600 
-                            hover:bg-blue-50 transition-colors
+                            text-primary-600 border border-primary-600 
+                            hover:bg-primary-50 transition-colors
                         "
                     >
-                        Later
+                        {t('dismiss')}
                     </button>
                 </div>
             </div>
@@ -128,6 +127,7 @@ const AppContent = () => {
     const { updateAvailable, deferredPrompt: isPromptAvailable } = useAppSelector(state => state.ui);
     const { user } = useAppSelector(state => state.auth);
     console.log(user);
+    const { t } = useTranslation();
     
 
     const { 
@@ -463,12 +463,12 @@ useEffect(() => {
             <ToastContainer position="bottom-center" autoClose={5000} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
             {updateAvailable && (
                 <div className="fixed bottom-4 max-w-[500px] left-4 right-4 bg-yellow-500 text-white p-4 rounded-lg shadow-lg z-50 flex justify-between items-center">
-                    <p className="font-semibold">New version available!</p>
+                    <p className="font-semibold">{t('new_version_available')}</p>
                     <button 
                         onClick={handleUpdateClick}
                         className="bg-white text-yellow-600 px-4 py-2 rounded font-bold hover:bg-gray-100"
                     >
-                        Update Now
+                        {t('update_now')}
                     </button>
                 </div>
             )}

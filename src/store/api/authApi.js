@@ -10,7 +10,7 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Auth'],
     }),
-    
+
     register: builder.mutation({
       query: (data) => ({
         url: '/auth/register',
@@ -34,7 +34,7 @@ export const authApi = baseApi.injectEndpoints({
       }),
       providesTags: ['Settings'],
     }),
-        
+
     googleLogin: builder.query({
       query: () => ({
         url: '/auth/login/success',
@@ -42,7 +42,7 @@ export const authApi = baseApi.injectEndpoints({
       }),
       providesTags: ['Auth'],
     }),
-    
+
     setPassword: builder.mutation({
       query: (data) => ({
         url: '/auth/set-password',
@@ -50,7 +50,7 @@ export const authApi = baseApi.injectEndpoints({
         data,
       }),
     }),
-    
+
     linkGoogleAccount: builder.mutation({
       query: (data) => ({
         url: '/auth/link-google',
@@ -58,6 +58,34 @@ export const authApi = baseApi.injectEndpoints({
         data,
       }),
     }),
+
+    // --- NEW: Password Management Endpoints ---
+
+    forgotPassword: builder.mutation({
+      query: (data) => ({
+        url: '/auth/forgot-password',
+        method: 'POST',
+        data, // Expected: { email }
+      }),
+    }),
+
+    resetPassword: builder.mutation({
+      query: (data) => ({
+        url: '/auth/reset-password',
+        method: 'POST',
+        data, // Expected: { token, password }
+      }),
+    }),
+
+    changePassword: builder.mutation({
+      query: (data) => ({
+        url: '/auth/change-password',
+        method: 'POST',
+        data, // Expected: { oldPassword, newPassword }
+      }),
+    }),
+
+    // --- End of Password Management ---
 
     generateToken: builder.mutation({
       query: (data) => ({
@@ -82,13 +110,14 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Auth'],
     }),
-    
+
     logout: builder.mutation({
       query: () => ({
         url: '/auth/logout',
+        method: 'GET', 
       }),
     }),
-    
+
     refreshToken: builder.mutation({
       query: (data) => ({
         url: '/auth/refresh',
@@ -105,6 +134,9 @@ export const {
   useGoogleLoginQuery,
   useSetPasswordMutation,
   useLinkGoogleAccountMutation,
+  useForgotPasswordMutation, // Exported
+  useResetPasswordMutation,   // Exported
+  useChangePasswordMutation,  // Exported
   useDeleteTokenMutation,
   useGetRegistrationTokensQuery,
   useGenerateTokenMutation,

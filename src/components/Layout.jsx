@@ -6,11 +6,12 @@ import NotificationIcon from './notifications/NotificationIcon';
 import SideNav from './layout/SideNav';
 import { Menu, X } from 'lucide-react';
 import LanguageSwitcher from './common/LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 
 const Layout = () => {
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
+  const { t } = useTranslation();
   
 
 
@@ -35,13 +36,15 @@ const Layout = () => {
           <div className={`flex gap-2 items-center`}>
             <Link to="/" className='flex items-center text-xl font-bold font-oswald gap-3 text-primary'>
               <img src={appLogo} className={`h-10`} alt="App Logo" />
-              <p className=" leading-[100%]">Bari Porichalona <br /> 
+              <p className=" leading-[100%]">{t('bari_porichalona')} <br /> 
               <span className='text-xs font-thin text-gray-500 font-mooli'>({user?.role?.name || 'User'})</span></p>
             </Link>
           </div>
           <div className='flex gap-3'>
             <div className="flex items-center gap-4">
-              <LanguageSwitcher />
+              <div className='hidden md:block'>
+                <LanguageSwitcher />
+              </div>
               <NotificationIcon />
             </div>
           <button
@@ -58,7 +61,7 @@ const Layout = () => {
           </div>
         </header>
 
-        <div className="flex-1 p-4 overflow-y-auto max-w-full overflow-x-clip relative">
+        <div className="flex-1 p-4 max-w-full overflow-x-clip relative">
           <Outlet />
         </div>
       </main>

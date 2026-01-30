@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
-import { useDeleteTokenMutation, useGenerateTokenMutation, useGetRegistrationTokensQuery } from '../../../store/api/authApi';
+import React, { useState, useMemo } from 'react';
+import { 
+  useDeleteTokenMutation, 
+  useGenerateTokenMutation, 
+  useGetRegistrationTokensQuery 
+} from '../../../store/api/authApi';
 import { toast } from 'react-toastify';
-import { Copy, Link, X, Check, Calendar, Mail, User, Shield, Trash2, Eye, RefreshCw } from 'lucide-react';
+import { 
+  Copy, Link, X, Check, Calendar, Mail, User, 
+  Shield, Trash2, Eye, RefreshCw, Search 
+} from 'lucide-react';
 import Btn from '../../../components/common/Button';
 import Modal from '../../../components/common/Modal';
 import Table from '../../../components/common/Table';
@@ -15,8 +22,21 @@ const GenerateToken = () => {
   const [generateToken, { isLoading }] = useGenerateTokenMutation();
   const [deleteToken, { isLoading: isDeleting }] = useDeleteTokenMutation();
   const { data: tokensResponse, isLoading: isTokensLoading, refetch } = useGetRegistrationTokensQuery();
-  const { data: managedOwners, isLoading: ownersLoading } = useGetManagedOwnersQuery(undefined, {
-    skip: isHouseOwner,
+
+  // State for managed owners search
+  const [ownerSearchTerm, setOwnerSearchTerm] = useState('');
+  const [ownersPage, setOwnersPage] = useState(1);
+  const ownersLimit = 10;
+
+  // Fetch managed owners with search and pagination
+  const { 
+    data: managedOwnersResponse, 
+    isLoading: ownersLoading, 
+    isFetching: ownersFetching 
+  } = useGetManagedOwnersQuery({
+    search: ownerSearchTerm,
+    page: ownersPage,
+    limit: ownersLimit
   });
 
   const [formData, setFormData] = useState({
@@ -25,8 +45,6 @@ const GenerateToken = () => {
     expiresInHours: 24,
     metadata: {}
   });
-
-  
   
   const [validationErrors, setValidationErrors] = useState({});
   const [generatedToken, setGeneratedToken] = useState(null);
@@ -38,10 +56,11 @@ const GenerateToken = () => {
   const itemsPerPage = 10;
 
   const tokens = tokensResponse || [];
+  const tokensMeta = tokensResponse?.meta || { total: 0, totalPages: 1 };
   
-  // Pagination calculations
-  const totalTokens = tokens.length;
-  const totalPages = Math.ceil(totalTokens / itemsPerPage);
+  // Pagination calculations for tokens
+  const totalTokens = tokens?.length || 0;
+  const totalPages = 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalTokens);
   const currentTokens = tokens.slice(startIndex, endIndex);
@@ -54,50 +73,71 @@ const GenerateToken = () => {
     setModalIsOpen(true);
   };
 
+  // Get managed owners for dropdown options
   const getManagedOwnersOptions = () => {
-    if(!managedOwners?.data) return [];
-
-    return managedOwners.data.map(owner => ({
+    if (!managedOwnersResponse?.data) return [];
+    
+    return managedOwnersResponse.data.map(owner => ({
       label: `${owner.name} (${owner.email})`,
-      value: owner.id
-    }))
-  }
+      value: owner.id.toString()
+    }));
+  };
+
+  // Function to handle owner search change
+  const handleOwnerSearchChange = (searchValue) => {
+    setOwnerSearchTerm(searchValue);
+    setOwnersPage(1); // Reset to first page on new search
+  };
+
+  // Debounced search for owners
+  const debouncedSearch = useMemo(
+    () => {
+      let timeout;
+      return (value) => {
+        clearTimeout(timeout);
+        // eslint-disable-next-line react-hooks/immutability
+        timeout = setTimeout(() => {
+          handleOwnerSearchChange(value);
+        }, 500);
+      };
+    },
+    []
+  );
 
   const getFixedFields = () => {
     const fields = [];
 
-    if(formData.roleSlug === 'caretaker') {
-      if(!isHouseOwner){
+    if (formData.roleSlug === 'caretaker') {
+      if (!isHouseOwner) {
         fields.push({
           label: 'House Owner',
           key: 'house_owner_id',
           type: 'select',
           required: true,
           options: getManagedOwnersOptions(),
-          description: 'Select the house owner for whom this caretaker will work'
-        })
-      } else if(isHouseOwner){ {
+          description: 'Select the house owner for whom this caretaker will work',
+          onSearch: debouncedSearch, // Add search functionality
+          isLoading: ownersLoading || ownersFetching,
+          pagination: managedOwnersResponse?.meta ? {
+            current: managedOwnersResponse.meta.page,
+            total: managedOwnersResponse.meta.total,
+            totalPages: managedOwnersResponse.meta.totalPages,
+            onPageChange: setOwnersPage
+          } : null
+        });
+      } else if (isHouseOwner && user?.id) {
         fields.push({
           label: 'House Owner',
           key: 'house_owner_id',
-          type: 'text',
-          required: true,
-          defaultValue: user?.id?.toString(),
-          disabled: false,
-          description: 'You are the house owner for this caretaker'
-      })
-    }
-
-      
-
+          type: 'hidden',
+          defaultValue: user.id.toString(),
+          required: true
+        });
       }
     }
 
     return fields;
-  }
-
-  console.log(getFixedFields());
-  
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -106,28 +146,44 @@ const GenerateToken = () => {
       [name]: value
     }));
     
+    // Clear validation error for this field
     if (validationErrors[name]) {
       setValidationErrors(prev => ({
         ...prev,
         [name]: ''
       }));
     }
+
+    // If role changes, clear any metadata validation errors
+    if (name === 'roleSlug' && validationErrors.metadata) {
+      setValidationErrors(prev => ({
+        ...prev,
+        metadata: ''
+      }));
+    }
   };
+
   const handleMetadataChange = (metadata) => {
     setFormData(prev => ({
       ...prev,
       metadata
     }));
-  }
+
+    // Clear metadata validation errors
+    if (validationErrors.metadata) {
+      setValidationErrors(prev => ({
+        ...prev,
+        metadata: ''
+      }));
+    }
+  };
 
   const validateForm = () => {
     const errors = {};
     
-    // Email validation - email should be required
-    if (formData.email.trim()) {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        errors.email = 'Please enter a valid email address';
-      }
+    // Email validation - optional but must be valid if provided
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
     }
     
     // Role validation
@@ -142,12 +198,14 @@ const GenerateToken = () => {
       errors.expiresInHours = 'Please enter a value between 1 and 720 hours';
     }
 
+    // Caretaker validation
     if (formData.roleSlug === 'caretaker') {
-      if (!formData.metadata.house_owner_id) {
-        errors.metadata = 'house_owner_id is required for caretaker tokens';
+      if (!formData.metadata?.house_owner_id) {
+        errors.metadata = 'House owner is required for caretaker tokens';
+      } else if (isHouseOwner && user?.id && formData.metadata.house_owner_id !== user.id.toString()) {
+        errors.metadata = 'As a house owner, you can only create caretaker tokens for yourself';
       }
     }
-    
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -168,9 +226,15 @@ const GenerateToken = () => {
         metadata: formData.metadata
       };
       
-      const response = await generateToken(requestData).unwrap();
+      // If caretaker and house owner, ensure the ID is included
+      if (formData.roleSlug === 'caretaker' && isHouseOwner && user?.id) {
+        requestData.metadata = {
+          ...requestData.metadata,
+          house_owner_id: user.id.toString()
+        };
+      }
       
-      console.log('Response:', response);
+      const response = await generateToken(requestData).unwrap();
       
       if (response) {
         setGeneratedToken(response);
@@ -185,8 +249,12 @@ const GenerateToken = () => {
           email: '',
           roleSlug: 'house_owner',
           expiresInHours: 24,
-          metadata: '{}'
+          metadata: {}
         });
+        
+        // Reset search state
+        setOwnerSearchTerm('');
+        setOwnersPage(1);
       } else {
         toast.error('Unexpected response format from server');
       }
@@ -226,7 +294,7 @@ const GenerateToken = () => {
       toast.success('Token deleted successfully!');
       setDeleteModalOpen(false);
       setSelectedToken(null);
-      refetch(); // Refresh the tokens list
+      refetch();
     } catch (error) {
       console.error('Delete failed:', error);
       toast.error('Failed to delete token');
@@ -431,7 +499,19 @@ const GenerateToken = () => {
                 <button
                   key={role}
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, roleSlug: role }))}
+                  onClick={() => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      roleSlug: role,
+                      metadata: role === 'caretaker' ? prev.metadata : {}
+                    }));
+                    
+                    // Reset owner search when changing role
+                    if (role === 'caretaker') {
+                      setOwnerSearchTerm('');
+                      setOwnersPage(1);
+                    }
+                  }}
                   className={`flex items-center justify-center px-4 py-3 border rounded-lg transition-all ${
                     formData.roleSlug === role
                       ? 'border-primary bg-primary-50 text-primary-700'
@@ -475,51 +555,119 @@ const GenerateToken = () => {
             )}
           </div>
           
-          {/* Metadata Field */}
-          {/* <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Metadata (JSON) *
+          {/* Caretaker House Owner Field - Shown separately when role is caretaker */}
+          {formData.roleSlug === 'caretaker' && !isHouseOwner && (
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                House Owner *
               </label>
-              <button
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, metadata: '{}' }))}
-                className="text-sm text-primary-600 hover:text-primary-800"
+              <p className="text-sm text-gray-500 mb-3">
+                Select the house owner for whom this caretaker will work
+              </p>
+              
+              {/* Search input for house owners */}
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Search house owners by name or email..."
+                  onChange={(e) => debouncedSearch(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                />
+              </div>
+              
+              {/* House owner select dropdown */}
+              <select
+                value={formData.metadata?.house_owner_id || ''}
+                onChange={(e) => handleMetadataChange({
+                  ...formData.metadata,
+                  house_owner_id: e.target.value
+                })}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition ${
+                  validationErrors.metadata ? 'border-red-500' : 'border-gray-300'
+                }`}
+                required
               >
-                Reset to empty object
-              </button>
+                <option value="">Select a house owner...</option>
+                {getManagedOwnersOptions().map((owner) => (
+                  <option key={owner.value} value={owner.value}>
+                    {owner.label}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Loading and pagination info */}
+              <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
+                <div>
+                  {ownersLoading || ownersFetching ? (
+                    <span>Loading house owners...</span>
+                  ) : (
+                    <span>
+                      Showing {getManagedOwnersOptions().length} of {managedOwnersResponse?.meta?.total || 0} owners
+                    </span>
+                  )}
+                </div>
+                {managedOwnersResponse?.meta?.totalPages > 1 && (
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setOwnersPage(p => Math.max(1, p - 1))}
+                      disabled={ownersPage === 1}
+                      className="px-2 py-1 text-xs disabled:opacity-50"
+                    >
+                      ←
+                    </button>
+                    <span className="px-2 py-1 text-xs">
+                      Page {ownersPage} of {managedOwnersResponse.meta.totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setOwnersPage(p => Math.min(managedOwnersResponse.meta.totalPages, p + 1))}
+                      disabled={ownersPage === managedOwnersResponse.meta.totalPages}
+                      className="px-2 py-1 text-xs disabled:opacity-50"
+                    >
+                      →
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {validationErrors.metadata && (
+                <p className="text-red-500 text-sm mt-2">{validationErrors.metadata}</p>
+              )}
             </div>
-            <textarea
-              name="metadata"
-              value={formData.metadata}
-              onChange={handleChange}
-              rows="4"
-              className={`w-full px-4 py-3 border rounded-lg font-mono text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition ${
-                validationErrors.metadata ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder='{"note": "Optional metadata here"}'
-              required
-            />
-            {validationErrors.metadata && (
-              <p className="text-red-500 text-sm mt-2">{validationErrors.metadata}</p>
-            )}
-            <p className="text-gray-500 text-sm mt-2">
-              Optional JSON metadata that will be stored with the token
-            </p>
-          </div> */}
+          )}
 
+          {/* House owner info when current user is house owner */}
+          {formData.roleSlug === 'caretaker' && isHouseOwner && user?.id && (
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <label className="block text-sm font-medium mb-2 text-blue-700">
+                House Owner
+              </label>
+              <p className="text-sm text-blue-600">
+                You are creating a caretaker token for yourself ({user.name} - {user.email})
+              </p>
+              <input
+                type="hidden"
+                value={user.id}
+                onChange={(e) => handleMetadataChange({
+                  ...formData.metadata,
+                  house_owner_id: user.id.toString()
+                })}
+              />
+            </div>
+          )}
+          
+          {/* Metadata Field for other data */}
           <div>
             <MetadataInput
               value={formData?.metadata}
               onChange={handleMetadataChange}
-              label="Metadata"
-              fixedFields={getFixedFields()}
-              description="Add metadata for this token"
-              hideFixedFields={formData.roleSlug !== 'caretaker'}
+              label="Additional Metadata"
+              fixedFields={[]} // We handle house_owner_id separately above
+              description="Add any additional metadata for this token (optional)"
+              hideFixedFields={true}
             />
-            {validationErrors.metadata && (
-              <p className="text-red-500 text-sm mt-2">{validationErrors.metadata}</p>
-            )}
           </div>
           
           {/* Submit Button */}

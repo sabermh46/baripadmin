@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Building,
   MapPin,
+  ChevronLeft,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks';
@@ -151,7 +152,7 @@ const CaretakerDetails = () => {
               </h3>
               <div className="mt-2">
                 <Btn onClick={() => navigate('/caretakers')}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  <ChevronLeft className="h-4 w-4 mr-2" />
                   Back to Caretakers
                 </Btn>
               </div>
@@ -166,7 +167,7 @@ const CaretakerDetails = () => {
   const { assignments, stats } = caretaker;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="mx-auto">
       {/* Back Button */}
       <div className="mb-6">
         <Btn
@@ -174,7 +175,7 @@ const CaretakerDetails = () => {
           onClick={() => navigate('/caretakers')}
           className="mb-4"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ChevronLeft className="h-4 w-4 mr-2" />
           Back to Caretakers
         </Btn>
       </div>
@@ -258,7 +259,7 @@ const CaretakerDetails = () => {
             >
               {/* Assignment Header */}
               <div className="border-b border-gray-200 p-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col md:flex-row md:items-center flex-wrap justify-between gap-4">
                   <div>
                     <div className="flex items-center space-x-3 mb-2">
                       <Building className="h-5 w-5 text-gray-400" />
@@ -284,7 +285,7 @@ const CaretakerDetails = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center flex-wrap space-x-3">
                     {editingAssignment === assignment.assignmentId ? (
                       <>
                         <Btn

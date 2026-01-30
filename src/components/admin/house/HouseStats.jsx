@@ -9,10 +9,12 @@ import { toast } from 'react-toastify';
 import AccessDeniedPage from '../../../pages/utility/AccessDeniedPage';
 import { LoaderMinimal } from '../../common/RouteLoader';
 import { useAuth } from '../../../hooks';
+import { useTranslation } from 'react-i18next';
 
 const HouseStats = () => {
   const { data, isLoading, error } = useGetHouseStatsQuery();
   const { isWebOwner, isDeveloper, isStaff, isHouseOwner } = useAuth();
+  const { t } = useTranslation();
 
 
   if (error) {
@@ -60,35 +62,35 @@ const HouseStats = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text">House Statistics</h1>
+        <h1 className="text-2xl font-bold text-text">{t('house_statistics')}</h1>
         <p className="text-subdued">Overview of {isHouseOwner ? 'your' : 'all'} houses in the system</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Properties"
+          title={t('total_properties')}
           value={stats?.totalHouses}
           icon={Building}
           color="blue"
           trend={12}
         />
         <StatCard
-          title="Total Flats"
+          title={t('total_flats')}
           value={stats?.totalFlats}
           icon={Layers}
           color="green"
           trend={8}
         />
         <StatCard
-          title="Active Caretakers"
+          title={t('active_caretakers')}
           value={stats?.totalCaretakers}
           icon={Users}
           color="purple"
           trend={-3}
         />
         <StatCard
-          title="Active Renters"
+          title={t('active_renters')}
           value={stats?.totalRenters}
           icon={Users}
           color="primary"
@@ -104,11 +106,8 @@ const HouseStats = () => {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-text flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
-                  Recent Properties
+                  {t('recent_properties')}
                 </h2>
-                <button className="text-sm text-primary hover:text-primary/80 transition-colors">
-                  View All
-                </button>
               </div>
               
               <div className="space-y-4">
@@ -144,39 +143,13 @@ const HouseStats = () => {
                 ) : (
                   <div className="text-center py-8">
                     <Building className="w-12 h-12 text-subdued mx-auto mb-3 opacity-50" />
-                    <p className="text-text">No recent properties</p>
-                    <p className="text-subdued text-sm mt-1">Properties you add will appear here</p>
+                    <p className="text-text">{t('no_recent_properties')}</p>
+                    <p className="text-subdued text-sm mt-1">{t('properties_you_add_will_appear_here')}</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Monthly Chart */}
-            {stats.housesByMonth?.length > 0 && (
-              <div className="bg-surface border border-surface rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-text mb-6">Monthly Activity</h2>
-                <div className="flex items-end h-48 gap-2">
-                  {stats.housesByMonth.map((monthData, index) => {
-                    const maxCount = Math.max(...stats.housesByMonth.map(m => m.count));
-                    const height = (monthData.count / maxCount) * 100;
-                    
-                    return (
-                      <div key={index} className="flex-1 flex flex-col items-center">
-                        <div className="text-xs text-subdued mb-2">{monthData.month}</div>
-                        <div
-                          className="w-full bg-primary/20 hover:bg-primary/30 transition-colors rounded-t-lg"
-                          style={{ height: `${height}%` }}
-                          title={`${monthData.count} properties`}
-                        >
-                          <div className="h-full bg-primary rounded-t-lg"></div>
-                        </div>
-                        <div className="text-xs font-medium text-text mt-2">{monthData.count}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
         </>
         : null
       }

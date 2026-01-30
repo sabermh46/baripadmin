@@ -2,6 +2,7 @@ import {
   BellDot,
   BookUser,
   CircleUser,
+  FileText,
   House,
   LayoutDashboard,
   SettingsIcon,
@@ -14,6 +15,7 @@ import { useLogoutMutation } from "../../store/api/authApi";
 import { logout as logoutAction } from '../../store/slices/authSlice';
 import usePushNotifications from "../../hooks/usePushNotifications";
 import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "../common/LanguageSwitcher";
 
 export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
   const { user } = useAuth();
@@ -88,6 +90,18 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
     },
     {
+      path: "/expenses",
+      label: t("expenses"),
+      icon: <FileText />,
+      roles: ["developer", "web_owner", "staff", "house_owner", "caretaker" ],
+    },
+    {
+      path: "/reports",
+      label: t("reports"),
+      icon: <FileText />,
+      roles: ["developer", "web_owner", "staff", "house_owner", "caretaker" ],
+    },
+    {
       path: "/admin/settings",
       label: t("settings"),
       icon: <SettingsIcon />,
@@ -107,7 +121,7 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
   return (
     <>
 
-      <div className="h-auto flex-1 overflow-y-auto pb-30 mt-14">
+      <div className="max-h-[calc(100vh-3rem)] flex-1 overflow-y-auto pb-30 pt-12">
         {filteredNavItems.map((item) => {
           let isActive = currentPath === item.path || (item.toMatch && item.toMatch.includes(currentPath));
           if(!isActive) {
@@ -142,6 +156,9 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       </div>
 
       <div className="px-5 pt-5 border-t border-gray-200 absolute w-full max-w-full pb-5 bottom-0 bg-white overflow-x-clip">
+          <div className="pb-2 flex justify-end md:hidden">
+            <LanguageSwitcher />
+          </div>
                 <div className="flex items-center gap-3 mb-4 max-w-full">
                   <div className="min-w-10 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold overflow-clip">
                     <img src={user?.avatarUrl} alt={user?.name} className="w-full h-full object-cover" />

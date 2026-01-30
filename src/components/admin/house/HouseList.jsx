@@ -1,29 +1,28 @@
-// src/components/house/HouseList.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, Filter, Edit, Trash2, Eye, Plus, ChevronRight,
-  Home, Users, Layers, Calendar, MoreVertical, RefreshCw
+  Search, Filter, Edit, Trash2, Eye, Plus, 
+  Home, Users, Layers, RefreshCw, MapPin, LayoutGrid, List, MoreVertical
 } from 'lucide-react';
 import { useGetHousesQuery, useDeleteHouseMutation } from '../../../store/api/houseApi';
 import { useAuth } from '../../../hooks';
-import { LoaderMinimal } from '../../common/RouteLoader';
 import { toast } from 'react-toastify';
-import AccessDeniedPage from '../../../pages/utility/AccessDeniedPage';
-// import { formatDate, formatCurrency } from '../../utils/format';
+import { useTranslation } from 'react-i18next';
+import Table from '../../common/Table';
 
 const HouseList = () => {
   const navigate = useNavigate();
-  const { isWebOwner, isHouseOwner, isStaff, isCaretaker } = useAuth();
+  const { t } = useTranslation();
+  const { isWebOwner, isHouseOwner, isCaretaker } = useAuth();
   
+  // Default view based on role
+  const [viewMode, setViewMode] = useState(isWebOwner ? 'table' : 'grid');
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
     search: '',
-    ownerId: '',
-    sortBy: 'createdAt',
-    sortOrder: 'desc'
   });
+
 
   const { data, isFetching, refetch } = useGetHousesQuery(filters);
   const [deleteHouse] = useDeleteHouseMutation();
@@ -31,288 +30,270 @@ const HouseList = () => {
   const houses = data?.data || [];
   const pagination = data?.pagination;
 
+  // --- Handlers ---
   const handleSearch = (e) => {
     setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }));
   };
 
-  const handleDelete = async (id, address) => {
-    if(isWebOwner) {
-        if (window.confirm(`Are you sure you want to delete "${address}"? This action cannot be undone.`)) {
-            try {
-                await deleteHouse(id).unwrap();
-                refetch();
-            } catch (error) {
-                console.error('Delete failed:', error);
-            }
-        }
-    }
-    if(isHouseOwner) {
-        toast.error("You don't have permission to delete House.");
+  const handleDelete = async (e, id, address) => {
+    e.stopPropagation();
+    if (!isWebOwner) return toast.error(t('action_not_allowed'));
+    
+    if (window.confirm(`${t('confirm_delete')} "${address}"?`)) {
+      try {
+        await deleteHouse(id).unwrap();
+        toast.success(t('house_deleted'));
+        refetch();
+      } catch (error) {
+        toast.error(t('delete_failed'));
+      }
     }
   };
 
-  const StatusBadge = ({ active }) => (
-    <span className={`px-2 py-1 text-xs font-medium rounded-full ${active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-      {active ? 'Active' : 'Inactive'}
-    </span>
-  );
-
-
+  // --- Column Configuration ---
+  const columns = [
+    {
+      title: t('property'),
+      key: 'name',
+      render: (row) => (
+        <div className="py-1">
+          <p className="font-semibold text-text leading-tight">{row?.name}</p>
+          <p className="text-[10px] text-subdued mt-1 uppercase tracking-tighter font-mono">{row?.uuid}</p>
+        </div>
+      ),
+    },
+    {
+      title: t('address'),
+      dataIndex: 'address',
+      className: 'max-w-xs truncate text-subdued text-sm',
+    },
+    {
+      title: t('owner'),
+      key: 'owner',
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+            <Users className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <div className="truncate">
+            <p className="text-sm font-medium text-text">{row?.owner?.name || 'N/A'}</p>
+            <p className="text-[11px] text-subdued leading-none">{row?.owner?.email}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: t('flats'),
+      key: 'stats',
+      render: (row) => (
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/houses/${row.id}/flats`);
+          }} 
+          className="inline-flex cursor-pointer hover:scale-105 transition-transform"
+        >
+          <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-xs font-bold flex items-center gap-1">
+            <Layers className="w-3 h-3" />
+            {row?.stats?.flats || 0} {t('flats')}
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: t('status'),
+      key: 'status',
+      render: (row) => (
+        <span className={`px-2 py-1 text-[11px] font-bold rounded-md uppercase tracking-wide ${
+          row.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+        }`}>
+          {row.active ? t('active') : t('inactive')}
+        </span>
+      ),
+    },
+    {
+      title: t('actions'),
+      key: 'actions',
+      className: 'text-right',
+      render: (row) => (
+        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => navigate(`/houses/${row?.id}`)} className="p-2 text-subdued hover:text-primary hover:bg-primary/5 rounded-lg transition-colors">
+            <Eye className="w-4 h-4" />
+          </button>
+          <button onClick={() => navigate(`/houses/${row?.id}/edit`)} className="p-2 text-subdued hover:text-secondary hover:bg-secondary/5 rounded-lg transition-colors">
+            <Edit className="w-4 h-4" />
+          </button>
+          {isWebOwner && (
+            <button onClick={(e) => handleDelete(e, row?.id, row?.address)} className="p-2 text-subdued hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-0 space-y-6 max-w-7xl mx-auto">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text">House List</h1>
-          <p className="text-subdued">Manage all Houses</p>
+          <h1 className="text-3xl font-black text-text tracking-tight">{t('house_list')}</h1>
+          <p className="text-subdued mt-1">{isWebOwner ? t('admin_management_view') : t('my_properties')}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="px-3 py-2 border border-surface rounded-lg text-text hover:bg-surface transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={() => navigate('/houses/create')}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add House
-          </button>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-surface border border-surface rounded-xl p-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-subdued" />
-            <input
-              type="text"
-              placeholder="Search by address or UUID..."
-              value={filters.search}
-              onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2 border border-surface rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-text"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="px-4 py-2 border border-surface rounded-lg text-text hover:bg-surface transition-colors flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              Filters
+        
+        <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
+            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-subdued hover:text-text'}`}>
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button onClick={() => setViewMode('table')} className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm text-primary' : 'text-subdued hover:text-text'}`}>
+              <List className="w-4 h-4" />
             </button>
           </div>
+
+          <button onClick={() => refetch()} className="p-2.5 border border-gray-200 rounded-xl hover:bg-white text-subdued hover:text-primary transition-all">
+            <RefreshCw className={`w-5 h-5 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+
+          {isWebOwner && (
+            <button onClick={() => navigate('/houses/create')} className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20">
+              <Plus className="w-5 h-5" /> {t('add_house')}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Stats Summary */}
+      {/* Stats Cards */}
       {data?.stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-surface border border-surface rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                <Home className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-sm text-subdued">Total Properties</p>
-                <p className="text-2xl font-bold text-text">{data.stats.total}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-surface border border-surface rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 text-green-600 rounded-lg">
-                <Layers className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-sm text-subdued">Total Flats</p>
-                <p className="text-2xl font-bold text-text">{data.stats.flats}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-surface border border-surface rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
-                <Users className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-sm text-subdued">Active Properties</p>
-                <p className="text-2xl font-bold text-text">{data.stats.active}</p>
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard icon={<Home />} label={t('total_properties')} value={data.stats.total} color="blue" />
+          <StatCard icon={<Layers />} label={t('total_flats')} value={data.stats.flats} color="green" />
+          <StatCard icon={<Users />} label={t('active_properties')} value={data.stats.active} color="purple" />
         </div>
       )}
 
-      {/* Houses Table */}
-      <div className="bg-surface border border-surface rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-surface">
-              <tr className="border-b border-surface">
-                <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Property</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Address</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Owner</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Flats</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Status</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Created</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-subdued">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface">
-              {houses.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="py-8 text-center">
-                    <div className="max-w-sm mx-auto">
-                      <Home className="w-12 h-12 text-subdued mx-auto mb-3 opacity-50" />
-                      <p className="text-text font-medium">No properties found</p>
-                      <p className="text-subdued text-sm mt-1">Try adjusting your search or create a new property</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                houses.map((house) => (
-                  <tr key={house?.id} className="hover:bg-surface/50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div>
-                        <p className="font-medium text-text">{house?.name}</p>
-                        <p className="text-xs text-subdued mt-1">{house?.uuid}</p>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div>
-                        <p className="font-medium text-text">{house?.address}</p>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <Users className="w-3 h-3 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-text">{house?.owner?.name}</p>
-                          <p className="text-xs text-subdued">{house?.owner?.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                          {house?.stats?.flats || 0} flats
-                        </span>
-                        {house?.stats?.caretakers > 0 && (
-                          <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                            {house?.stats.caretakers} caretakers
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <StatusBadge active={house?.active} />
-                    </td>
-                    <td className="py-3 px-4 text-sm text-subdued">
-                      {/* {formatDate(house?.createdAt)} */}
-                        {new Date(house?.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => navigate(`/houses/${house?.id}`)}
-                          className="cursor-pointer p-1.5 text-text hover:text-primary hover:bg-primary/10 rounded transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/houses/${house?.id}/edit`)}
-                          className="cursor-pointer p-1.5 text-text hover:text-secondary hover:bg-secondary/10 rounded transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        {(isWebOwner) && (
-                          <button
-                            onClick={() => handleDelete(house?.id, house?.address)}
-                            className="cursor-pointer p-1.5 text-text hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => navigate(`/houses/${house?.id}`)}
-                          className="p-1.5 text-text hover:text-primary hover:bg-primary/10 rounded transition-colors"
-                          title="More"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Search Bar */}
+      <div className="relative group">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-subdued group-focus-within:text-primary transition-colors" />
+        <input
+          type="text"
+          placeholder={t('search_by_address_or_name')}
+          value={filters.search}
+          onChange={handleSearch}
+          className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all shadow-sm"
+        />
       </div>
 
-      {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
-        <div className="flex items-center justify-between border-t border-surface pt-4">
-          <div className="text-sm text-subdued">
-            Showing {(filters.page - 1) * filters.limit + 1} to{' '}
-            {Math.min(filters.page * filters.limit, pagination.total)} of {pagination.total} properties
+      {/* Main Content Area */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isFetching ? (
+            [...Array(6)].map((_, i) => <div key={i} className="h-56 bg-white border border-gray-100 rounded-2xl animate-pulse" />)
+          ) : houses.map((house) => (
+            <HouseCard 
+              key={house.id} 
+              house={house} 
+              t={t} 
+              onDelete={handleDelete} 
+              isWebOwner={isWebOwner}
+              navigate={navigate}
+            />
+          ))}
+        </div>
+      ) : (
+        <Table
+          columns={columns}
+          data={houses}
+          loading={isFetching}
+          showPagination={true}
+          pagination={{
+            current: filters.page,
+            totalPages: pagination?.pages || 1,
+            total: pagination?.total || 0,
+            pageSize: filters.limit
+          }}
+          onPageChange={(page) => setFilters(prev => ({ ...prev, page }))}
+          onRowClick={(row) => navigate(`/houses/${row.id}`)}
+          className="shadow-sm overflow-hidden border-none bg-transparent"
+        />
+      )}
+
+      {/* Empty State */}
+      {!isFetching && houses.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+          <div className="p-4 bg-white rounded-full shadow-sm mb-4">
+            <Home className="w-10 h-10 text-gray-300" />
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
-              disabled={filters.page <= 1}
-              className="px-3 py-1.5 border border-surface rounded-lg text-text hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                let pageNum;
-                if (pagination.pages <= 5) {
-                  pageNum = i + 1;
-                } else if (filters.page <= 3) {
-                  pageNum = i + 1;
-                } else if (filters.page >= pagination.pages - 2) {
-                  pageNum = pagination.pages - 4 + i;
-                } else {
-                  pageNum = filters.page - 2 + i;
-                }
-                
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setFilters(prev => ({ ...prev, page: pageNum }))}
-                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                      filters.page === pageNum
-                        ? 'bg-primary text-white'
-                        : 'text-text hover:bg-surface'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
-              disabled={filters.page >= pagination.pages}
-              className="px-3 py-1.5 border border-surface rounded-lg text-text hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
-          </div>
+          <p className="text-text font-bold text-lg">{t('no_properties_found')}</p>
+          <p className="text-subdued text-sm">{t('try_different_search')}</p>
         </div>
       )}
     </div>
   );
 };
+
+// --- Sub-Components ---
+
+const StatCard = ({ icon, label, value, color }) => (
+  <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+    <div className={`p-3 rounded-xl bg-${color}-50 text-${color}-600`}>
+      {React.cloneElement(icon, { size: 24 })}
+    </div>
+    <div>
+      <p className="text-xs font-bold text-subdued uppercase tracking-wider">{label}</p>
+      <p className="text-2xl font-black text-text">{value}</p>
+    </div>
+  </div>
+);
+
+const HouseCard = ({ house, t, onDelete, isWebOwner, onClick, navigate }) => (
+  <div 
+    onClick={() => navigate(`/houses/${house.id}`)}
+    className="group bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden"
+  >
+    <div className="flex justify-between items-start mb-4">
+      <div className="w-12 h-12 bg-primary/5 text-primary rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+        <Home size={24} />
+      </div>
+      <div className="flex gap-1">
+        <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase ${house.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+          {house.active ? t('active') : t('inactive')}
+        </span>
+      </div>
+    </div>
+
+    <h3 className="text-xl font-bold text-text truncate group-hover:text-primary transition-colors">{house.name}</h3>
+    <div className="flex items-center text-subdued text-sm mt-1 mb-6">
+      <MapPin className="w-3.5 h-3.5 mr-1 shrink-0" />
+      <span className="truncate">{house.address}</span>
+    </div>
+
+    <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+      <div className="flex gap-4 flex-1">
+        <div onClick={(e)=>{e.stopPropagation(); navigate(`/houses/${house.id}/flats`)}} className="cursor-pointer bg-gray-200 hover:bg-gray-300 transition-colors px-2 py-1 rounded-lg text-center pt-2 flex-1">
+          <p className="text-[10px] text-subdued uppercase font-bold leading-none mb-1">{t('flats')}</p>
+          <p className="text-sm font-black text-text">{house?.stats?.flats || 0}</p>
+        </div>
+        <div onClick={(e)=>{e.stopPropagation(); navigate(`/caretakers`)}} className='bg-gray-200 hover:bg-gray-300 transition-colors px-2 py-1 rounded-lg text-center pt-2 flex-1'>
+          <p className="text-[10px] text-subdued uppercase font-bold leading-none mb-1">{t('caretakers')}</p>
+          <p className="text-sm font-black text-text">{house?.stats?.caretakers || 0}</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-1 ">
+         {isWebOwner && (
+           <button 
+             onClick={(e) => onDelete(e, house.id, house.address)}
+             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+           >
+             <Trash2 size={16} />
+           </button>
+         )}
+      </div>
+    </div>
+  </div>
+);
 
 export default HouseList;

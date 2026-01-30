@@ -1,5 +1,4 @@
 // api/flatApi.js
-import { get } from 'idb-keyval';
 import { baseApi } from './baseApi';
 
 export const flatApi = baseApi.injectEndpoints({

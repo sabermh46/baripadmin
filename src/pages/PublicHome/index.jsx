@@ -4,10 +4,12 @@ import { useAuth } from '../../hooks';
 import { appLogo } from '../../assets';
 import Btn from '../../components/common/Button';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 const PublicHome = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
@@ -18,7 +20,6 @@ const PublicHome = () => {
   };
   
   useEffect(() => {
-    toast("Welcome to Bari Porichalona! Manage your house rents with ease.", { type: "info", autoClose: 5000 });
 
   }, [])
   
@@ -33,7 +34,7 @@ const PublicHome = () => {
           <Link to="/" className="flex items-center gap-2">
             <img src={appLogo} alt="Barip Logo" className="h-full w-auto max-h-12 p-0" />
             <h1 className="text-sm md:text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-primary-400 to-red-400 font-oswald">
-                Bari Porichalona
+                {t('bari_porichalona')}
             </h1>
           </Link>
 

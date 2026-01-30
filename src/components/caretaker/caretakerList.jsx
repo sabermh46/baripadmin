@@ -25,6 +25,7 @@ import { useAuth } from '../../hooks';
 import Btn from '../common/Button';
 import ConfirmationModal from '../common/ConfirmationModal';
 import Table from '../common/Table';
+import { useTranslation } from 'react-i18next';
 
 const CaretakerList = () => {
   const [filters, setFilters] = useState({
@@ -34,6 +35,7 @@ const CaretakerList = () => {
     sortBy: 'createdAt',
     sortOrder: 'desc',
   });
+  const { t } = useTranslation();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedCaretaker, setSelectedCaretaker] = useState(null);
   
@@ -74,7 +76,7 @@ const CaretakerList = () => {
 
   const columns = [
     {
-      title: 'Caretaker',
+      title: t('caretaker'),
       key: 'caretaker',
       render: (row) => (
         <div className="flex items-center">
@@ -97,7 +99,7 @@ const CaretakerList = () => {
       ),
     },
     {
-      title: 'Contact',
+      title: t('contact'),
       key: 'contact',
       render: (row) => (
         <div className="text-sm">
@@ -113,7 +115,7 @@ const CaretakerList = () => {
       ),
     },
     {
-      title: 'Assignments',
+      title: t('assignments'),
       key: 'assignments',
       render: (row) => (
         <div className="space-y-1">
@@ -131,7 +133,7 @@ const CaretakerList = () => {
       ),
     },
     {
-      title: 'House Owners',
+      title: t('house_owners'),
       key: 'owners',
       render: (row) => (
         <div className="max-w-xs">
@@ -152,7 +154,7 @@ const CaretakerList = () => {
       ),
     },
     {
-      title: 'Status',
+      title: t('status'),
       key: 'status',
       render: (row) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -167,7 +169,7 @@ const CaretakerList = () => {
       ),
     },
     {
-      title: 'Joined',
+      title: t('joined'),
       key: 'joined',
       render: (row) => (
         <div className="text-sm text-gray-500">
@@ -176,7 +178,7 @@ const CaretakerList = () => {
       ),
     },
     {
-      title: 'Actions',
+      title: t('actions'),
       key: 'actions',
       render: (row) => (
         <div className="flex items-center space-x-2">
@@ -213,9 +215,9 @@ const CaretakerList = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Caretakers</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('caretakers')}</h1>
           <p className="text-gray-600 mt-1">
-            Manage caretakers and their permissions
+            {t('manage_caretakers_and_their_permissions')}
           </p>
         </div>
         
@@ -224,7 +226,9 @@ const CaretakerList = () => {
           <Link to="/caretakers/new">
             <Btn>
               <Plus className="h-4 w-4 mr-2" />
-              Add Caretaker
+              {
+                t('add_caretaker')
+              }
             </Btn>
           </Link>
         )}
@@ -252,9 +256,9 @@ const CaretakerList = () => {
               onChange={(e) => handleFilterChange('sortBy', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
             >
-              <option value="name">Sort by Name</option>
-              <option value="createdAt">Sort by Date</option>
-              <option value="email">Sort by Email</option>
+              <option value="name">{t('sort_by_name')}</option>
+              <option value="createdAt">{t('sort_by_date')}</option>
+              <option value="email">{t('sort_by_email')}</option>
             </select>
           </div>
           
@@ -264,8 +268,8 @@ const CaretakerList = () => {
               onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
             >
-              <option value="asc">Ascending</option>
-              <option value="desc">Descending</option>
+              <option value="asc">{t('accending')}</option>
+              <option value="desc">{t('decending')}</option>
             </select>
           </div>
         </div>
@@ -295,10 +299,10 @@ const CaretakerList = () => {
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDelete}
-        title="Delete Caretaker"
-        message={`Are you sure you want to delete ${selectedCaretaker?.name}? This will remove all their assignments and permissions. This action cannot be undone.`}
-        confirmText="Delete Caretaker"
-        cancelText="Cancel"
+        title={t('delete_caretaker')}
+        message={`${t('are_you_sure_you_want_to_delete')} ${selectedCaretaker?.name}? ${t('this_will_remove_all_their_assignments_and_permissions_this_action_cannot_be_undone')}`}
+        confirmText={t('delete_caretaker')}
+        cancelText={t('cancel')}
         variant="danger"
         isLoading={isDeleting}
       />

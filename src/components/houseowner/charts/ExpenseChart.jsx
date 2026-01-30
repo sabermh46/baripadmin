@@ -1,6 +1,6 @@
 // components/dashboard/charts/ExpenseChart.jsx
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { AlertCircle } from 'lucide-react';
 
 const ExpenseChart = ({ data = [] }) => {

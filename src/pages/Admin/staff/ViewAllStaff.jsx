@@ -26,6 +26,7 @@ import BulkPermissionManager from "../../../components/admin/Staff/BulkPermissio
 import CopyPermissions from "../../../components/admin/Staff/CopyPermissions";
 import { toast } from "react-toastify";
 import Table from "../../../components/common/Table";
+import { useTranslation } from "react-i18next";
 
 const ViewAllStaff = () => {
   const [search, setSearch] = useState("");
@@ -37,6 +38,7 @@ const ViewAllStaff = () => {
   const [bulkManagerOpen, setBulkManagerOpen] = useState(false);
   const [copyPermissionsOpen, setCopyPermissionsOpen] = useState(false);
 
+  const {t } = useTranslation();
   const limit = 10;
 
   // Debounce search
@@ -175,7 +177,7 @@ const ViewAllStaff = () => {
   // Table columns definition
   const columns = [
     {
-      title: "Staff Member",
+      title: t('staff_members'),
       dataIndex: "name",
       key: "name",
       render: (staff) => (
@@ -191,13 +193,13 @@ const ViewAllStaff = () => {
       ),
     },
     {
-      title: "Status",
+      title: t('status'),
       dataIndex: "status",
       key: "status",
       render: (staff) => getStatusBadge(staff.status),
     },
     {
-      title: "Role",
+      title: t('role'),
       dataIndex: "role",
       key: "role",
       render: (staff) => (
@@ -208,7 +210,7 @@ const ViewAllStaff = () => {
       ),
     },
     {
-      title: "Reports To",
+      title: t('reports_to'),
       key: "parent",
       render: (staff) => (
         <div className="text-sm">
@@ -224,7 +226,7 @@ const ViewAllStaff = () => {
       ),
     },
     {
-      title: "Last Active",
+      title: t('last_active'),
       key: "lastLogin",
       render: (staff) => (
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -234,7 +236,7 @@ const ViewAllStaff = () => {
       ),
     },
     {
-      title: "Actions",
+      title: t('actions'),
       key: "actions",
       render: (staff) => (
         <div className="flex items-center gap-2">
@@ -276,7 +278,7 @@ const ViewAllStaff = () => {
             onClick={refetch}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
           >
-            Retry
+            {t('retry')}
           </button>
         </div>
       </div>
@@ -289,10 +291,10 @@ const ViewAllStaff = () => {
       <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-            Staff Management
+            {t('staff_management')}
           </h1>
           <p className="text-gray-600 mt-2">
-            View and manage all staff members and their permissions
+            {t('view_and_manage_all_staff_members_and_their_permissions')}
           </p>
         </div>
 
@@ -302,7 +304,7 @@ const ViewAllStaff = () => {
           </div>
           <input
             type="text"
-            placeholder="Search by name or email..."
+            placeholder={t('search_by_name_or_email')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 pr-4 py-2 w-full md:w-80 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
@@ -318,7 +320,7 @@ const ViewAllStaff = () => {
               <Users className="h-6 w-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Total Staff</p>
+              <p className="text-sm text-gray-500">{t('total_staff')}</p>
               <p className="text-2xl font-semibold text-gray-900">
                 {pagination?.total || 0}
               </p>
@@ -331,7 +333,7 @@ const ViewAllStaff = () => {
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Active</p>
+              <p className="text-sm text-gray-500">{t('active')}</p>
               <p className="text-2xl font-semibold text-gray-900">
                 {staffList.filter((s) => s.status === "active").length}
               </p>
@@ -344,7 +346,7 @@ const ViewAllStaff = () => {
               <Key className="h-6 w-6 text-primary-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Avg. Permissions</p>
+              <p className="text-sm text-gray-500">{t('avg_permissions')}</p>
               <p className="text-2xl font-semibold text-gray-900">
                 {staffList.length > 0
                   ? Math.round(
@@ -365,14 +367,14 @@ const ViewAllStaff = () => {
         <div className="p-4 md:p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              Staff Members
+              {t('staff_members')}
             </h2>
             <button
               onClick={refetch}
               className="flex items-center text-sm text-gray-600 hover:text-gray-900"
             >
               <Activity className="h-4 w-4 mr-2" />
-              Refresh
+              {t('refresh')}
             </button>
           </div>
 

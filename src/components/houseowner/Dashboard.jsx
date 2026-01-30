@@ -20,12 +20,14 @@ import {
   useRefreshDashboardDataMutation
 } from '../../store/api/houseOwnerAnalyticsApi';
 import Btn from '../common/Button';
+import { useTranslation } from 'react-i18next';
 
 const HouseOwnerComponent = () => {
   const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
+  const {t} = useTranslation();
   // Use RTK Query hooks
   const { 
     data: dashboardData, 
@@ -105,54 +107,77 @@ const HouseOwnerComponent = () => {
     summary = {}, 
     upcomingPayments = [], 
     charts = {}, 
-    houses = [] 
+    houses = [],
+    renters = [],
+    caretakers = []
   } = dashboardData || {};
 
   // Format stats for StatsCardGrid with fallbacks
   const stats = [
     { 
-      label: "Total Houses", 
+      label: t('total_properties'), 
       value: summary?.totalHouses ?? 0, 
       icon: HomeIcon,
-      subtext: `${summary?.activeHouses ?? 0} active, ${summary?.inactiveHouses ?? 0} inactive`
+      subtext: `${summary?.activeHouses ?? 0} active, ${summary?.inactiveHouses ?? 0} inactive`,
+      hover: {
+        cardFor: "houses",
+        print: "grid",
+        data: houses
+      }
     },
     { 
-      label: "Total Flats", 
+      label: t('total_flats'), 
       value: summary?.totalFlats ?? 0, 
       icon: Flats,
-      subtext: `${summary?.occupiedFlats ?? 0} occupied, ${summary?.vacantFlats ?? 0} vacant`
+      subtext: `${summary?.occupiedFlats ?? 0} occupied, ${summary?.vacantFlats ?? 0} vacant`,
+      
+      hover: {
+        cardFor: "flats",
+        print: "listGrid",
+        data: houses
+      }
     },
     { 
-      label: "Active Renters", 
+      label: t('active_renters'), 
       value: summary?.totalRenters ?? 0, 
       icon: Renters,
-      subtext: `${summary?.activeRenters ?? 0} active, ${summary?.inactiveRenters ?? 0} inactive`
+      subtext: `${summary?.activeRenters ?? 0} active, ${summary?.inactiveRenters ?? 0} inactive`,
+      hover: {
+        cardFor: "renters",
+        print: "grid",
+        data: renters
+      }
     },
     { 
-      label: "Caretakers", 
+      label: t('active_caretakers'), 
       value: summary?.assignedCaretakers ?? 0, 
       icon: CareTaker,
-      subtext: "Assigned to your houses"
+      subtext: "Assigned to your houses",
+      hover: {
+        cardFor: "caretakers",
+        print: "grid",
+        data: caretakers
+      }
     },
   ];
 
   // Fix for: "Uncaught TypeError: can't access property toLocaleString"
   const profitStats = [
     {
-      label: "Monthly Rent",
-      value: `$${(summary?.monthlyRentCollection ?? 0).toLocaleString()}`,
+      label: t('monthly_rent'),
+      value: `৳ ${(summary?.monthlyRentCollection ?? 0).toLocaleString()}`,
       trend: (summary?.monthlyRentCollection ?? 0) > 0 ? 'up' : 'neutral',
       change: "Current month"
     },
     {
-      label: "Expenses",
-      value: `$${(summary?.monthlyExpenses ?? 0).toLocaleString()}`,
+      label: t('monthly_expenses'),
+      value: `৳ ${(summary?.monthlyExpenses ?? 0).toLocaleString()}`,
       trend: (summary?.monthlyExpenses ?? 0) > 0 ? 'down' : 'neutral',
       change: "Current month"
     },
     {
-      label: "Monthly Profit",
-      value: `$${(summary?.monthlyProfit ?? 0).toLocaleString()}`,
+      label: t('monthly_profit'),
+      value: `৳ ${(summary?.monthlyProfit ?? 0).toLocaleString()}`,
       trend: (summary?.monthlyProfit ?? 0) > 0 ? 'up' : (summary?.monthlyProfit ?? 0) < 0 ? 'down' : 'neutral',
       change: `Occupancy: ${summary?.occupancyRate ?? 0}%`
     }
@@ -164,7 +189,7 @@ const HouseOwnerComponent = () => {
       <div className="flex justify-between items-center">
         <div className="">
           <h2 className="text-sm text-slate-700 font-semibold ">
-            Welcome back, {" "}
+            {t('welcome_back')}, {" "}
             <span className="text-base font-mooli text-primary">{user?.name || 'User'}</span>
           </h2>
         </div>
@@ -243,24 +268,17 @@ const HouseOwnerComponent = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Monthly Rent Collection</h3>
           <MonthlyChart data={charts?.monthlyRentCollection || []} />
         </div>
         
         <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Flat Occupancy</h3>
           <OccupancyChart data={charts?.flatOccupancy || []} />
         </div>
         
         <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Expense Breakdown</h3>
           <ExpenseChart data={charts?.expenseBreakdown || []} />
         </div>
         
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Collection By House</h3>
-          <CollectionByHouseChart data={charts?.rentCollectionByHouse || []} />
-        </div>
       </div>
     </div>
   );

@@ -17,7 +17,7 @@ import StaffPage from '../pages/Admin/staff';
 import { LoaderMinimal } from '../components/common/RouteLoader';
 import { Loader } from 'lucide-react';
 import SystemSettings from '../pages/Admin/SystemSettings';
-import HouseOwnersPage from '../pages/Admin/HouseOwner';
+import HouseOwnersPage from '../pages/Admin/HouseOwnersPage';
 import HousesPage from '../pages/House';
 import CreateHouseForm from '../components/admin/house/CreateHouseForm';
 import HouseDetails from '../components/admin/house/HouseDetails';
@@ -25,10 +25,13 @@ import HouseEditForm from '../components/admin/house/HouseEditForm';
 import FlatList from '../components/flats/FlatList';
 import FlatDetails from '../components/flats/FlatDetails';
 import RenterList from '../components/renters/RenterList';
-import testComp from '../components/admin/house/testComp';
-import testComp2 from '../components/admin/house/testComp2';
 import CareTakerPage from '../pages/Caretaker';
 import CaretakerDetails from '../components/caretaker/CaretakerDetails';
+import { ReportGenPage } from '../pages/report/ReportGenPage';
+import ForgotPassword from '../pages/auth/ForgotPassword';
+import ResetPassword from '../pages/auth/ResetPassword';
+import ChangePassword from '../pages/auth/ChangePassword';
+import HouseOwnerExpensesPage from '../pages/Expenses';
 
 
 
@@ -191,6 +194,22 @@ const AppRoutes = () => {
           </PublicRoute>
         } />
 
+        <Route path="/forgot-password" element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        } />
+        <Route path="/reset-password" element={
+          <PublicRoute>
+            <ResetPassword />
+          </PublicRoute>
+        } />
+        <Route path="/change-password" element={
+          <ProtectedRoute>
+            <ChangePassword />
+          </ProtectedRoute>
+        } />
+
         <Route path='/test2' element={
           <PublicRoute>
             <testComp2/>
@@ -316,6 +335,16 @@ const AppRoutes = () => {
             <Route path="admin/house-owners" element={
               <ProtectedRoute roles={['web_owner']}>
                 <HouseOwnersPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner', 'caretaker']}>
+                <ReportGenPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/expenses" element={
+              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner', 'caretaker']}>
+                <HouseOwnerExpensesPage />
               </ProtectedRoute>
             } />
         </Route>

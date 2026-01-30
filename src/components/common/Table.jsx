@@ -29,8 +29,12 @@ const Table = ({
     }
   };
 
+  const { current, total, totalPages, pageSize = 10 } = pagination || {};
+  const startIndex = (current - 1) * pageSize;
+  const endIndex = Math.min(current * pageSize, total);
+
   return (
-    <div className={`overflow-x-auto rounded-lg border border-gray-200 w-full ${className}`}>
+    <div className={`overflow-x-auto rounded-lg border border-gray-200 max-w-full ${className}`}>
       <div className="inline-block align-middle w-full">
         <div className="overflow-x-auto shadow-sm">
           <table className="min-w-full max-w-full divide-y divide-gray-200">
@@ -125,6 +129,7 @@ const Table = ({
         </div>
 
         {/* Pagination */}
+
         {showPagination && pagination && (
           <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
             <div className="flex flex-1 justify-between sm:hidden">
@@ -148,10 +153,10 @@ const Table = ({
                 <p className="text-sm text-gray-700">
                   Showing{' '}
                   <span className="font-medium">
-                    {pagination.startIndex + 1}
+                    {total === 0 ? 0 : startIndex + 1}
                   </span>{' '}
                   to{' '}
-                  <span className="font-medium">{pagination.endIndex}</span>{' '}
+                  <span className="font-medium">{endIndex}</span>{' '}
                   of{' '}
                   <span className="font-medium">{pagination.total}</span>{' '}
                   results
@@ -179,35 +184,37 @@ const Table = ({
                     <ChevronLeft className="h-5 w-5" />
                   </button>
                   
-                  {/* Page numbers */}
-                  {Array.from({ length: Math.min(5, pagination.totalPages) }).map((_, i) => {
-                    let pageNum;
-                    if (pagination.totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (pagination.current <= 3) {
-                      pageNum = i + 1;
-                    } else if (pagination.current >= pagination.totalPages - 2) {
-                      pageNum = pagination.totalPages - 4 + i;
-                    } else {
-                      pageNum = pagination.current - 2 + i;
+                  {/* Fixed page numbers logic */}
+                  {(() => {
+                    const { current, totalPages } = pagination;
+                    const pages = [];
+                    const maxVisiblePages = 5;
+                    
+                    let startPage = Math.max(1, current - Math.floor(maxVisiblePages / 2));
+                    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                    
+                    // Adjust start page if we're near the end
+                    if (endPage - startPage + 1 < maxVisiblePages) {
+                      startPage = Math.max(1, endPage - maxVisiblePages + 1);
                     }
-
-                    if (pageNum > pagination.totalPages) return null;
-
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-                          pagination.current === pageNum
-                            ? 'z-10 bg-primary-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'
-                            : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
+                    
+                    for (let i = startPage; i <= endPage; i++) {
+                      pages.push(
+                        <button
+                          key={i}
+                          onClick={() => handlePageChange(i)}
+                          className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                            pagination.current === i
+                              ? 'z-10 bg-primary-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'
+                              : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
+                          }`}
+                        >
+                          {i}
+                        </button>
+                      );
+                    }
+                    return pages;
+                  })()}
 
                   <button
                     onClick={() => handlePageChange(pagination.current + 1)}

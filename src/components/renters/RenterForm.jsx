@@ -19,7 +19,7 @@ const renterSchema = z.object({
   nid: z.string().optional(),
   status: z.enum(['active', 'inactive']).default('active'),
   metadata: z.string().optional(),
-  houseOwnerId: z.string(),
+  houseOwnerId: z.preprocess((val) => String(val), z.string().min(1, 'Owner ID is required')),
 });
 
 const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
@@ -54,7 +54,7 @@ const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
       nid: '',
       status: 'active',
       metadata: '',
-      houseOwnerId: houseOwnerId || ''
+      houseOwnerId: isHouseOwner ? user.id : houseOwnerId || ''
     }
   });
 
@@ -165,7 +165,11 @@ const removeFile = (setImage, setPreview, inputName) => {
     }
   };
 
+  console.log("Form Errors:", errors);
+
   if (!open) return null;
+
+
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -372,7 +376,7 @@ const removeFile = (setImage, setPreview, inputName) => {
                     />
                     <button
                       type="button"
-                      onClick={() => removeFile(setNidBackImage, setNidBackPreview, )}
+                      onClick={() => removeFile(setNidBackImage, setNidBackPreview, 'nidBackImage')}
                       className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
                     >
                       <X size={16} />

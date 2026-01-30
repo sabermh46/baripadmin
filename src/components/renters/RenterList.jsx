@@ -21,6 +21,7 @@ import Table from '../common/Table';
 import ConfirmationModal from '../common/ConfirmationModal';
 import { useLocation, useParams } from 'react-router-dom';
 import RenterForm from './RenterForm';
+import { useTranslation } from 'react-i18next';
 
 const RenterList = () => {
   const [page, setPage] = useState(1);
@@ -30,6 +31,7 @@ const RenterList = () => {
   const [createRenterFormOpen, setCreateRenterFormOpen] = useState(false);
   const location = useLocation();
 const queryParams = new URLSearchParams(location.search);
+const { t } = useTranslation();
 const view = queryParams.get('view');
   console.log(view);
   const openCreateRenterForm = () => {
@@ -79,7 +81,7 @@ const view = queryParams.get('view');
 
   const columns = [
     {
-      title: 'Name',
+      title: t('name'),
       dataIndex: 'name',
       key: 'name',
       render: (renter) => (
@@ -95,7 +97,7 @@ const view = queryParams.get('view');
       )
     },
     {
-      title: 'Phone',
+      title: t('phone'),
       dataIndex: 'phone',
       key: 'phone',
       render: (renter) => (
@@ -108,13 +110,13 @@ const view = queryParams.get('view');
       )
     },
     {
-      title: 'NID',
+      title: t('nid'),
       dataIndex: 'nid',
       key: 'nid',
       render: (renter) => renter.nid || 'Not provided'
     },
     {
-      title: 'Flats',
+      title: t('flats'),
       dataIndex: 'flatCount',
       key: 'flats',
       render: (renter) => (
@@ -124,7 +126,7 @@ const view = queryParams.get('view');
       )
     },
     {
-      title: 'Status',
+      title: t('status'),
       dataIndex: 'status',
       key: 'status',
       render: (renter) => {
@@ -143,7 +145,7 @@ const view = queryParams.get('view');
       }
     },
     {
-      title: 'Actions',
+      title: t('actions'),
       key: 'actions',
       render: (renter) => (
         <div className="flex space-x-2">
@@ -186,8 +188,7 @@ const view = queryParams.get('view');
   return (
     <div className="p-0">
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Renters</h1>
-        <p className="text-gray-600">Manage your renters and their information</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('renters')}</h1>
       </div>
 
       {/* Filters and Actions */}

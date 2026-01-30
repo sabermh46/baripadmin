@@ -12,7 +12,7 @@ function LanguageSwitcher() {
   };
 
   return (
-    <div className="flex items-center justify-center p-4">
+    <div className="flex items-center justify-center">
       <button
         onClick={toggleLanguage}
         className="relative flex h-10 w-18 cursor-pointer items-center rounded-full bg-gray-200 p-1 transition-colors duration-300 dark:bg-gray-300"

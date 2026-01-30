@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/preserve-manual-memoization */
 // components/dashboard/SystemDashboard.jsx
 import React, { useMemo } from 'react';
 import {
@@ -57,12 +58,12 @@ const SystemDashboard = () => {
 
   const {t} = useTranslation();
   const stats = useMemo(() => [
-    { title: 'Total Users', value: data?.quickStats?.totalUsers || 0, icon: Users, color: 'blue' },
-    { title: 'Total Houses', value: data?.quickStats?.totalHouses || 0, icon: Home, color: 'green' },
-    { title: 'Total Flats', value: data?.quickStats?.totalFlats || 0, icon: Building, color: 'yellow' },
-    { title: 'Active Staff', value: data?.quickStats?.activeStaff || 0, icon: Staff, color: 'purple' },
-    { title: 'Caretakers', value: data?.quickStats?.activeCaretakers || 0, icon: Shield, color: 'red' },
-    { title: 'System Health', value: '100%', icon: Activity, color: 'indigo' }
+    { title: t('total_users'), value: data?.quickStats?.totalUsers || 0, icon: Users, color: 'blue' },
+    { title: t('total_houses'), value: data?.quickStats?.totalHouses || 0, icon: Home, color: 'green' },
+    { title: t('total_flats'), value: data?.quickStats?.totalFlats || 0, icon: Building, color: 'yellow' },
+    { title: t('active_staff'), value: data?.quickStats?.activeStaff || 0, icon: Staff, color: 'purple' },
+    { title: t('caretakers'), value: data?.quickStats?.activeCaretakers || 0, icon: Shield, color: 'red' },
+    { title: t('system_health'), value: '100%', icon: Activity, color: 'indigo' }
   ], [data]);
 
   const { user } = useAuth();
@@ -99,7 +100,7 @@ const SystemDashboard = () => {
 
       <div className="flex gap-4 flex-wrap justify-between mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-700">System Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-700">{t('system_dashboard')}</h1>
           <p className="text-gray-600 mt-1">
             Last updated: {new Date(data?.timestamp).toLocaleString()}
           </p>
@@ -114,9 +115,9 @@ const SystemDashboard = () => {
           <button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
             Export Report
           </button> */}
-          <Btn className={`flex-1`} type="secondary" onClick={refetch}>Refresh</Btn>
-          <Btn className={`flex-1`} type="secondary">Export Report</Btn>
-          <Btn className={`flex-1`} type='primary' href={'/admin/generate-token'}>Generate Invitation Link</Btn>
+          <Btn className={`flex-1`} type="secondary" onClick={refetch}>{t('refresh')}</Btn>
+          <Btn className={`flex-1`} type="secondary">{t('export_report')}</Btn>
+          <Btn className={`flex-1`} type='primary' href={'/admin/generate-token'}>{t('generate_invitation_link')}</Btn>
         </div>
       </div>
 
@@ -130,7 +131,7 @@ const SystemDashboard = () => {
       {/* Main Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* User Growth Chart */}
-        <ChartCard title="User Growth (Last 12 Months)">
+        <ChartCard title={t('user_growth_last_12_months')}>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data?.systemOverview?.userGrowth}>
@@ -151,14 +152,14 @@ const SystemDashboard = () => {
         </ChartCard>
 
         {/* House Statistics */}
-        <ChartCard title="House Distribution">
+        <ChartCard title={t('house_distribution')}>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={[
-                { name: 'Active', value: data?.systemOverview?.houseStats?.activeHouses || 0 },
-                { name: 'Inactive', value: data?.systemOverview?.houseStats?.inactiveHouses || 0 },
-                { name: 'With Flats', value: data?.systemOverview?.houseStats?.housesWithFlats || 0 },
-                { name: 'With Caretakers', value: data?.systemOverview?.houseStats?.housesWithCaretakers || 0 }
+                { name: t('active'), value: data?.systemOverview?.houseStats?.activeHouses || 0 },
+                { name: t('inactive'), value: data?.systemOverview?.houseStats?.inactiveHouses || 0 },
+                { name: t('with_flats'), value: data?.systemOverview?.houseStats?.housesWithFlats || 0 },
+                { name: t('with_caretakers'), value: data?.systemOverview?.houseStats?.housesWithCaretakers || 0 }
               ]}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="name" />
@@ -171,7 +172,7 @@ const SystemDashboard = () => {
         </ChartCard>
 
         {/* Role Distribution */}
-        <ChartCard title="Role Distribution">
+        <ChartCard title={t('role_distribution')}>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -197,7 +198,7 @@ const SystemDashboard = () => {
         </ChartCard>
 
         {/* Performance Metrics */}
-        <ChartCard title="System Performance">
+        <ChartCard title={t('system_performance')}>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={[
@@ -228,7 +229,7 @@ const SystemDashboard = () => {
       {/* Recent Activities */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Users */}
-        <ChartCard title="Recent Users" className="lg:col-span-1">
+        <ChartCard title={t('recent_users')} className="lg:col-span-1">
           <div className="space-y-2">
             {data?.recentActivities?.recentUsers?.map((user, index) => (
               <RecentActivityItem
@@ -244,7 +245,7 @@ const SystemDashboard = () => {
         </ChartCard>
 
         {/* Recent Houses */}
-        <ChartCard title="Recent Houses" className="lg:col-span-1">
+        <ChartCard title={t('recent_houses')} className="lg:col-span-1">
           <div className="space-y-2">
             {data?.recentActivities?.recentHouses?.map((house, index) => (
               <RecentActivityItem
@@ -261,7 +262,7 @@ const SystemDashboard = () => {
         </ChartCard>
 
         {/* Recent Notices */}
-        <ChartCard title="Recent Notices" className="lg:col-span-1">
+        <ChartCard title={t('recent_notices')} className="lg:col-span-1">
           <div className="space-y-2">
             {data?.recentActivities?.recentNotices?.map((notice, index) => (
               <RecentActivityItem

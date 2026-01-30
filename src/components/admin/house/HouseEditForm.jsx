@@ -8,11 +8,13 @@ import { useGetHouseDetailsQuery, useUpdateHouseMutation } from '../../../store/
 import { useAuth } from '../../../hooks';
 import AmenitiesInput from '../../common/AmenitiesInput';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 const HouseEditForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isWebOwner, isHouseOwner, isCaretaker } = useAuth();
+  const { t } = useTranslation();
 
   const { data, isLoading } = useGetHouseDetailsQuery(id);
   const [updateHouse, { isLoading: isUpdating, error }] = useUpdateHouseMutation();
@@ -95,7 +97,7 @@ const HouseEditForm = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
+    if (!formData.address.trim()) newErrors.address = t('address_is_required');
     if (formData.flatCount < 1) newErrors.flatCount = 'Must have at least 1 flat';
     
     // Validate amenities
@@ -157,7 +159,7 @@ const HouseEditForm = () => {
     try {
       const result = await updateHouse({ id, ...formData }).unwrap();
       if (result.success) {
-        toast.success('Property updated successfully!');
+        toast.success(t('property_updated_successfully'));
         setSuccess(true);
         setTimeout(() => {
           navigate(`/houses/${id}`);
@@ -165,8 +167,9 @@ const HouseEditForm = () => {
       }
     } catch (err) {
       console.error('Update error:', err);
-    }
-  };
+      toast.error(t('failed_to_update_property'));
+    } 
+  }
 
   // Calculate total amenities charges
   const totalAmenitiesCharge = formData.metadata.amenities?.reduce(
@@ -194,19 +197,19 @@ const HouseEditForm = () => {
           className="inline-flex items-center gap-2 text-text hover:text-primary transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Property
+          
+          {t('back_to_property_details')}
         </button>
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-secondary/10 text-secondary rounded-lg">
             <Building className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-text">Edit Property</h1>
-            <p className="text-subdued">Update property information</p>
+            <h1 className="text-2xl font-bold text-text">{t('edit_property')}</h1>
+            <p className="text-subdued">{t('update_property_information')}</p>
           </div>
         </div>
       </div>
-
       <form onSubmit={handleSubmit} className="bg-surface border border-surface rounded-md p-6 space-y-6">
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-md flex items-center gap-3">

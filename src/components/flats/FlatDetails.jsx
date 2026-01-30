@@ -18,11 +18,12 @@ import FlatForm from './FlatForm';
 import RecordPaymentModal from './RecordPaymentModal';
 import ApplyAdvancePaymentModal from './ApplyAdvancePaymentModal'; // New component
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 const FlatDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+  const {t} = useTranslation();
   // State Management
   const [activeTab, setActiveTab] = useState('overview');
   const [openEdit, setOpenEdit] = useState(false);
@@ -117,10 +118,12 @@ const FlatDetails = () => {
   };
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: FileText },
-    { id: 'payments', label: 'Payment History', icon: History },
-    { id: 'advance', label: 'Advance Payments', icon: Shield }, // New tab
+    { id: 'overview', label: t('overview'), icon: FileText },
+    { id: 'payments', label: t('payment_history'), icon: History },
+    { id: 'advance', label: t('advance_payments'), icon: Shield }, // New tab
   ];
+
+  
 
   return (
     <div className="">
@@ -149,7 +152,7 @@ const FlatDetails = () => {
                   className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Shield size={18} />
-                  Apply Advance
+                  {t('apply_advance')}
                 </button>
               )}
               <button
@@ -157,7 +160,7 @@ const FlatDetails = () => {
                 className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 border border-subdued/30 rounded-lg bg-white hover:bg-subdued/10 transition-colors"
               >
                 <Send size={18} />
-                Send Reminder
+                {t('send_reminder')}
               </button>
             </>
           )}
@@ -166,7 +169,7 @@ const FlatDetails = () => {
             className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 bg-surface border border-subdued/30 text-text rounded-lg hover:bg-subdued/10 transition-colors"
           >
             <Edit size={18} />
-            Edit Flat
+            {t('edit_flat')}
           </button>
           <button
             onClick={() => setOpenPayment(true)}
@@ -174,7 +177,7 @@ const FlatDetails = () => {
             className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             <PlusCircle size={18} />
-            Record Payment
+            {t('record_payment')}
           </button>
         </div>
       </div>
@@ -217,7 +220,7 @@ const FlatDetails = () => {
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 rounded-lg"><DollarSign className="text-blue-600" size={24} /></div>
                   <div>
-                    <p className="text-sm text-subdued">Monthly Rent</p>
+                    <p className="text-sm text-subdued">{t('monthly_rent')}</p>
                     <p className="text-xl font-bold">${flat.rent_amount?.toLocaleString()}</p>
                   </div>
                 </div>
@@ -226,7 +229,7 @@ const FlatDetails = () => {
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-100 rounded-lg"><Calendar className="text-green-600" size={24} /></div>
                   <div>
-                    <p className="text-sm text-subdued">Due Day</p>
+                    <p className="text-sm text-subdued">{t('due_day')}</p>
                     <p className="text-xl font-bold">Day {flat.should_pay_rent_day}</p>
                   </div>
                 </div>
@@ -241,7 +244,7 @@ const FlatDetails = () => {
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-orange-100 rounded-lg"><AlertCircle className="text-orange-600" size={24} /></div>
                   <div>
-                    <p className="text-sm text-subdued">Late Fee</p>
+                    <p className="text-sm text-subdued">{t('late_fee')}</p>
                     <p className="text-xl font-bold">{flat.late_fee_percentage ?? 5}%</p>
                   </div>
                 </div>
@@ -250,7 +253,7 @@ const FlatDetails = () => {
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-purple-100 rounded-lg"><Clock className="text-purple-600" size={24} /></div>
                   <div>
-                    <p className="text-sm text-subdued">Status</p>
+                    <p className="text-sm text-subdued">{t('status')}</p>
                     <p className={`text-xl font-bold ${flat.renter_id ? 'text-green-600' : 'text-yellow-600'}`}>
                       {flat.renter_id ? 'Occupied' : 'Vacant'}
                     </p>
@@ -264,7 +267,7 @@ const FlatDetails = () => {
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-green-800 flex items-center gap-2">
-                    <Shield size={20} /> Advance Payments Available
+                    <Shield size={20} /> {t('advance_payments_available')}
                   </h3>
                   <span className="text-2xl font-bold text-green-700">
                     ${availableAdvance.toLocaleString()}
@@ -272,19 +275,19 @@ const FlatDetails = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center">
-                    <p className="text-sm text-green-700">Total Advance</p>
+                    <p className="text-sm text-green-700">{t('total_advance')}</p>
                     <p className="text-xl font-bold">
                       ${advancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm text-green-700">Remaining</p>
+                    <p className="text-sm text-green-700">{t('remaining')}</p>
                     <p className="text-xl font-bold">${availableAdvance.toLocaleString()}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm text-green-700">Covers Months</p>
+                    <p className="text-sm text-green-700">{t('covers_months')}</p>
                     <p className="text-xl font-bold">
-                      {flat.rent_amount > 0 ? (availableAdvance / flat.rent_amount).toFixed(1) : '0'} months
+                      {flat.rent_amount > 0 ? (availableAdvance / flat.rent_amount).toFixed(1) : '0'} {t('months')}
                     </p>
                   </div>
                 </div>
@@ -308,7 +311,7 @@ const FlatDetails = () => {
               {/* Renter Details Card */}
               <div className="bg-surface rounded-lg p-4 border border-subdued/20">
                 <h2 className="text-lg font-bold text-text mb-4 flex items-center gap-2">
-                  <User size={20} /> Renter Information
+                  <User size={20} /> {t('renter_details')}
                 </h2>
                 {flat.renter_id ? (
                   <Link to={`/renters?view=${flat.renter_id}`} className="space-y-4">
@@ -328,16 +331,16 @@ const FlatDetails = () => {
                     {/* Advance payment summary from metadata */}
                     {flatMetadata.advance_payments_summary && (
                       <div className="mt-4 pt-4 border-t border-subdued/20">
-                        <p className="text-sm font-medium text-text mb-2">Advance Payment Summary</p>
+                        <p className="text-sm font-medium text-text mb-2">{t('advance_payment_summary')}</p>
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span className="text-subdued">Total Advance Paid:</span>
+                            <span className="text-subdued">{t('total_advance_paid')}:</span>
                             <span className="font-bold text-green-600">
                               ${flatMetadata.advance_payments_summary.total_advance?.toLocaleString() || '0'}
                             </span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-subdued">Payment Count:</span>
+                            <span className="text-subdued">{t('payment_count')}:</span>
                             <span>{flatMetadata.advance_payments_summary.payment_count || 0}</span>
                           </div>
                         </div>
@@ -346,9 +349,9 @@ const FlatDetails = () => {
                   </Link>
                 ) : (
                   <div className="text-center py-6">
-                    <p className="text-subdued mb-4">No renter assigned to this flat.</p>
+                    <p className="text-subdued mb-4">{t('no_renter_assigned')}</p>
                     <button onClick={() => navigate(`/flats/${id}/assign-renter`)} className="text-primary font-medium hover:underline">
-                      + Assign a Renter
+                      + {t('assign_a_renter')}
                     </button>
                   </div>
                 )}
@@ -356,12 +359,12 @@ const FlatDetails = () => {
 
               {/* Financial Stats Card */}
               <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <h2 className="text-lg font-bold text-text mb-4">Financial Statistics</h2>
+                <h2 className="text-lg font-bold text-text mb-4">{t('financial_statistics')}</h2>
                 <div className="grid grid-cols-2 gap-4">
                   {/* Total Paid */}
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-green-700 uppercase tracking-wider">Total Paid</p>
+                      <p className="text-xs text-green-700 uppercase tracking-wider">{t('total_paid')}</p>
                       <TrendingUp className="text-green-600" size={16} />
                     </div>
                     <p className="text-xl font-bold text-green-700 mt-1">
@@ -377,7 +380,7 @@ const FlatDetails = () => {
                   {/* Total Due/Pending */}
                   <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-red-700 uppercase tracking-wider">Total Due</p>
+                      <p className="text-xs text-red-700 uppercase tracking-wider">{t('total_due')}</p>
                       <AlertCircle className="text-red-600" size={16} />
                     </div>
                     <p className="text-xl font-bold text-red-700 mt-1">
@@ -389,26 +392,26 @@ const FlatDetails = () => {
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg col-span-2">
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="text-xs text-blue-700 uppercase tracking-wider">Payment Status</p>
+                        <p className="text-xs text-blue-700 uppercase tracking-wider">{t('payment_status')}</p>
                         <p className="text-md font-semibold text-blue-800 mt-1">
-                          {stats.pendingCount || 0} Pending Month(s)
+                          {stats.pendingCount || 0} {t('pending_months')}
                         </p>
                         {stats.overdueCount > 0 && (
                           <p className="text-sm text-red-600 mt-1">
-                            {stats.overdueCount} Overdue
+                            {stats.overdueCount} {t('overdue')}
                           </p>
                         )}
                       </div>
                       {stats.overdueCount > 0 && (
                         <div className="flex items-center gap-2">
                           <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-bold rounded-full">
-                            OVERDUE
+                            {t('overdue')}
                           </span>
                           <button
                             onClick={() => setOpenPayment(true)}
                             className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
                           >
-                            Pay Now
+                            {t('pay_now')}
                           </button>
                         </div>
                       )}
@@ -429,9 +432,9 @@ const FlatDetails = () => {
                   <div className="flex items-center gap-3">
                     <Shield className="text-green-600" size={20} />
                     <div>
-                      <p className="font-medium text-green-800">Advance Payment Available</p>
+                      <p className="font-medium text-green-800">{t('advance_payment_available')}</p>
                       <p className="text-sm text-green-700">
-                        ${availableAdvance.toLocaleString()} can be applied to pending payments
+                        ${availableAdvance.toLocaleString()} {t('can_be_applied_to_pending_payments')}
                       </p>
                     </div>
                   </div>
@@ -439,7 +442,7 @@ const FlatDetails = () => {
                     onClick={() => setOpenApplyAdvance(true)}
                     className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
                   >
-                    Apply Advance
+                    {t('apply_advance')}
                   </button>
                 </div>
               </div>
@@ -450,13 +453,13 @@ const FlatDetails = () => {
                 <table className="w-full">
                   <thead className="bg-subdued/5 border-b border-subdued/20">
                     <tr>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Due Date</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Amount</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Paid Date</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Method</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Late Fee</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Advance Used</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Status</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('due_date')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('amount')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('paid_date')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('method')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('late_fee')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('advance_used')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('status')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-subdued/10">
@@ -488,7 +491,7 @@ const FlatDetails = () => {
                             {advanceUsed ? (
                               <div className="text-xs text-green-700">
                                 <div className="font-medium">${advanceUsed.amount}</div>
-                                <div className="text-green-600">Advance applied</div>
+                                <div className="text-green-600">{t('advance_applied')}</div>
                               </div>
                             ) : '-'}
                           </td>
@@ -522,7 +525,7 @@ const FlatDetails = () => {
                     <DollarSign className="text-blue-600" size={24} />
                   </div>
                   <div>
-                    <p className="text-sm text-subdued">Total Advance</p>
+                    <p className="text-sm text-subdued">{t('total_advance')}</p>
                     <p className="text-xl font-bold">
                       ${advancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
                     </p>
@@ -535,7 +538,7 @@ const FlatDetails = () => {
                     <ArrowDownRight className="text-green-600" size={24} />
                   </div>
                   <div>
-                    <p className="text-sm text-subdued">Remaining Available</p>
+                    <p className="text-sm text-subdued">{t('remaining_available')}</p>
                     <p className="text-xl font-bold text-green-600">
                       ${availableAdvance.toLocaleString()}
                     </p>
@@ -548,7 +551,7 @@ const FlatDetails = () => {
                     <TrendingUp className="text-orange-600" size={24} />
                   </div>
                   <div>
-                    <p className="text-sm text-subdued">Months Covered</p>
+                    <p className="text-sm text-subdued">{t('months_covered')}</p>
                     <p className="text-xl font-bold">
                       {flat.rent_amount > 0 ? (availableAdvance / flat.rent_amount).toFixed(1) : '0'}
                     </p>
@@ -560,19 +563,19 @@ const FlatDetails = () => {
             {/* Advance Payments List */}
             <div className="bg-surface rounded-lg border border-subdued/20 overflow-hidden">
               <div className="p-4 border-b border-subdued/20">
-                <h3 className="text-lg font-bold text-text">Advance Payment History</h3>
+                <h3 className="text-lg font-bold text-text">{t('advance_payment_history')}</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-subdued/5 border-b border-subdued/20">
                     <tr>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Date</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Amount</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Paid Amount</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Remaining</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Method</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Status</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">Actions</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('date')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('amount')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('paid_amount')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('remaining')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('method')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('status')}</th>
+                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-subdued/10">
@@ -617,8 +620,8 @@ const FlatDetails = () => {
                       <tr>
                         <td colSpan="7" className="py-10 text-center text-subdued">
                           <Shield className="mx-auto mb-3 text-subdued/50" size={32} />
-                          <p>No advance payments recorded</p>
-                          <p className="text-sm mt-1">Advance payments are added when assigning a renter</p>
+                          <p>{t('no_advance_payments_recorded')}</p>
+                          <p className="text-sm mt-1">{t('advance_payments_added_when_assigning_renter')}</p>
                         </td>
                       </tr>
                     )}
@@ -671,14 +674,14 @@ const FlatDetails = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-lg p-4 max-w-md w-full shadow-xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Send Reminder</h3>
+              <h3 className="text-lg font-bold">{t('send_reminder')}</h3>
               <button onClick={() => setOpenReminder(false)}><X size={20}/></button>
             </div>
             <p className="text-subdued mb-6">
-              This will send a rent payment notification to <strong>{renter.name}</strong> via their registered contact methods.
+              {t('send_reminder_message', { name: renter.name })}
             </p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setOpenReminder(false)} className="px-4 py-2 text-subdued">Cancel</button>
+              <button onClick={() => setOpenReminder(false)} className="px-4 py-2 text-subdued">{t('cancel')}</button>
               <button 
                 onClick={handleSendReminder} 
                 disabled={isSendingReminder}

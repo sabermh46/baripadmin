@@ -26,7 +26,19 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
 
-  const { data: managedOwners, isLoading: ownersLoading } = useGetManagedOwnersQuery(undefined, {});
+  const [ownerSearchTerm, setOwnerSearchTerm] = useState('');
+  const [ownersPage, setOwnersPage] = useState(1);
+  const ownersLimit = 10;
+  const { 
+      data: managedOwnersResponse, 
+      isLoading: ownersLoading, 
+      isFetching: ownersFetching 
+    } = useGetManagedOwnersQuery({
+      search: ownerSearchTerm,
+      page: ownersPage,
+      limit: ownersLimit
+    });
+  
 
   const [createHouse, { isLoading, error, reset }] = useCreateHouseMutation();
 
@@ -130,6 +142,16 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
     }
   };
 
+  const getManagedOwnersOptions = () => {
+    if (!managedOwnersResponse?.data) return [];
+    
+    return managedOwnersResponse.data.map(owner => ({
+      label: `${owner.name} (${owner.email})`,
+      value: owner.id.toString()
+    }));
+  };
+
+
   // Calculate total amenities charges
   const totalAmenitiesCharge = formData.metadata.amenities?.reduce(
     (sum, amenity) => sum + (parseFloat(amenity.charge) || 0), 
@@ -184,41 +206,74 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
         )}
 
         {/* Owner Selection - Only for Staff and Web Owner */}
-        {(isStaff || isWebOwner) && (
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-              <User size={16} /> Assigned House Owner *
-            </label>
-            <div className="relative">
-              <select
-                name="ownerId"
-                value={formData.ownerId}
-                onChange={handleChange}
-                disabled={ownersLoading}
-                className={`w-full pl-10 pr-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all appearance-none
-                  ${errors.ownerId ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}
-                  ${ownersLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <option value="">Select an owner...</option>
-                {ownersLoading ? (
-                  <option value="" disabled>Loading owners...</option>
-                ) : (
-                  managedOwners?.data?.map(owner => (
-                    <option key={owner.id} value={owner.id}>
-                      {owner.name} ({owner.email})
-                    </option>
-                  ))
-                )}
-              </select>
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              {errors.ownerId && (
-                <p className="text-red-500 text-xs mt-1 ml-1 flex items-center gap-1">
-                  <X size={12} /> {errors.ownerId}
-                </p>
-              )}
-            </div>
-          </div>
+{(isStaff || isWebOwner) && (
+  <div className="space-y-2">
+    <label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+      <User size={16} /> Select House Owner *
+    </label>
+    <select
+      name="ownerId" // Target the correct field in state
+      value={formData.ownerId}
+      onChange={handleChange} // Use the existing handleChange helper
+      className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all hover:border-gray-300 ${
+        errors.ownerId ? 'border-red-500 bg-red-50' : 'border-gray-200'
+      }`}
+    >
+      <option value="">Select a house owner...</option>
+      {getManagedOwnersOptions().map((owner) => (
+        <option key={owner.value} value={owner.value}>
+          {owner.label}
+        </option>
+      ))}
+    </select>
+
+    {/* Loading and pagination info */}
+    <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
+      <div className="flex items-center gap-2">
+        {ownersLoading || ownersFetching ? (
+          <>
+            <Loader2 size={14} className="animate-spin" />
+            <span>Loading house owners...</span>
+          </>
+        ) : (
+          <span>
+            Showing {getManagedOwnersOptions().length} of {managedOwnersResponse?.meta?.total || 0} owners
+          </span>
         )}
+      </div>
+      
+      {managedOwnersResponse?.meta?.totalPages > 1 && (
+        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-1">
+          <button
+            type="button"
+            onClick={() => setOwnersPage(p => Math.max(1, p - 1))}
+            disabled={ownersPage === 1}
+            className="p-1 hover:text-primary-600 disabled:opacity-30"
+          >
+            ←
+          </button>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+            {ownersPage} / {managedOwnersResponse.meta.totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setOwnersPage(p => Math.min(managedOwnersResponse.meta.totalPages, p + 1))}
+            disabled={ownersPage === managedOwnersResponse.meta.totalPages}
+            className="p-1 hover:text-primary-600 disabled:opacity-30"
+          >
+            →
+          </button>
+        </div>
+      )}
+    </div>
+
+    {errors.ownerId && (
+      <p className="text-red-500 text-xs mt-1 ml-1 flex items-center gap-1">
+        <X size={12} /> {errors.ownerId}
+      </p>
+    )}
+  </div>
+)}
 
         {/* House Owner View - Show read-only info */}
         {isHouseOwner && (

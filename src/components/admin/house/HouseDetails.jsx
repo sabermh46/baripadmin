@@ -9,11 +9,27 @@ import { useGetHouseDetailsQuery, useDeleteHouseMutation } from '../../../store/
 import Btn from '../../common/Button';
 import { useAuth } from '../../../hooks';
 import { toast } from 'react-toastify';
+import { useState } from 'react';
+import Modal from '../../common/Modal';
+import RecordExpenseForm from '../../../pages/Expenses/RecordExpense';
 
 const HouseDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const [showForm, setShowForm] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
+  
+    const handleFormSubmit = (expenseData) => {
+      console.log('Expense recorded:', expenseData);
+      setShowForm(false);
+      setRefreshKey(prev => prev + 1); // Trigger refresh of expense list
+    };
+  
+    const handleFormCancel = () => {
+      setShowForm(false);
+    };
 
   const { data, isLoading, error } = useGetHouseDetailsQuery(id);
   const [deleteHouse] = useDeleteHouseMutation();
@@ -69,6 +85,13 @@ const HouseDetails = () => {
               Property Details
             </p>
           </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+          >
+            <DollarSign className="w-4 h-4" />
+            Record Expense
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -256,6 +279,13 @@ const HouseDetails = () => {
               </button>
             </div>
           </div>
+
+          {
+            showForm &&
+            <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
+              <RecordExpenseForm />
+            </Modal>
+          }
 
           {/* Statistics */}
           <div className="bg-surface border border-black/10 shadow rounded-xl p-6">

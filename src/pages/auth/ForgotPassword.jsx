@@ -1,0 +1,84 @@
+// src/pages/auth/ForgotPassword.jsx
+import React, { useState } from 'react';
+import { useForgotPasswordMutation } from '../../store/api/authApi';
+import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
+
+const ForgotPassword = () => {
+  const [email, setEmail] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
+
+  const {t} = useTranslation();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await forgotPassword({ email }).unwrap();
+      setIsSubmitted(true);
+      toast.success(t("we_sent_password_reset_link"));
+    } catch (err) {
+      toast.error(err?.data?.message || t("failed_to_send_reset_link"));
+    }
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="max-w-md w-full text-center space-y-6 bg-surface p-8 rounded-2xl border border-surface shadow-xl">
+          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
+            <Mail size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-text">{t("check_your_email")}</h2>
+          <p className="text-subdued">{t("we_sent_password_reset_link")} <span className="font-semibold text-text">{email}</span>.</p>
+          <Link to="/login" className="inline-flex items-center text-primary font-medium hover:underline">
+            <ArrowLeft size={16} className="mr-2" /> {t("back_to_login")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="max-w-md w-full space-y-8 bg-surface p-8 rounded-2xl border border-surface shadow-xl">
+        <div className="text-center">
+          <h2 className="text-3xl font-black text-text tracking-tight">{t("forgot_password")}</h2>
+          <p className="text-subdued mt-2">{t("no_worries_enter_email")}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-subdued w-5 h-5" />
+            <input
+              type="email"
+              required
+              className="w-full pl-10 pr-4 py-3 bg-background border border-surface rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-text"
+              placeholder={t("email_address")}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {isLoading ? <Loader2 className="animate-spin" size={20} /> : t("send_reset_link")}
+          </button>
+        </form>
+
+        <div className="text-center">
+          <Link to="/login" className="text-sm text-subdued hover:text-primary transition-colors">
+            {t('back_to_login')}
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ForgotPassword;
