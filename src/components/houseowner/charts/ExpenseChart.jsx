@@ -2,8 +2,11 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const ExpenseChart = ({ data = [] }) => {
+
+  const {t} = useTranslation();
   // Format data for the chart
   const chartData = data.map(item => ({
     name: item.category || 'Uncategorized',
@@ -37,10 +40,10 @@ const ExpenseChart = ({ data = [] }) => {
         <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
           <p className="font-semibold text-gray-800 mb-2">{label}</p>
           <p className="text-sm text-gray-600 mb-1">
-            Amount: <span className="font-semibold text-primary">${payload[0].value.toLocaleString()}</span>
+            {t('amount')}: <span className="font-semibold text-primary">${payload[0].value.toLocaleString()}</span>
           </p>
           <p className="text-sm text-gray-600">
-            Expenses: <span className="font-semibold">{payload[0].payload.count}</span>
+            {t('expenses')}: <span className="font-semibold">{payload[0].payload.count}</span>
           </p>
         </div>
       );
@@ -69,8 +72,8 @@ const ExpenseChart = ({ data = [] }) => {
       {/* Chart Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-bold text-gray-800">Expense Breakdown</h3>
-          <p className="text-sm text-gray-500">Expenses by category</p>
+          <h3 className="text-lg font-bold text-gray-800">{t('expense_breakdown')}</h3>
+          <p className="text-sm text-gray-500">{t('expenses_by_category')}</p>
         </div>
         <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full">
           <AlertCircle className="w-4 h-4 text-gray-600" />
@@ -125,8 +128,8 @@ const ExpenseChart = ({ data = [] }) => {
         ) : (
           <div className="h-full flex flex-col items-center justify-center bg-gray-50 rounded-lg">
             <AlertCircle className="w-12 h-12 text-gray-400 mb-3" />
-            <p className="text-gray-500 font-medium">No expenses recorded</p>
-            <p className="text-sm text-gray-400 mt-1">Expenses will appear here once added</p>
+            <p className="text-gray-500 font-medium">{t('no_expenses_recorded')}</p>
+            <p className="text-sm text-gray-400 mt-1">{t('expenses_will_appear_here_once_added')}</p>
           </div>
         )}
       </div>
@@ -134,7 +137,7 @@ const ExpenseChart = ({ data = [] }) => {
       {/* Category Summary */}
       {data.length > 0 && (
         <div className="mt-6">
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">Expense Categories</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('expense_categories')}</h4>
           <div className="space-y-2">
             {chartData.map((item, index) => (
               <div key={index} className="flex items-center justify-between">

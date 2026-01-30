@@ -3,8 +3,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, RefreshCw } from 'lucide-react';
 import useNotifications from '../../hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 const NotificationIcon = () => {
+    const {t} = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -158,7 +160,7 @@ const NotificationIcon = () => {
                     {/* Header */}
                     <div className="py-2 px-3 md:p-4 border-b border-gray-100 bg-gray-50">
                         <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-gray-800">Notifications</h3>
+                            <h3 className="font-semibold text-gray-800">{t('notifications')}</h3>
                             <div className="flex items-center space-x-2">
                                 <button
                                     onClick={handleRefresh}
@@ -167,13 +169,13 @@ const NotificationIcon = () => {
                                     aria-label="Refresh notifications"
                                 >
                                     <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                    Refresh
+                                    {t('refresh')}
                                 </button>
                             </div>
                         </div>
                         {unreadCount > 0 && (
                             <p className="text-sm text-gray-600 mt-1">
-                                {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+                                {unreadCount} {t('unread')} {t('notifications')}{unreadCount !== 1 ? 's' : ''}
                             </p>
                         )}
                     </div>
@@ -183,12 +185,12 @@ const NotificationIcon = () => {
                         {loading && !isRefreshing ? (
                             <div className="p-8 text-center">
                                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
-                                <p className="mt-2 text-gray-500">Loading notifications...</p>
+                                <p className="mt-2 text-gray-500">{t('loading_notifications')}</p>
                             </div>
                         ) : notifications.length === 0 ? (
                             <div className="p-8 text-center">
                                 <Bell className="w-12 h-12 text-gray-300 mx-auto" />
-                                <p className="mt-2 text-gray-500">No notifications yet</p>
+                                <p className="mt-2 text-gray-500">{t('no_notifications')}</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-300">
@@ -224,7 +226,7 @@ const NotificationIcon = () => {
                                                     {!notification.read && (
                                                         <span 
                                                             className="inline-block w-2 h-2 bg-blue-500 rounded-full"
-                                                            aria-label="Unread"
+                                                            aria-label={t('unread')}
                                                         ></span>
                                                     )}
                                                 </div>
@@ -263,7 +265,7 @@ const NotificationIcon = () => {
                             className="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
                             onClick={() => setIsOpen(false)}
                         >
-                            View all notifications
+                            {t('view_all_notifications')}
                         </a>
                     </div>
                 </div>

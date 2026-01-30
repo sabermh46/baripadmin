@@ -19,6 +19,9 @@ import RecordPaymentModal from './RecordPaymentModal';
 import ApplyAdvancePaymentModal from './ApplyAdvancePaymentModal'; // New component
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
+import AssignRenterModal from './AssignRenterModal';
+import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
+import { set } from 'lodash';
 
 const FlatDetails = () => {
   const { id } = useParams();
@@ -31,12 +34,14 @@ const FlatDetails = () => {
   const [openReminder, setOpenReminder] = useState(false);
   const [openApplyAdvance, setOpenApplyAdvance] = useState(false); // New state
   const [selectedAdvancePayment, setSelectedAdvancePayment] = useState(null);
+  const [openAssignModal, setOpenAssignModal] = useState(false);
 
   // Queries
   const { data: flatData, isLoading, refetch: refetchDetails } = useGetFlatDetailsQuery(id);
   const { data: financialSummaryData, refetch: refetchFinancialSummary } = useGetFlatFinancialSummaryQuery({ flatId: id }, { skip: !id });
+  const {data: houseData, isLoading: isHouseLoading, error } = useGetHouseDetailsQuery(flatData?.data?.flat?.house_id, { skip: !flatData?.data?.flat?.house_id });
   
-  console.log(financialSummaryData);
+  console.log(flatData);
   
   // New query for advance payments
   const { data: advancePaymentsData, refetch: refetchAdvancePayments } = useGetFlatAdvancePaymentsQuery(
@@ -350,7 +355,7 @@ const FlatDetails = () => {
                 ) : (
                   <div className="text-center py-6">
                     <p className="text-subdued mb-4">{t('no_renter_assigned')}</p>
-                    <button onClick={() => navigate(`/flats/${id}/assign-renter`)} className="text-primary font-medium hover:underline">
+                    <button onClick={() => setOpenAssignModal(true)} className="text-primary font-medium hover:underline">
                       + {t('assign_a_renter')}
                     </button>
                   </div>
@@ -693,6 +698,15 @@ const FlatDetails = () => {
           </div>
         </div>
       )}
+
+      <AssignRenterModal
+              open={openAssignModal}
+              onClose={() => {
+                setOpenAssignModal(false);
+              }}
+              flat={flatData?.data?.flat || null}
+              houseinfo={houseData?.data || null}
+            />
     </div>
   );
 };

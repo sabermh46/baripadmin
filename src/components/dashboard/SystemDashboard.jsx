@@ -12,6 +12,10 @@ import { LoaderMinimal } from '../common/RouteLoader';
 import Btn from '../common/Button';
 import { useAuth } from '../../hooks';
 import { useTranslation } from 'react-i18next';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+// Import your logo or use the URL string
+import appLogo from '../../assets//icons/logo.svg';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
@@ -55,6 +59,312 @@ const RecentActivityItem = ({ type, title, address, user, time, icon: Icon }) =>
 
 const SystemDashboard = () => {
   const { data, error, isLoading, refetch } = useGetDashboardDataQuery();
+
+  console.log(data);
+  
+// {
+//     "systemOverview": {
+//         "userGrowth": [
+//             {
+//                 "month": "2025-08",
+//                 "count": 0
+//             },
+//             {
+//                 "month": "2025-09",
+//                 "count": 0
+//             },
+//             {
+//                 "month": "2025-10",
+//                 "count": 0
+//             },
+//             {
+//                 "month": "2025-11",
+//                 "count": 0
+//             },
+//             {
+//                 "month": "2025-12",
+//                 "count": 0
+//             },
+//             {
+//                 "month": "2026-01",
+//                 "count": 4
+//             }
+//         ],
+//         "houseStats": {
+//             "totalHouses": 2,
+//             "activeHouses": 2,
+//             "inactiveHouses": 0,
+//             "housesWithFlats": 3,
+//             "housesWithCaretakers": 0,
+//             "recentHouses": [
+//                 {
+//                     "id": 3,
+//                     "uuid": "dcbaaad6-a17a-4894-8fd6-c34815040073",
+//                     "address": "wh",
+//                     "active": 1,
+//                     "flatCount": 2,
+//                     "caretakerCount": 0,
+//                     "owner": {
+//                         "name": "Sumon Rahman H",
+//                         "email": "false.xenon.7@gmail.com"
+//                     },
+//                     "createdAt": "2026-01-30T16:46:58.569Z"
+//                 },
+//                 {
+//                     "id": 2,
+//                     "uuid": "39f206ab-1531-4135-b82e-e1d7042f5ab3",
+//                     "address": "qwertyui",
+//                     "active": 1,
+//                     "flatCount": 1,
+//                     "caretakerCount": 0,
+//                     "owner": {
+//                         "name": "H O 1",
+//                         "email": "houseOwner01@gmail.com"
+//                     },
+//                     "createdAt": "2026-01-28T17:39:27.713Z"
+//                 }
+//             ]
+//         },
+//         "roleDistribution": [
+//             {
+//                 "role": "DEVELOPER",
+//                 "count": 1,
+//                 "slug": "developer"
+//             },
+//             {
+//                 "role": "WEB_OWNER",
+//                 "count": 1,
+//                 "slug": "web_owner"
+//             },
+//             {
+//                 "role": "STAFF",
+//                 "count": 0,
+//                 "slug": "staff"
+//             },
+//             {
+//                 "role": "HOUSE_OWNER",
+//                 "count": 2,
+//                 "slug": "house_owner"
+//             },
+//             {
+//                 "role": "CARETAKER",
+//                 "count": 0,
+//                 "slug": "caretaker"
+//             }
+//         ],
+//         "summary": {
+//             "totalUsers": 4,
+//             "activeUsers": 4,
+//             "totalNotifications": 1,
+//             "recentActivity": 3,
+//             "uptime": "99.9%",
+//             "databaseHealth": "healthy",
+//             "serverLoad": "low"
+//         }
+//     },
+//     "recentActivities": {
+//         "recentUsers": [
+//             {
+//                 "id": 4,
+//                 "name": "Sumon Rahman H",
+//                 "email": "false.xenon.7@gmail.com",
+//                 "role": {
+//                     "name": "HOUSE_OWNER",
+//                     "slug": "house_owner"
+//                 },
+//                 "createdAt": "2026-01-30T16:00:49.995Z"
+//             },
+//             {
+//                 "id": 3,
+//                 "name": "H O 1",
+//                 "email": "houseOwner01@gmail.com",
+//                 "role": {
+//                     "name": "HOUSE_OWNER",
+//                     "slug": "house_owner"
+//                 },
+//                 "createdAt": "2026-01-25T17:40:23.999Z"
+//             },
+//             {
+//                 "id": 2,
+//                 "name": "Tanvir Haque",
+//                 "email": "tanvirhaque.org@gmail.com",
+//                 "role": {
+//                     "name": "WEB_OWNER",
+//                     "slug": "web_owner"
+//                 },
+//                 "createdAt": "2026-01-24T18:14:25.256Z"
+//             },
+//             {
+//                 "id": 1,
+//                 "name": "Saber Mahmud Sourav",
+//                 "email": "sabermahmud.sourav.7@gmail.com",
+//                 "role": {
+//                     "name": "DEVELOPER",
+//                     "slug": "developer"
+//                 },
+//                 "createdAt": "2026-01-24T18:14:25.254Z"
+//             }
+//         ],
+//         "recentHouses": [
+//             {
+//                 "id": 3,
+//                 "name": "White House",
+//                 "address": "wh",
+//                 "active": 1,
+//                 "owner": {
+//                     "name": "Sumon Rahman H",
+//                     "email": "false.xenon.7@gmail.com"
+//                 },
+//                 "createdAt": "2026-01-30T16:46:58.569Z"
+//             },
+//             {
+//                 "id": 2,
+//                 "name": "Proshanti 2.0",
+//                 "address": "qwertyui",
+//                 "active": 1,
+//                 "owner": {
+//                     "name": "H O 1",
+//                     "email": "houseOwner01@gmail.com"
+//                 },
+//                 "createdAt": "2026-01-28T17:39:27.713Z"
+//             }
+//         ],
+//         "recentNotices": []
+//     },
+//     "quickStats": {
+//         "totalUsers": 4,
+//         "totalHouses": 2,
+//         "totalFlats": 3,
+//         "totalRenters": 3,
+//         "activeStaff": 0,
+//         "activeCaretakers": 0,
+//         "systemHealth": "healthy"
+//     },
+//     "timestamp": "2026-01-30T18:43:41.926Z"
+// }
+
+  const getLogoBase64 = (url) => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = url;
+            img.crossOrigin = 'Anonymous'; 
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => resolve(null);
+        });
+    };
+
+  const handleExportPDF = async () => {
+    if (!data) return;
+
+    const doc = new jsPDF();
+    const primaryColorRGB = [15, 23, 42]; // Matches slate-800
+
+    // 1. Branding & Header (Same as your ReportGenPage)
+    try {
+        const logoData = await getLogoBase64(appLogo);
+        if (logoData) doc.addImage(logoData, 'PNG', 20, 15, 12, 12);
+    } catch (e) {
+        doc.setFillColor(...primaryColorRGB);
+        doc.circle(26, 21, 6, 'F');
+    }
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Bari Porichalona", 36, 21);
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text("System Administration Dashboard", 36, 26);
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("SYSTEM OVERVIEW REPORT", 130, 20);
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generated By: ${user?.name}`, 130, 26);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 130, 31);
+
+    doc.setDrawColor(...primaryColorRGB);
+    doc.line(20, 36, 190, 36);
+
+    // 2. Quick Stats Table
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...primaryColorRGB);
+    doc.text("Key Metrics", 20, 45);
+
+    autoTable(doc, {
+        startY: 50,
+        margin: { left: 20 },
+        tableWidth: 170,
+        head: [['Metric', 'Value', 'Status']],
+        body: [
+            ['Total Users', data.quickStats.totalUsers, 'Active'],
+            ['Total Houses', data.quickStats.totalHouses, 'Operational'],
+            ['Total Flats', data.quickStats.totalFlats, 'Recorded'],
+            ['System Health', '100%', 'Excellent'],
+            ['Server Load', data.systemOverview.summary.serverLoad.toUpperCase(), 'Normal'],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: primaryColorRGB },
+    });
+
+    // 3. User Role Distribution
+    const finalY1 = doc.lastAutoTable.finalY;
+    doc.text("Role Distribution", 20, finalY1 + 15);
+    
+    autoTable(doc, {
+        startY: finalY1 + 20,
+        margin: { left: 20 },
+        tableWidth: 80,
+        head: [['Role', 'Count']],
+        body: data.systemOverview.roleDistribution.map(r => [r.role, r.count]),
+        theme: 'grid',
+        headStyles: { fillColor: [100, 116, 139] }, // Slate-500
+    });
+
+    // 4. Recent Houses Table (Horizontal placement or below)
+    const finalY2 = doc.lastAutoTable.finalY;
+    doc.text("Recently Added Properties", 20, finalY2 + 15);
+
+    const houseRows = data.recentActivities.recentHouses.map(h => [
+        h.name,
+        h.address,
+        h.owner.name,
+        new Date(h.createdAt).toLocaleDateString()
+    ]);
+
+    autoTable(doc, {
+        startY: finalY2 + 20,
+        margin: { left: 20, right: 20 },
+        head: [['House Name', 'Address', 'Owner', 'Created']],
+        body: houseRows,
+        theme: 'striped',
+        headStyles: { fillColor: primaryColorRGB },
+    });
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Bari Porichalona Confidential | Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+    }
+
+    doc.save(`System_Dashboard_Report_${new Date().getTime()}.pdf`);
+};
 
   const {t} = useTranslation();
   const stats = useMemo(() => [
@@ -106,17 +416,9 @@ const SystemDashboard = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
-          {/* <button
-            onClick={refetch}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
-          >
-            Refresh
-          </button>
-          <button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
-            Export Report
-          </button> */}
+
           <Btn className={`flex-1`} type="secondary" onClick={refetch}>{t('refresh')}</Btn>
-          <Btn className={`flex-1`} type="secondary">{t('export_report')}</Btn>
+          <Btn className={`flex-1`} onClick={handleExportPDF} type="secondary">{t('export_report')}</Btn>
           <Btn className={`flex-1`} type='primary' href={'/admin/generate-token'}>{t('generate_invitation_link')}</Btn>
         </div>
       </div>

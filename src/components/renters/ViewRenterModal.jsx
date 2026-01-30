@@ -9,9 +9,11 @@ import {
   Home,
   Calendar,
   Clock,
-  Download
+  Download,
+  ChevronRight
 } from 'lucide-react';
 import Modal from '../common/Modal';
+import { Link } from 'react-router-dom';
 
 const ViewRenterModal = ({ isOpen, onClose, renterId }) => {
   const { data, isLoading } = useGetRenterDetailsQuery(renterId);
@@ -19,11 +21,9 @@ const ViewRenterModal = ({ isOpen, onClose, renterId }) => {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     
-    // Remove the /uploads prefix if present
-    const cleanPath = imagePath.replace(/^\/uploads\//, '');
     
     // Use the proxy endpoint
-    return `${import.meta.env.VITE_APP_API_URL}/api/images/${encodeURIComponent(cleanPath)}`;
+    return `${import.meta.env.VITE_APP_API_URL}${imagePath}`;
   };
 
   const renter = data?.data?.renter;
@@ -177,11 +177,14 @@ const ViewRenterModal = ({ isOpen, onClose, renterId }) => {
               <div className="space-y-2">
                 {flats.map((flat) => (
                   <div key={flat.id} className="bg-white p-3 rounded border">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center gap-4 flex-wrap">
                       <div>
                         <p className="font-medium text-gray-900">Flat #{flat.number}</p>
                         <p className="text-sm text-gray-500">{flat.houseName}</p>
                       </div>
+                      <Link to={'/flats/' + flat.id} className='mr-auto bg-primary p-2 rounded-full text-white'>
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
                       <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                         {flat.houseAddress}
                       </span>

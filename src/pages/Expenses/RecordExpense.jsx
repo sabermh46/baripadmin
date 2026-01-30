@@ -15,7 +15,7 @@ import {
   Check,
   ChevronDown
 } from 'lucide-react';
-import { Combobox, Listbox } from '@headlessui/react';
+import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions, Listbox } from '@headlessui/react';
 import { z } from 'zod';
 import { useRecordExpenseMutation } from '../../store/api/reportApi';
 import { useGetHousesQuery } from '../../store/api/houseApi';
@@ -150,20 +150,20 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
           >
             <div className="relative">
               <div className="relative w-full">
-                <Combobox.Input
+                <ComboboxInput
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none transition"
                   placeholder="Type to search properties..."
                   // This is crucial for the display
                   displayValue={(house) => house?.name || ''} 
                   onChange={(e) => setHouseSearch(e.target.value)}
                 />
-                <Combobox.Button className="absolute right-3 top-3.5">
+                <ComboboxButton className="absolute right-3 top-3.5">
                   <ChevronDown className="h-5 w-5 text-gray-400" />
-                </Combobox.Button>
+                </ComboboxButton>
               </div>
               
               {/* 3. SHOW OPTIONS IMMEDIATELY */}
-              <Combobox.Options className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-auto">
+              <ComboboxOptions className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-auto">
                 {housesLoading ? (
                   <div className="px-4 py-6 text-center text-gray-500">
                     <Loader2 className="animate-spin h-5 w-5 mx-auto mb-2" />
@@ -173,7 +173,7 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
                   <div className="px-4 py-6 text-center text-gray-500">No properties found</div>
                 ) : (
                   houses.map((house) => (
-                    <Combobox.Option
+                    <ComboboxOption
                       key={house.id}
                       value={house}
                       className={({ active }) =>
@@ -189,10 +189,10 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
                           {selected && <Check className="h-4 w-4 text-orange-600" />}
                         </div>
                       )}
-                    </Combobox.Option>
+                    </ComboboxOption>
                   ))
                 )}
-              </Combobox.Options>
+              </ComboboxOptions>
             </div>
           </Combobox>
           {errors.house_id && <p className="text-xs text-red-500 font-medium">{errors.house_id.message}</p>}

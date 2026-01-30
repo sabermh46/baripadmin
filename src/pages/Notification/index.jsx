@@ -14,8 +14,10 @@ import {
 import { format } from 'date-fns';
 import useNotifications from '../../hooks/useNotifications';
 import Btn from '../../components/common/Button';
+import { useTranslation } from 'react-i18next';
 
 const NotificationsPage = () => {
+    const {t} = useTranslation();
     const {
         notifications,
         unreadCount,
@@ -102,7 +104,7 @@ const NotificationsPage = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-                    <p className="mt-4 text-gray-600">Loading notifications...</p>
+                    <p className="mt-4 text-gray-600">{t('loading_notifications')}</p>
                 </div>
             </div>
         );
@@ -113,13 +115,13 @@ const NotificationsPage = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <AlertTriangle className="w-16 h-16 text-red-500 mx-auto" />
-                    <h2 className="mt-4 text-xl font-semibold text-gray-800">Error loading notifications</h2>
+                    <h2 className="mt-4 text-xl font-semibold text-gray-800">{t('error_loading_notifications')}</h2>
                     <p className="mt-2 text-gray-600">{error}</p>
                     <button
                         onClick={refresh}
                         className="mt-4 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
                     >
-                        Try Again
+                        {t('retry')}
                     </button>
                 </div>
             </div>
@@ -131,19 +133,19 @@ const NotificationsPage = () => {
                 {/* Header */}
                 <div className="flex flex-wrap items-center justify-between mb-4">
                     <div>
-                        <h1 className="text-xl md:text-3xl font-bold text-slate-600">Notifications</h1>
+                        <h1 className="text-xl md:text-3xl font-bold text-slate-600">{t('notifications')}</h1>
                         <p className="mt-2 text-gray-600 text-sm md:text-base">
-                            {unreadCount} unread • {notifications.length} total
+                            {unreadCount} {t('unread')} • {notifications.length} {t('total')}
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 mt-2">
 
                         <Btn onClick={refresh}>
-                            Refresh
+                            {t('refresh')}
                         </Btn>
                         {unreadCount > 0 && (
                             <Btn onClick={markAllAsRead} type='primary'>
-                            Mark all as read
+                            {t('mark_all_as_read')}
                         </Btn>
                         )}
                     </div>
@@ -212,7 +214,7 @@ const NotificationsPage = () => {
                 {selectedNotifications.length > 0 && (
                     <div className="flex flex-col md:flex-row items-center justify-between sticky top-10 bg-primary-200 rounded-xl py-2 px-1 my-2">
                         <span className="font-medium">
-                            {selectedNotifications.length} notification{selectedNotifications.length !== 1 ? 's' : ''} selected
+                            {selectedNotifications.length} {t('notifications')}{selectedNotifications.length !== 1 ? t('notifications') : ''} {t('selected')}
                         </span>
                         <div className="flex items-center space-x-2">
                             <button
@@ -220,14 +222,14 @@ const NotificationsPage = () => {
                                 className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
                             >
                                 <Check className="w-4 h-4 inline mr-1" />
-                                Mark as read
+                                {t('mark_as_read')}
                             </button>
                             <button
                                 onClick={handleDeleteSelected}
                                 className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
                             >
                                 <Trash2 className="w-4 h-4 inline mr-1" />
-                                Delete
+                                {t('delete')}
                             </button>
                         </div>
                     </div>
@@ -237,9 +239,9 @@ const NotificationsPage = () => {
                 {notifications.length === 0 ? (
                     <div className="text-center py-12">
                         <Bell className="w-16 h-16 text-gray-300 mx-auto" />
-                        <h3 className="mt-4 text-lg font-medium text-gray-900">No notifications</h3>
+                        <h3 className="mt-4 text-lg font-medium text-gray-900">{t('no_notifications')}</h3>
                         <p className="mt-1 text-gray-500">
-                            {filters.unread ? "You don't have any unread notifications." : "You don't have any notifications yet."}
+                            {filters.unread ? t('no_unread_notifications') : t('no_notifications_yet')}
                         </p>
                     </div>
                 ) : (
@@ -319,7 +321,7 @@ const NotificationsPage = () => {
                             disabled={loading}
                             className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                         >
-                            {loading ? 'Loading...' : 'Load More'}
+                            {loading ? t('loading') : t('load_more')}
                         </button>
                     </div>
                 )}

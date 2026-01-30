@@ -2,8 +2,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Home, User, ChevronRight, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const UpcomingPayments = ({ payments = [] }) => {
+  const {t}= useTranslation();
   const navigate = useNavigate();
 
   // Function to get days color based on urgency
@@ -36,12 +38,12 @@ const UpcomingPayments = ({ payments = [] }) => {
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-gray-800">Upcoming Payments</h3>
-            <p className="text-sm text-gray-500">Due in the next 30 days</p>
+            <h3 className="text-lg font-bold text-gray-800">{t('upcoming_payments')}</h3>
+            <p className="text-sm text-gray-500">{t('due_in_next_30_days')}</p>
           </div>
           <div className="px-3 py-1 bg-gray-50 rounded-full">
             <span className="text-sm font-medium text-gray-700">
-              {payments.length} payments
+              {payments.length} {t('payments')}
             </span>
           </div>
         </div>
@@ -81,7 +83,7 @@ const UpcomingPayments = ({ payments = [] }) => {
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-400" />
                       <span className="text-sm text-gray-600">
-                        Due: {formatDate(payment.due_date)}
+                        {t('due')}: {formatDate(payment.due_date)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -126,9 +128,9 @@ const UpcomingPayments = ({ payments = [] }) => {
           <div className="px-6 py-12 text-center">
             <div className="flex flex-col items-center">
               <AlertCircle className="w-16 h-16 text-gray-300 mb-4" />
-              <h4 className="text-lg font-semibold text-gray-600 mb-2">No Upcoming Payments</h4>
+              <h4 className="text-lg font-semibold text-gray-600 mb-2">{t('no_upcoming_payments')}</h4>
               <p className="text-gray-500 max-w-md mx-auto">
-                All rent payments are up to date. New upcoming payments will appear here automatically.
+                {t('you_have_no_payments_due_in_the_next_30_days')}
               </p>
             </div>
           </div>
@@ -142,13 +144,13 @@ const UpcomingPayments = ({ payments = [] }) => {
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-600">
-                Total Due: <span className="font-semibold text-gray-800">
+                {t('total_due')}: <span className="font-semibold text-gray-800">
                   ${payments.reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString()}
                 </span>
               </span>
             </div>
             <span className="text-sm text-gray-500">
-              Click any payment to view details
+              {t('click_any_payment_to_view_details')}
             </span>
           </div>
         </div>

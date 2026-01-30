@@ -2,8 +2,10 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area } from 'recharts';
 import { TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const MonthlyChart = ({ data = [] }) => {
+  const {t} = useTranslation();
   // Format data for the chart
   const chartData = data.map(item => ({
     name: item.month.split('-')[1] + '/' + item.month.split('-')[0].slice(2), // Format: MM/YY
@@ -31,10 +33,10 @@ const MonthlyChart = ({ data = [] }) => {
         <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
           <p className="font-semibold text-gray-800 mb-2">{label}</p>
           <p className="text-sm text-gray-600 mb-1">
-            Amount: <span className="font-semibold text-primary">${payload[0].value.toLocaleString()}</span>
+            {t('amount')}: <span className="font-semibold text-primary">${payload[0].value.toLocaleString()}</span>
           </p>
           <p className="text-sm text-gray-600">
-            Payments: <span className="font-semibold">{payload[0].payload.count}</span>
+            {t('payments')}: <span className="font-semibold">{payload[0].payload.count}</span>
           </p>
         </div>
       );
@@ -47,7 +49,7 @@ const MonthlyChart = ({ data = [] }) => {
       {/* Chart Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="text-sm text-gray-500">Rent collected over months</p>
+          <p className="text-sm text-gray-500">{t('rent_collected_over_months')}</p>
         </div>
         <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full">
           <TrendingUp className={`w-4 h-4 ${growth >= 0 ? 'text-green-500' : 'text-red-500'}`} />
@@ -112,13 +114,13 @@ const MonthlyChart = ({ data = [] }) => {
       {/* Stats Summary */}
       <div className="grid grid-cols-2 gap-4 mt-6">
         <div className="bg-blue-50 p-3 rounded-lg">
-          <p className="text-xs text-blue-600 font-medium">Current Month</p>
+          <p className="text-xs text-blue-600 font-medium">{t('current_month')}</p>
           <p className="text-lg font-bold text-gray-800">
             ${chartData[chartData.length - 1]?.amount.toLocaleString() || '0'}
           </p>
         </div>
         <div className="bg-purple-50 p-3 rounded-lg">
-          <p className="text-xs text-purple-600 font-medium">Total Payments</p>
+          <p className="text-xs text-purple-600 font-medium">{t('total_payments')}</p>
           <p className="text-lg font-bold text-gray-800">
             {data.reduce((sum, item) => sum + item.payment_count, 0)}
           </p>

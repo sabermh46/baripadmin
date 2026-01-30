@@ -172,7 +172,7 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
                   onClick={handleLogout}
                   className="w-full py-2 bg-red-500 text-white border-none rounded-lg cursor-pointer hover:bg-red-600 transition-colors"
                 >
-                  Logout
+                  {t('logout')}
                 </button>
               </div>
     </>

@@ -139,7 +139,6 @@ const HouseList = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-text tracking-tight">{t('house_list')}</h1>
-          <p className="text-subdued mt-1">{isWebOwner ? t('admin_management_view') : t('my_properties')}</p>
         </div>
         
         <div className="flex items-center gap-2">

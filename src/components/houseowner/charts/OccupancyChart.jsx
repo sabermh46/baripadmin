@@ -2,12 +2,15 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const OccupancyChart = ({ data = { vacant: 0, occupied: 0 } }) => {
   const chartData = [
     { name: 'Occupied', value: data.occupied || 0, color: '#10b981' },
     { name: 'Vacant', value: data.vacant || 0, color: '#ef4444' }
   ];
+
+  const {t} = useTranslation();
 
   const totalFlats = data.occupied + data.vacant;
   const occupancyRate = totalFlats > 0 ? Math.round((data.occupied / totalFlats) * 100) : 0;
@@ -19,10 +22,10 @@ const OccupancyChart = ({ data = { vacant: 0, occupied: 0 } }) => {
         <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
           <p className="font-semibold text-gray-800">{payload[0].name}</p>
           <p className="text-sm text-gray-600">
-            Flats: <span className="font-bold">{payload[0].value}</span>
+            {t('flats')}: <span className="font-bold">{payload[0].value}</span>
           </p>
           <p className="text-sm text-gray-600">
-            Percentage: <span className="font-bold">
+            {t('percentage')}: <span className="font-bold">
               {Math.round((payload[0].value / totalFlats) * 100)}%
             </span>
           </p>
@@ -58,13 +61,13 @@ const OccupancyChart = ({ data = { vacant: 0, occupied: 0 } }) => {
       {/* Chart Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-bold text-gray-800">Flat Occupancy</h3>
-          <p className="text-sm text-gray-500">Occupied vs Vacant Flats</p>
+          <h3 className="text-lg font-bold text-gray-800">{t('flat_occupancy')}</h3>
+          <p className="text-sm text-gray-500">{t('occupied_vs_vacant_flats')}</p>
         </div>
         <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full">
           <Home className="w-4 h-4 text-gray-600" />
           <span className="text-sm font-medium text-gray-700">
-            {occupancyRate}% Occupied
+            {occupancyRate}% {t('occupied')}
           </span>
         </div>
       </div>
@@ -102,7 +105,7 @@ const OccupancyChart = ({ data = { vacant: 0, occupied: 0 } }) => {
         <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-500">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <p className="text-xs text-green-600 font-medium">Occupied</p>
+            <p className="text-xs text-green-600 font-medium">{t('occupied')}</p>
           </div>
           <p className="text-lg font-bold text-gray-800 mt-1">{data.occupied || 0}</p>
           <p className="text-xs text-gray-500">
@@ -112,7 +115,7 @@ const OccupancyChart = ({ data = { vacant: 0, occupied: 0 } }) => {
         <div className="bg-red-50 p-3 rounded-lg border-l-4 border-red-500">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <p className="text-xs text-red-600 font-medium">Vacant</p>
+            <p className="text-xs text-red-600 font-medium">{t('vacant')}</p>
           </div>
           <p className="text-lg font-bold text-gray-800 mt-1">{data.vacant || 0}</p>
           <p className="text-xs text-gray-500">

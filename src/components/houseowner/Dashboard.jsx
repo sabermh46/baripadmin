@@ -241,7 +241,7 @@ const HouseOwnerComponent = () => {
       
       {/* Recent Houses */}
       <div className="bg-white rounded-xl p-4 border border-gray-200 mt-4">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Your Houses</h3>
+        <h3 className="text-lg font-bold text-gray-800 mb-4">{t('your_houses')}</h3>
         {houses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {houses.slice(0, 6).map((house) => (
@@ -252,15 +252,15 @@ const HouseOwnerComponent = () => {
                   <span className={`px-2 py-1 text-xs rounded-full ${
                     house.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
-                    {house.active ? 'Active' : 'Inactive'}
+                    {house.active ? t('active') : t('inactive')}
                   </span>
-                  <span className="text-sm text-gray-700">{house.flatCount || 0} flats</span>
+                  <span className="text-sm text-gray-700">{house.flatCount || 0} {t('flats')}</span>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-4">No houses found.</p>
+          <p className="text-gray-500 text-center py-4">{t('no_houses_found')}</p>
         )}
       </div>
 

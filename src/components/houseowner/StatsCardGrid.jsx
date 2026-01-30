@@ -58,12 +58,20 @@ export default function StatsCardGrid({ stats = [] }) {
                             <p key={index} className="font-medium text-text mb-2 font-roboto">{item.name}</p>
                             <div className="flex gap-2 flex-wrap">
                               {
-                                item.flats?.map((flat, idx)=>(
-                                  <Link to={'/flats/' + flat.id} key={idx} className="p-3 bg-gray-200 rounded-lg mb-2 hover:shadow-md transition-shadow block">
-                                    <p className="font-medium text-text">{flat.name}</p>
-                                    <p className="font-google-sans-code text-xs">{flat.number}</p>
-                                  </Link>
-                                ))
+                                item.flats?.map((flat, idx)=>{
+                                  const isVacant = !flat.renter_id;
+                                  return (
+                                    <Link to={'/flats/' + flat.id} key={idx} className={`p-3 rounded-lg mb-2 hover:shadow-md transition-shadow relative block border border-gray-500 z-10`}>
+                                      {
+                                        isVacant && (
+                                          <span className="text-[0.6rem] w-full text-center font-poppins text-white px-1 rounded-lg rounded-b-none block absolute -z-10 top-0 bg-red-500 left-1/2 -translate-x-1/2">{t('vacant')}</span>
+                                        )
+                                      }
+                                      <p className="font-medium text-text">{flat.name}</p>
+                                      <p className="font-google-sans-code text-xs">{flat.number}</p>
+                                    </Link>
+                                  )
+                                })
                               }
                             </div>
                           </div>

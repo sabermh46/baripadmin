@@ -63,7 +63,6 @@ const HouseStats = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-text">{t('house_statistics')}</h1>
-        <p className="text-subdued">Overview of {isHouseOwner ? 'your' : 'all'} houses in the system</p>
       </div>
 
       {/* Stats Grid */}

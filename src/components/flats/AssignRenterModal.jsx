@@ -76,19 +76,25 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null }) => {
 
   // Set default next payment date
   useEffect(() => {
-    if (flat && open) {
+    // 1. Ensure flat, open, AND the specific property exist
+    if (flat && open && flat.should_pay_rent_day) {
       const today = new Date();
-      let dueDate = new Date(
-        today.getFullYear(),
-        today.getMonth() + 1,
-        flat.should_pay_rent_day
-      );
-      
-      if (today.getDate() > flat.should_pay_rent_day) {
+      const dayOfMonth = parseInt(flat.should_pay_rent_day, 10);
+
+      // 2. Create the date safely
+      let dueDate = new Date(today.getFullYear(), today.getMonth(), dayOfMonth);
+
+      // 3. Logic: If today is already past the rent day, move to next month
+      if (today.getDate() > dayOfMonth) {
         dueDate.setMonth(dueDate.getMonth() + 1);
       }
-      
-      setNextPaymentDate(format(dueDate, 'yyyy-MM-dd'));
+
+      // 4. Final check before formatting
+      if (!isNaN(dueDate.getTime())) {
+        setNextPaymentDate(format(dueDate, 'yyyy-MM-dd'));
+      } else {
+        console.error("Generated an invalid date:", dueDate);
+      }
     }
   }, [flat, open]);
 
