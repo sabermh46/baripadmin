@@ -4,15 +4,17 @@ import { useChangePasswordMutation } from '../../store/api/authApi';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import NavigateBack from '../../components/common/NavigateBack';
+import { useTranslation } from 'react-i18next';
 
 const ChangePassword = () => {
+  const {t} = useTranslation();
   const [formData, setFormData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [changePassword, { isLoading }] = useChangePasswordMutation();
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (formData.newPassword !== formData.confirmPassword) {
-      return toast.error("New passwords do not match");
+      return toast.error(t("new_passwords_do_not_match"));
     }
 
     try {
@@ -20,10 +22,10 @@ const ChangePassword = () => {
         oldPassword: formData.oldPassword, 
         newPassword: formData.newPassword 
       }).unwrap();
-      toast.success("Password updated successfully!");
+      toast.success(t("password_updated_successfully"));
       setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      toast.error(err?.data?.error || "Failed to change password");
+      toast.error(err?.data?.error || t("failed_to_change_password"));
     }
   };
 
@@ -37,14 +39,14 @@ const ChangePassword = () => {
                 <ShieldCheck size={24} />
                 </div>
                 <div>
-                <h3 className="text-lg font-bold text-text">Change Your Password</h3>
-                <p className="text-sm text-subdued">Manage your account password</p>
+                <h3 className="text-lg font-bold text-text">{t("change_your_password")}</h3>
+                <p className="text-sm text-subdued">{t("manage_your_account_password")}</p>
                 </div>
             </div>
 
             <form onSubmit={handleUpdate} className="space-y-4 max-w-md">
                 <div>
-                <label className="block text-sm font-medium text-subdued mb-1">Old Password</label>
+                <label className="block text-sm font-medium text-subdued mb-1">{t("old_password")}</label>
                 <input
                     type="password"
                     required
@@ -54,7 +56,7 @@ const ChangePassword = () => {
                 />
                 </div>
                 <div>
-                <label className="block text-sm font-medium text-subdued mb-1">New Password</label>
+                <label className="block text-sm font-medium text-subdued mb-1">{t("new_password")}</label>
                 <input
                     type="password"
                     required
@@ -65,7 +67,7 @@ const ChangePassword = () => {
                 />
                 </div>
                 <div>
-                <label className="block text-sm font-medium text-subdued mb-1">Confirm New Password</label>
+                <label className="block text-sm font-medium text-subdued mb-1">{t("confirm_new_password")}</label>
                 <input
                     type="password"
                     required
@@ -81,7 +83,7 @@ const ChangePassword = () => {
                 className="mt-2 px-6 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all flex items-center gap-2 disabled:opacity-50"
                 >
                 {isLoading && <Loader2 className="animate-spin" size={16} />}
-                Update Password
+                {t("update_password")}
                 </button>
             </form>
             </div>

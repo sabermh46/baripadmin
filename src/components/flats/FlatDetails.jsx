@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import AssignRenterModal from './AssignRenterModal';
 import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
 import { set } from 'lodash';
+import TkSymbol from '../common/TkSymbol';
 
 const FlatDetails = () => {
   const { id } = useParams();
@@ -89,8 +90,8 @@ const FlatDetails = () => {
   // Calculate next due date - use custom next_payment_date if available
   const calculateNextDueDate = () => {
     // First check if custom next payment date is set
-    if (flat.next_payment_date) {
-      return new Date(flat.next_payment_date);
+    if (flat.rent_due_date) {
+      return new Date(flat.rent_due_date);
     }
     
     // Fall back to calculation based on rent day
@@ -206,7 +207,7 @@ const FlatDetails = () => {
                 {tab.label}
                 {tab.id === 'advance' && availableAdvance > 0 && (
                   <span className="ml-1 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">
-                    ${availableAdvance.toLocaleString()}
+                    <TkSymbol /> {availableAdvance.toLocaleString()}
                   </span>
                 )}
               </button>
@@ -226,7 +227,7 @@ const FlatDetails = () => {
                   <div className="p-2 bg-blue-100 rounded-lg"><DollarSign className="text-blue-600" size={24} /></div>
                   <div>
                     <p className="text-sm text-subdued">{t('monthly_rent')}</p>
-                    <p className="text-xl font-bold">${flat.rent_amount?.toLocaleString()}</p>
+                    <p className="text-xl font-bold"><TkSymbol /> {flat.rent_amount?.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -241,7 +242,6 @@ const FlatDetails = () => {
                 {nextDueDate && (
                   <p className="text-xs text-subdued mt-2">
                     Next: {format(nextDueDate, 'dd MMM yyyy')}
-                    {flat.next_payment_date && <span className="text-green-600 ml-1">• Custom</span>}
                   </p>
                 )}
               </div>
@@ -275,19 +275,19 @@ const FlatDetails = () => {
                     <Shield size={20} /> {t('advance_payments_available')}
                   </h3>
                   <span className="text-2xl font-bold text-green-700">
-                    ${availableAdvance.toLocaleString()}
+                    <TkSymbol /> {availableAdvance.toLocaleString()}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center">
                     <p className="text-sm text-green-700">{t('total_advance')}</p>
                     <p className="text-xl font-bold">
-                      ${advancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
+                      <TkSymbol /> {advancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-green-700">{t('remaining')}</p>
-                    <p className="text-xl font-bold">${availableAdvance.toLocaleString()}</p>
+                    <p className="text-xl font-bold"><TkSymbol /> {availableAdvance.toLocaleString()}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-green-700">{t('covers_months')}</p>
@@ -341,7 +341,7 @@ const FlatDetails = () => {
                           <div className="flex justify-between text-sm">
                             <span className="text-subdued">{t('total_advance_paid')}:</span>
                             <span className="font-bold text-green-600">
-                              ${flatMetadata.advance_payments_summary.total_advance?.toLocaleString() || '0'}
+                              <TkSymbol /> {flatMetadata.advance_payments_summary.total_advance?.toLocaleString() || '0'}
                             </span>
                           </div>
                           <div className="flex justify-between text-sm">
@@ -373,11 +373,11 @@ const FlatDetails = () => {
                       <TrendingUp className="text-green-600" size={16} />
                     </div>
                     <p className="text-xl font-bold text-green-700 mt-1">
-                      ${Number(stats.totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      <TkSymbol /> {Number(stats.totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                     {availableAdvance > 0 && (
                       <p className="text-xs text-green-600 mt-1">
-                        +${availableAdvance.toLocaleString()} advance available
+                        +<TkSymbol /> {availableAdvance.toLocaleString()} advance available
                       </p>
                     )}
                   </div>
@@ -389,7 +389,7 @@ const FlatDetails = () => {
                       <AlertCircle className="text-red-600" size={16} />
                     </div>
                     <p className="text-xl font-bold text-red-700 mt-1">
-                      ${Number(stats.totalDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      <TkSymbol /> {Number(stats.totalDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                   </div>
 
@@ -439,7 +439,7 @@ const FlatDetails = () => {
                     <div>
                       <p className="font-medium text-green-800">{t('advance_payment_available')}</p>
                       <p className="text-sm text-green-700">
-                        ${availableAdvance.toLocaleString()} {t('can_be_applied_to_pending_payments')}
+                        <TkSymbol /> {availableAdvance.toLocaleString()} {t('can_be_applied_to_pending_payments')}
                       </p>
                     </div>
                   </div>
@@ -482,20 +482,20 @@ const FlatDetails = () => {
                         <tr key={p.id} className="hover:bg-subdued/5 transition-colors">
                           <td className="py-4 px-6">{p.due_date ? format(new Date(p.due_date), 'dd MMM yyyy') : '-'}</td>
                           <td className="py-4 px-6">
-                            <div className="font-bold">${p.amount?.toLocaleString()}</div>
+                            <div className="font-bold"><TkSymbol />{p.amount?.toLocaleString()}</div>
                             {p.base_amount && p.amenities_charge && (
                               <div className="text-xs text-subdued">
-                                Base: ${p.base_amount} + Amenities: ${p.amenities_charge}
+                                Base: <TkSymbol />{p.base_amount} + Amenities: <TkSymbol />{p.amenities_charge}
                               </div>
                             )}
                           </td>
                           <td className="py-4 px-6">{p.paid_date ? format(new Date(p.paid_date), 'dd MMM yyyy') : '-'}</td>
                           <td className="py-4 px-6 capitalize">{p.payment_method?.replace('_', ' ') || '-'}</td>
-                          <td className="py-4 px-6 text-orange-600">{p.late_fee_amount > 0 ? `$${p.late_fee_amount}` : '-'}</td>
+                          <td className="py-4 px-6 text-orange-600">{p.late_fee_amount > 0 ? <><TkSymbol />{p.late_fee_amount}</> : '-'}</td>
                           <td className="py-4 px-6">
                             {advanceUsed ? (
                               <div className="text-xs text-green-700">
-                                <div className="font-medium">${advanceUsed.amount}</div>
+                                <div className="font-medium"><TkSymbol />{advanceUsed.amount}</div>
                                 <div className="text-green-600">{t('advance_applied')}</div>
                               </div>
                             ) : '-'}
@@ -532,7 +532,7 @@ const FlatDetails = () => {
                   <div>
                     <p className="text-sm text-subdued">{t('total_advance')}</p>
                     <p className="text-xl font-bold">
-                      ${advancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
+                      <TkSymbol />{advancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -545,7 +545,7 @@ const FlatDetails = () => {
                   <div>
                     <p className="text-sm text-subdued">{t('remaining_available')}</p>
                     <p className="text-xl font-bold text-green-600">
-                      ${availableAdvance.toLocaleString()}
+                      <TkSymbol />{availableAdvance.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -587,13 +587,13 @@ const FlatDetails = () => {
                     {advancePayments.length > 0 ? advancePayments.map((payment) => (
                       <tr key={payment.id} className="hover:bg-subdued/5 transition-colors">
                         <td className="py-4 px-6">{format(new Date(payment.payment_date), 'dd MMM yyyy')}</td>
-                        <td className="py-4 px-6 font-bold">${payment.amount?.toLocaleString()}</td>
-                        <td className="py-4 px-6 text-green-600">${payment.paid_amount?.toLocaleString()}</td>
+                        <td className="py-4 px-6 font-bold"><TkSymbol />{payment.amount?.toLocaleString()}</td>
+                        <td className="py-4 px-6 text-green-600"><TkSymbol />{payment.paid_amount?.toLocaleString()}</td>
                         <td className="py-4 px-6">
                           <span className={`font-bold ${
                             payment.remaining_amount > 0 ? 'text-green-600' : 'text-subdued'
                           }`}>
-                            ${payment.remaining_amount?.toLocaleString()}
+                            <TkSymbol />{payment.remaining_amount?.toLocaleString()}
                           </span>
                         </td>
                         <td className="py-4 px-6 capitalize">{payment.payment_method?.replace('_', ' ') || '-'}</td>

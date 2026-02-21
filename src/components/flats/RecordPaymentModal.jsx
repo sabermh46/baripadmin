@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { useRecordPaymentMutation } from '../../store/api/flatApi';
 import { toast } from 'react-toastify';
+import TkSymbol from '../common/TkSymbol';
 
 const paymentSchema = z.object({
   paid_amount: z.coerce.number().positive('Amount must be positive'),
@@ -24,20 +25,14 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
   const [showAmenitiesEditor, setShowAmenitiesEditor] = useState(false);
   const [useAdvancePayment, setUseAdvancePayment] = useState(false);
   const [availableAdvance, setAvailableAdvance] = useState(0);
-  const [selectedAdvancePaymentId, setSelectedAdvancePaymentId] = useState('');
 
-  // Calculate available advance payments
+  // Calculate total available advance payments
   useEffect(() => {
-    const available = advancePayments.reduce((sum, payment) => 
-      sum + (parseFloat(payment.remaining_amount) || 0), 0
+    const total = advancePayments.reduce(
+      (sum, payment) => sum + (parseFloat(payment.remaining_amount) || 0),
+      0
     );
-    setAvailableAdvance(available);
-    
-    // Auto-select the first available advance payment
-    const firstAvailable = advancePayments.find(p => parseFloat(p.remaining_amount) > 0);
-    if (firstAvailable) {
-      setSelectedAdvancePaymentId(firstAvailable.id);
-    }
+    setAvailableAdvance(total);
   }, [advancePayments]);
 
   // Memoize parsedMetadata
@@ -82,13 +77,12 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
     handleSubmit,
     watch,
     reset,
-    setValue,
     formState: { errors, isSubmitting }
   } = useForm({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       paid_amount: parsedMetadata.base_rent || flat?.rent_amount || '',
-      payment_method: '',
+      payment_method: 'cash',
       transaction_id: '',
       notes: '',
       paid_date: format(new Date(), 'yyyy-MM-dd'),
@@ -127,9 +121,9 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
   }, [paidDate, flat?.rent_due_date, flat?.late_fee_percentage, baseRent]);
 
   const totalAmount = parseFloat(paidAmount) + lateFee + amenitiesTotal;
-  const selectedAdvancePayment = advancePayments.find(p => p.id === selectedAdvancePaymentId);
-  const advanceAvailable = selectedAdvancePayment ? parseFloat(selectedAdvancePayment.remaining_amount) : 0;
-  const amountAfterAdvance = Math.max(totalAmount - Math.min(advanceAvailable, totalAmount), 0);
+  const amountAfterAdvance = useAdvancePayment
+    ? Math.max(totalAmount - Math.min(availableAdvance, totalAmount), 0)
+    : totalAmount;
 
   const handleAddAmenity = () => {
     setAmenities([...amenities, { name: '', charge: 0 }]);
@@ -147,26 +141,27 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
 
   const onSubmit = async (formData) => {
     try {
+      // Build payload as expected by backend (excluding flatId)
       const paymentData = {
-        flatId: flat.id,
         ...formData,
-        paid_amount: totalAmount,
+        paid_amount: totalAmount,                       // total amount for this payment
         amenities: amenities.filter(a => a.name.trim()),
         base_rent: parseFloat(paidAmount) || 0,
         amenities_total: amenitiesTotal,
         late_fee: lateFee,
         use_advance_payment: useAdvancePayment,
-        advance_payment_id: useAdvancePayment ? selectedAdvancePaymentId : undefined
+        // No advance_payment_id – backend uses oldest available advance
       };
-      
-      await recordPayment(paymentData).unwrap();
-      
+
+      // Pass flatId as separate parameter (adjust if your mutation signature differs)
+      const response = await recordPayment({ flatId: flat.id, ...paymentData }).unwrap();
+
       toast.success(
-        useAdvancePayment 
-          ? `Payment recorded successfully. $${Math.min(advanceAvailable, totalAmount).toLocaleString()} applied from advance payment.`
-          : 'Payment recorded successfully.'
+        useAdvancePayment
+          ? `Payment recorded successfully. ৳ ${Math.min(availableAdvance, totalAmount).toLocaleString()} applied from advance payment.`
+          : response.message || 'Payment recorded successfully.'
       );
-      
+
       onClose();
       reset();
       setAmenities([]);
@@ -211,7 +206,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued">
-                  $
+                  <TkSymbol />
                 </span>
                 <input
                   {...register('paid_amount')}
@@ -249,7 +244,6 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
                 {...register('payment_method')}
                 className="w-full px-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
               >
-                <option value="">Select method</option>
                 <option value="cash">Cash</option>
                 <option value="bank">Bank Transfer</option>
                 <option value="mobile_banking">Mobile Banking</option>
@@ -301,7 +295,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
             />
           </div>
 
-          {/* Advance Payment Section */}
+          {/* Advance Payment Section – simplified */}
           {availableAdvance > 0 && (
             <div className="border border-green-200 rounded-lg p-4 bg-green-50">
               <div className="flex items-center justify-between mb-4">
@@ -309,7 +303,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
                   <Shield className="w-4 h-4" /> Advance Payment Available
                 </h4>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-green-700">${availableAdvance.toLocaleString()}</span>
+                  <span className="font-bold text-green-700"><TkSymbol />{availableAdvance.toLocaleString()}</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -324,41 +318,18 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
               
               {useAdvancePayment && (
                 <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-green-700 mb-2">
-                      Select Advance Payment
-                    </label>
-                    <select
-                      value={selectedAdvancePaymentId}
-                      onChange={(e) => setSelectedAdvancePaymentId(e.target.value)}
-                      className="w-full px-4 py-2 bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                    >
-                      {advancePayments
-                        .filter(p => parseFloat(p.remaining_amount) > 0)
-                        .map(payment => (
-                          <option key={payment.id} value={payment.id}>
-                            ${payment.remaining_amount?.toLocaleString()} available (Paid: {format(new Date(payment.payment_date), 'dd MMM yyyy')})
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  
-                  {selectedAdvancePayment && (
-                    <div className="p-3 bg-white border border-green-300 rounded-lg">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-green-700">Selected Advance:</span>
-                          <span className="font-bold">${selectedAdvancePayment.remaining_amount?.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-green-700">Amount to Use:</span>
-                          <span className="font-bold">
-                            ${Math.min(advanceAvailable, totalAmount).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
+                  <div className="p-3 bg-white border border-green-300 rounded-lg">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-green-700">Total Available Advance:</span>
+                      <span className="font-bold">${availableAdvance.toLocaleString()}</span>
                     </div>
-                  )}
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-green-700">Amount to Apply:</span>
+                      <span className="font-bold">
+                        ${Math.min(availableAdvance, totalAmount).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -407,7 +378,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
                     </div>
                     <div className="w-32">
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued">$</span>
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued"><TkSymbol /></span>
                         <input
                           type="number"
                           value={amenity.charge}
@@ -452,7 +423,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
               <div className="pt-4 border-t border-subdued/20">
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-text">Amenities Total:</span>
-                  <span className="font-bold text-primary">${amenitiesTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="font-bold text-primary"><TkSymbol />{amenitiesTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
             )}
@@ -469,20 +440,20 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-gray-700">Base Rent:</span>
-                <span>${parseFloat(paidAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span><TkSymbol />{parseFloat(paidAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               
               {amenitiesTotal > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-blue-700">Amenities Charges:</span>
-                  <span className="text-blue-700">+${amenitiesTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-blue-700">+<TkSymbol />{amenitiesTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               
               {lateFee > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-yellow-700">Late Fee:</span>
-                  <span className="text-yellow-700">+${lateFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-yellow-700">+<TkSymbol />{lateFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               
@@ -491,11 +462,11 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
                 <>
                   <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
                     <span className="text-green-700">Total Before Advance:</span>
-                    <span className="font-bold text-green-700">${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-bold text-green-700"><TkSymbol />{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-green-700">Advance Payment Applied:</span>
-                    <span className="font-bold text-green-700">-${Math.min(advanceAvailable, totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-bold text-green-700">-<TkSymbol />{Math.min(availableAdvance, totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </>
               )}
@@ -509,7 +480,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
                     ? 'text-green-700' 
                     : 'text-gray-900'
                 }`}>
-                  ${useAdvancePayment 
+                  <TkSymbol />{useAdvancePayment 
                     ? amountAfterAdvance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                   }
@@ -548,7 +519,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
                 <div className="flex-1">
                   <div className="flex justify-between items-center mb-1">
                     <p className="font-medium text-yellow-800">Late Fee Applied</p>
-                    <p className="font-bold text-yellow-800">${lateFee.toFixed(2)}</p>
+                    <p className="font-bold text-yellow-800"><TkSymbol />{lateFee.toFixed(2)}</p>
                   </div>
                   <p className="text-sm text-yellow-700">
                     Payment is {Math.ceil((new Date(paidDate) - new Date(flat.rent_due_date)) / (1000 * 60 * 60 * 24))} days late
@@ -579,11 +550,13 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
                   Recording Payment...
                 </span>
               ) : (
-                `Record Payment ($${
-                  useAdvancePayment 
+                <>
+                  Record Payment (<TkSymbol />
+                  {useAdvancePayment
                     ? amountAfterAdvance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                })`
+                  })
+                </>
               )}
             </button>
           </div>

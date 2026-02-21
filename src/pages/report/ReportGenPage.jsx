@@ -329,7 +329,7 @@ export const ReportGenPage = () => {
                     </div>
 
                     <div className="rounded-xl rounded-t-none shadow-sm overflow-hidden pb-4">
-                        <div className="px-6 py-4 border-b flex justify-between items-center bg-white">
+                        <div className="px-6 py-4 flex justify-between items-center bg-white">
                             <h3 className="font-bold text-gray-700">Monthly Breakdown</h3>
                             <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
                                 <User size={14}/> {selectedOwner?.name || user?.name}
