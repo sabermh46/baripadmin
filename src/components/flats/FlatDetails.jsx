@@ -21,7 +21,6 @@ import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import AssignRenterModal from './AssignRenterModal';
 import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
-import { set } from 'lodash';
 import TkSymbol from '../common/TkSymbol';
 
 const FlatDetails = () => {
@@ -39,7 +38,7 @@ const FlatDetails = () => {
 
   // Queries
   const { data: flatData, isLoading, refetch: refetchDetails } = useGetFlatDetailsQuery(id);
-  const { data: financialSummaryData, refetch: refetchFinancialSummary } = useGetFlatFinancialSummaryQuery({ flatId: id }, { skip: !id });
+  // const { data: financialSummaryData, refetch: refetchFinancialSummary } = useGetFlatFinancialSummaryQuery({ flatId: id }, { skip: !id });
   const {data: houseData, isLoading: isHouseLoading, error } = useGetHouseDetailsQuery(flatData?.data?.flat?.house_id, { skip: !flatData?.data?.flat?.house_id });
   
   console.log(flatData);
