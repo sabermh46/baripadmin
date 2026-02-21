@@ -35,6 +35,14 @@ export const systemSettingsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['SystemSettings'],
     }),
+    //router.get('/email-stats'
+    getEmailStats: builder.query({
+      query: () => ({
+        url: '/admin/system-settings/email-stats',
+        method: 'GET',
+      }),
+      providesTags: ['EmailStats'],
+    }),
     
   }),
   overrideExisting: false,
@@ -45,4 +53,5 @@ export const {
   useGetSystemSettingByKeyQuery,
   useUpdateSystemSettingMutation,
   useDeleteSystemSettingMutation,
+  useGetEmailStatsQuery,
 } = systemSettingsApi;

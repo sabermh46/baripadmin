@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   useGetSystemSettingsQuery,
-  useUpdateSystemSettingMutation, 
+  useUpdateSystemSettingMutation,
+  useGetEmailStatsQuery
 } from '../../../store/api/admin/systemPermissions';
 import Table from '../../../components/common/Table';
 import Modal from '../../../components/common/Modal';
@@ -21,7 +22,10 @@ import {
   Filter,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Mail,
+  Server,
+  HardDrive
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -38,6 +42,9 @@ const SystemSettings = () => {
   const [errors, setErrors] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const { data: emailStats } = useGetEmailStatsQuery();
+  const emailStatsData = emailStats?.data ?? emailStats;
 
   const settings = settingsResponse?.data || [];
   
@@ -433,6 +440,85 @@ const SystemSettings = () => {
           </div>
         </div>
       </div>
+
+      {/* Email & Workers Stats Block */}
+      {emailStatsData && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary-600" />
+            Email & Worker Statistics
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Queue Stats */}
+            {emailStatsData.queue && (
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Mail className="h-4 w-4" /> Email Queue
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-amber-50 rounded p-3">
+                    <p className="text-xs text-gray-500">Queued</p>
+                    <p className="text-lg font-semibold">{emailStatsData.queue.queued ?? 0}</p>
+                  </div>
+                  <div className="bg-blue-50 rounded p-3">
+                    <p className="text-xs text-gray-500">Processing</p>
+                    <p className="text-lg font-semibold">{emailStatsData.queue.processing ?? 0}</p>
+                  </div>
+                  <div className="bg-green-50 rounded p-3">
+                    <p className="text-xs text-gray-500">Sent</p>
+                    <p className="text-lg font-semibold text-green-700">{emailStatsData.queue.sent ?? 0}</p>
+                  </div>
+                  <div className="bg-red-50 rounded p-3">
+                    <p className="text-xs text-gray-500">Failed</p>
+                    <p className="text-lg font-semibold text-red-700">{emailStatsData.queue.failed ?? 0}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Workers Stats */}
+            {emailStatsData.workers && (
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Server className="h-4 w-4" /> Workers
+                </h3>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="bg-gray-50 rounded p-3">
+                    <p className="text-xs text-gray-500">Total Workers</p>
+                    <p className="text-lg font-semibold">{emailStatsData.workers.totalWorkers ?? '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded p-3">
+                    <p className="text-xs text-gray-500">Busy Workers</p>
+                    <p className="text-lg font-semibold">{emailStatsData.workers.busyWorkers ?? '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded p-3">
+                    <p className="text-xs text-gray-500">Queue Length</p>
+                    <p className="text-lg font-semibold">{emailStatsData.workers.queueLength ?? '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded p-3">
+                    <p className="text-xs text-gray-500">Active Tasks</p>
+                    <p className="text-lg font-semibold">{emailStatsData.workers.activeTasks ?? '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded p-3">
+                    <p className="text-xs text-gray-500">CPU Count</p>
+                    <p className="text-lg font-semibold">{emailStatsData.workers.cpuCount ?? '-'}</p>
+                  </div>
+                </div>
+                {emailStatsData.workers.memoryUsage && (
+                  <div className="border-t pt-3">
+                    <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                      <HardDrive className="h-3 w-3" /> Memory Usage
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                      <span>RSS: {(emailStatsData.workers.memoryUsage.rss / 1024 / 1024).toFixed(2)} MB</span>
+                      <span>Heap: {(emailStatsData.workers.memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} / {(emailStatsData.workers.memoryUsage.heapTotal / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Search and Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">

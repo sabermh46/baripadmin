@@ -1,5 +1,5 @@
 // components/flats/FlatDetails.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Edit, DollarSign, Calendar, User, Phone, Mail,
@@ -11,9 +11,9 @@ import { format } from 'date-fns';
 import {
   useGetFlatDetailsQuery,
   useSendRentReminderMutation,
-  useGetFlatAdvancePaymentsQuery,
-  useGetFlatFinancialSummaryQuery
+  useGetFlatAdvancePaymentsQuery
 } from '../../store/api/flatApi';
+import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import FlatForm from './FlatForm';
 import RecordPaymentModal from './RecordPaymentModal';
 import ApplyAdvancePaymentModal from './ApplyAdvancePaymentModal'; // New component
@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import AssignRenterModal from './AssignRenterModal';
 import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
 import TkSymbol from '../common/TkSymbol';
+import Table from '../common/Table';
 
 const FlatDetails = () => {
   const { id } = useParams();
@@ -35,13 +36,14 @@ const FlatDetails = () => {
   const [openApplyAdvance, setOpenApplyAdvance] = useState(false); // New state
   const [selectedAdvancePayment, setSelectedAdvancePayment] = useState(null);
   const [openAssignModal, setOpenAssignModal] = useState(false);
+  const [reminderResult, setReminderResult] = useState(null);
+  const [selectedPaymentRenterId, setSelectedPaymentRenterId] = useState(null);
+  const [selectedAdvanceRenterId, setSelectedAdvanceRenterId] = useState(null);
 
   // Queries
   const { data: flatData, isLoading, refetch: refetchDetails } = useGetFlatDetailsQuery(id);
   // const { data: financialSummaryData, refetch: refetchFinancialSummary } = useGetFlatFinancialSummaryQuery({ flatId: id }, { skip: !id });
-  const {data: houseData, isLoading: isHouseLoading, error } = useGetHouseDetailsQuery(flatData?.data?.flat?.house_id, { skip: !flatData?.data?.flat?.house_id });
-  
-  console.log(flatData);
+  const { data: houseData } = useGetHouseDetailsQuery(flatData?.data?.flat?.house_id, { skip: !flatData?.data?.flat?.house_id });
   
   // New query for advance payments
   const { data: advancePaymentsData, refetch: refetchAdvancePayments } = useGetFlatAdvancePaymentsQuery(
@@ -49,7 +51,95 @@ const FlatDetails = () => {
     { skip: !id }
   );
 
+  const { data: rentersResponse } = useGetAvailableRentersQuery(
+    { houseId: flatData?.data?.flat?.house_id, search: '' },
+    { skip: !flatData?.data?.flat?.house_id || !id, refetchOnMountOrArgChange: true }
+  );
+
   const [sendReminder, { isLoading: isSendingReminder }] = useSendRentReminderMutation();
+
+  // Derived data (with fallbacks for loading state - hooks must run before early return)
+  const flat = flatData?.data?.flat || {};
+  const house = flatData?.data?.house || {};
+  const payments = useMemo(() => flatData?.data?.payments || [], [flatData?.data?.payments]);
+  const stats = flatData?.data?.stats || {};
+  const advancePayments = useMemo(() => advancePaymentsData?.data || [], [advancePaymentsData?.data]);
+  const availableRenters = useMemo(() => rentersResponse?.data || rentersResponse || [], [rentersResponse]);
+
+  const renter = {
+    name: flat.renterName,
+    phone: flat.renterPhone,
+    email: flat.renterEmail,
+    id: flat.renterId,
+  };
+
+  // Unique renter IDs from payments (for payment history tab)
+  const paymentRenterIds = useMemo(() => {
+    return [...new Set(payments.map(p => p.renter_id).filter(Boolean))];
+  }, [payments]);
+
+  // Unique renter IDs from advance payments (for advance tab)
+  const advanceRenterIds = useMemo(() => {
+    const ids = [...new Set(advancePayments.map(p => p.renter_id).filter(Boolean))];
+    return ids.length > 0 ? ids : (flat.renter_id ? [flat.renter_id] : []);
+  }, [advancePayments, flat.renter_id]);
+
+  // Renter options for payment history (include current renter + any from payments)
+  const paymentRenterOptions = useMemo(() => {
+    const idsSet = new Set(paymentRenterIds);
+    if (flat.renter_id) idsSet.add(flat.renter_id);
+    const ids = Array.from(idsSet);
+    return ids.map(rid => {
+      if (rid === flat.renter_id) {
+        return { value: rid, label: flat.renterName || `Renter #${rid}` };
+      }
+      const r = availableRenters.find(x => x.id === rid || x.id === parseInt(rid, 10));
+      return { value: rid, label: r ? r.name : `Renter #${rid}` };
+    });
+  }, [paymentRenterIds, flat.renter_id, flat.renterName, availableRenters]);
+
+  const advanceRenterOptions = useMemo(() => {
+    const idsSet = new Set(advanceRenterIds);
+    if (flat.renter_id) idsSet.add(flat.renter_id);
+    const ids = Array.from(idsSet);
+    return ids.map(rid => {
+      if (rid === flat.renter_id) {
+        return { value: rid, label: flat.renterName || `Renter #${rid}` };
+      }
+      const r = availableRenters.find(x => x.id === rid || x.id === parseInt(rid, 10));
+      return { value: rid, label: r ? r.name : `Renter #${rid}` };
+    });
+  }, [advanceRenterIds, flat.renter_id, flat.renterName, availableRenters]);
+
+  // Default to current renter when null (derived, no effect needed)
+  const effectivePaymentRenterId = selectedPaymentRenterId ?? flat.renter_id;
+  const effectiveAdvanceRenterId = selectedAdvanceRenterId ?? flat.renter_id;
+
+  const filteredPayments = useMemo(() => {
+    if (!effectivePaymentRenterId) return payments;
+    return payments.filter(p => p.renter_id === effectivePaymentRenterId || p.renter_id === parseInt(effectivePaymentRenterId, 10));
+  }, [payments, effectivePaymentRenterId]);
+
+  const filteredAdvancePayments = useMemo(() => {
+    if (!effectiveAdvanceRenterId) return advancePayments;
+    return advancePayments.filter(p => !p.renter_id || p.renter_id === effectiveAdvanceRenterId || p.renter_id === parseInt(effectiveAdvanceRenterId, 10));
+  }, [advancePayments, effectiveAdvanceRenterId]);
+
+  const selectedPaymentRenterInfo = useMemo(() => {
+    if (effectivePaymentRenterId === flat.renter_id) {
+      return { name: flat.renterName, phone: flat.renterPhone, email: flat.renterEmail };
+    }
+    const r = availableRenters.find(x => x.id === effectivePaymentRenterId || x.id === parseInt(effectivePaymentRenterId, 10));
+    return r ? { name: r.name, phone: r.phone, email: r.email } : null;
+  }, [effectivePaymentRenterId, flat.renter_id, flat.renterName, flat.renterPhone, flat.renterEmail, availableRenters]);
+
+  const selectedAdvanceRenterInfo = useMemo(() => {
+    if (effectiveAdvanceRenterId === flat.renter_id) {
+      return { name: flat.renterName, phone: flat.renterPhone, email: flat.renterEmail };
+    }
+    const r = availableRenters.find(x => x.id === effectiveAdvanceRenterId || x.id === parseInt(effectiveAdvanceRenterId, 10));
+    return r ? { name: r.name, phone: r.phone, email: r.email } : null;
+  }, [effectiveAdvanceRenterId, flat.renter_id, flat.renterName, flat.renterPhone, flat.renterEmail, availableRenters]);
 
   if (isLoading) {
     return (
@@ -59,26 +149,14 @@ const FlatDetails = () => {
     );
   }
 
-  const flat = flatData?.data?.flat || {};
-  const renter = {
-    name: flat.renterName,
-    phone: flat.renterPhone,
-    email: flat.renterEmail,
-    id: flat.renterId,
-  };
-  const house = flatData?.data?.house || {};
-  const payments = flatData?.data?.payments || [];
-  const stats = flatData?.data?.stats || {};
-  const advancePayments = advancePaymentsData?.data || [];
-  
   // Parse metadata to get advance payment summary
   let flatMetadata = {};
   try {
     flatMetadata = flat.metadata && typeof flat.metadata === 'string'
       ? JSON.parse(flat.metadata)
       : flat.metadata || {};
-  } catch (e) {
-    console.error("Error parsing flat metadata:", e);
+  } catch (err) {
+    console.error("Error parsing flat metadata:", err);
   }
 
   // Calculate available advance amount
@@ -113,13 +191,18 @@ const FlatDetails = () => {
 
   const handleSendReminder = async () => {
     try {
-      await sendReminder({ flat_id: id }).unwrap();
-      toast.success('Reminder sent successfully');
-      setOpenReminder(false);
+      const response = await sendReminder({ flat_id: id, houseId: flat.house_id }).unwrap();
+      const result = response?.data ?? response;
+      setReminderResult(result || { remindersSent: 1, results: [] });
     } catch (error) {
       toast.error('Failed to send reminder');
       console.error('Failed to send reminder:', error);
     }
+  };
+
+  const handleCloseReminderModal = () => {
+    setOpenReminder(false);
+    setReminderResult(null);
   };
 
   const tabs = [
@@ -381,14 +464,14 @@ const FlatDetails = () => {
                     )}
                   </div>
                   
-                  {/* Total Due/Pending */}
+                  {/* Total Due/Pending - only shows due for this month (totalDue - totalPaid) */}
                   <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-red-700 uppercase tracking-wider">{t('total_due')}</p>
                       <AlertCircle className="text-red-600" size={16} />
                     </div>
                     <p className="text-xl font-bold text-red-700 mt-1">
-                      <TkSymbol /> {Number(stats.totalDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      <TkSymbol /> {Math.max(0, Number(stats.totalDue || 0) - Number(stats.totalPaid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                   </div>
 
@@ -451,71 +534,85 @@ const FlatDetails = () => {
                 </div>
               </div>
             )}
-            
-            <div className="bg-surface rounded-lg border border-subdued/20 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-subdued/5 border-b border-subdued/20">
-                    <tr>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('due_date')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('amount')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('paid_date')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('method')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('late_fee')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('advance_used')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('status')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-subdued/10">
-                    {payments.length > 0 ? payments.map((p) => {
-                      // Parse metadata to check for advance payment usage
-                      let advanceUsed = null;
-                      try {
-                        const meta = p.metadata ? JSON.parse(p.metadata) : {};
-                        if (meta.advance_payment_used) {
-                          advanceUsed = meta.advance_payment_used;
-                        }
-                      } catch (e) {}
-                      
-                      return (
-                        <tr key={p.id} className="hover:bg-subdued/5 transition-colors">
-                          <td className="py-4 px-6">{p.due_date ? format(new Date(p.due_date), 'dd MMM yyyy') : '-'}</td>
-                          <td className="py-4 px-6">
-                            <div className="font-bold"><TkSymbol />{p.amount?.toLocaleString()}</div>
-                            {p.base_amount && p.amenities_charge && (
-                              <div className="text-xs text-subdued">
-                                Base: <TkSymbol />{p.base_amount} + Amenities: <TkSymbol />{p.amenities_charge}
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-4 px-6">{p.paid_date ? format(new Date(p.paid_date), 'dd MMM yyyy') : '-'}</td>
-                          <td className="py-4 px-6 capitalize">{p.payment_method?.replace('_', ' ') || '-'}</td>
-                          <td className="py-4 px-6 text-orange-600">{p.late_fee_amount > 0 ? <><TkSymbol />{p.late_fee_amount}</> : '-'}</td>
-                          <td className="py-4 px-6">
-                            {advanceUsed ? (
-                              <div className="text-xs text-green-700">
-                                <div className="font-medium"><TkSymbol />{advanceUsed.amount}</div>
-                                <div className="text-green-600">{t('advance_applied')}</div>
-                              </div>
-                            ) : '-'}
-                          </td>
-                          <td className="py-4 px-6">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              p.status === 'paid' ? 'bg-green-100 text-green-800' : 
-                              p.status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {p.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    }) : (
-                      <tr><td colSpan="7" className="py-10 text-center text-subdued">No payment history found.</td></tr>
-                    )}
-                  </tbody>
-                </table>
+
+            {/* Renter selector */}
+            <div className="bg-surface rounded-lg p-4 border border-subdued/20">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-subdued mb-2">{t('select_renter')}</label>
+                  <select
+                    value={effectivePaymentRenterId ?? ''}
+                    onChange={(e) => setSelectedPaymentRenterId(e.target.value ? parseInt(e.target.value, 10) : null)}
+                    className="w-full sm:max-w-xs px-3 py-2 border border-subdued/30 rounded-lg bg-white text-text focus:ring-2 focus:ring-primary/30"
+                  >
+                    {paymentRenterOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedPaymentRenterInfo && (
+                  <div className="flex items-center gap-4 p-3 bg-subdued/5 rounded-lg">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
+                      {selectedPaymentRenterInfo.name?.charAt(0) || '?'}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{selectedPaymentRenterInfo.name || '-'}</p>
+                      {selectedPaymentRenterInfo.phone && (
+                        <p className="text-sm text-subdued flex items-center gap-1"><Phone size={14}/> {selectedPaymentRenterInfo.phone}</p>
+                      )}
+                      {selectedPaymentRenterInfo.email && (
+                        <p className="text-sm text-subdued flex items-center gap-1"><Mail size={14}/> {selectedPaymentRenterInfo.email}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+            
+            <Table
+              columns={[
+                { key: 'due_date', title: t('due_date'), dataIndex: 'due_date', render: (row) => row.due_date ? format(new Date(row.due_date), 'dd MMM yyyy') : '-' },
+                { key: 'amount', title: t('amount'), render: (row) => (
+                  <div>
+                    <div className="font-bold"><TkSymbol />{row.amount?.toLocaleString()}</div>
+                    {row.base_amount && row.amenities_charge && (
+                      <div className="text-xs text-subdued">
+                        Base: <TkSymbol />{row.base_amount} + Amenities: <TkSymbol />{row.amenities_charge}
+                      </div>
+                    )}
+                  </div>
+                )},
+                { key: 'paid_date', title: t('paid_date'), render: (row) => row.paid_date ? format(new Date(row.paid_date), 'dd MMM yyyy') : '-' },
+                { key: 'method', title: t('method'), render: (row) => (row.payment_method?.replace('_', ' ') || '-') },
+                { key: 'late_fee', title: t('late_fee'), render: (row) => (
+                  <span className="text-orange-600">{row.late_fee_amount > 0 ? <><TkSymbol />{row.late_fee_amount}</> : '-'}</span>
+                )},
+                { key: 'advance_used', title: t('advance_used'), render: (row) => {
+                  let advanceUsed = null;
+                  try {
+                    const meta = row.metadata ? JSON.parse(row.metadata) : {};
+                    if (meta.advance_payment_used) advanceUsed = meta.advance_payment_used;
+                  } catch { /* ignore parse errors */ }
+                  return advanceUsed ? (
+                    <div className="text-xs text-green-700">
+                      <div className="font-medium"><TkSymbol />{advanceUsed.amount}</div>
+                      <div className="text-green-600">{t('advance_applied')}</div>
+                    </div>
+                  ) : '-';
+                }},
+                { key: 'status', title: t('status'), render: (row) => (
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    row.status === 'paid' ? 'bg-green-100 text-green-800' : 
+                    row.status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {row.status}
+                  </span>
+                )},
+              ]}
+              data={filteredPayments}
+              rowKey="id"
+              emptyMessage={t('no_payment_history') || 'No payment history found.'}
+            />
           </div>
         )}
 
@@ -531,7 +628,7 @@ const FlatDetails = () => {
                   <div>
                     <p className="text-sm text-subdued">{t('total_advance')}</p>
                     <p className="text-xl font-bold">
-                      <TkSymbol />{advancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
+                      <TkSymbol />{filteredAdvancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -544,7 +641,7 @@ const FlatDetails = () => {
                   <div>
                     <p className="text-sm text-subdued">{t('remaining_available')}</p>
                     <p className="text-xl font-bold text-green-600">
-                      <TkSymbol />{availableAdvance.toLocaleString()}
+                      <TkSymbol />{filteredAdvancePayments.reduce((sum, p) => sum + (parseFloat(p.remaining_amount) || 0), 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -557,10 +654,44 @@ const FlatDetails = () => {
                   <div>
                     <p className="text-sm text-subdued">{t('months_covered')}</p>
                     <p className="text-xl font-bold">
-                      {flat.rent_amount > 0 ? (availableAdvance / flat.rent_amount).toFixed(1) : '0'}
+                      {flat.rent_amount > 0 ? (filteredAdvancePayments.reduce((sum, p) => sum + (parseFloat(p.remaining_amount) || 0), 0) / flat.rent_amount).toFixed(1) : '0'}
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Renter selector */}
+            <div className="bg-surface rounded-lg p-4 border border-subdued/20">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-subdued mb-2">{t('select_renter')}</label>
+                  <select
+                    value={effectiveAdvanceRenterId ?? ''}
+                    onChange={(e) => setSelectedAdvanceRenterId(e.target.value ? parseInt(e.target.value, 10) : null)}
+                    className="w-full sm:max-w-xs px-3 py-2 border border-subdued/30 rounded-lg bg-white text-text focus:ring-2 focus:ring-primary/30"
+                  >
+                    {advanceRenterOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedAdvanceRenterInfo && (
+                  <div className="flex items-center gap-4 p-3 bg-subdued/5 rounded-lg">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
+                      {selectedAdvanceRenterInfo.name?.charAt(0) || '?'}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{selectedAdvanceRenterInfo.name || '-'}</p>
+                      {selectedAdvanceRenterInfo.phone && (
+                        <p className="text-sm text-subdued flex items-center gap-1"><Phone size={14}/> {selectedAdvanceRenterInfo.phone}</p>
+                      )}
+                      {selectedAdvanceRenterInfo.email && (
+                        <p className="text-sm text-subdued flex items-center gap-1"><Mail size={14}/> {selectedAdvanceRenterInfo.email}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -569,69 +700,46 @@ const FlatDetails = () => {
               <div className="p-4 border-b border-subdued/20">
                 <h3 className="text-lg font-bold text-text">{t('advance_payment_history')}</h3>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-subdued/5 border-b border-subdued/20">
-                    <tr>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('date')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('amount')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('paid_amount')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('remaining')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('method')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('status')}</th>
-                      <th className="text-left py-4 px-6 text-sm font-medium text-subdued">{t('actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-subdued/10">
-                    {advancePayments.length > 0 ? advancePayments.map((payment) => (
-                      <tr key={payment.id} className="hover:bg-subdued/5 transition-colors">
-                        <td className="py-4 px-6">{format(new Date(payment.payment_date), 'dd MMM yyyy')}</td>
-                        <td className="py-4 px-6 font-bold"><TkSymbol />{payment.amount?.toLocaleString()}</td>
-                        <td className="py-4 px-6 text-green-600"><TkSymbol />{payment.paid_amount?.toLocaleString()}</td>
-                        <td className="py-4 px-6">
-                          <span className={`font-bold ${
-                            payment.remaining_amount > 0 ? 'text-green-600' : 'text-subdued'
-                          }`}>
-                            <TkSymbol />{payment.remaining_amount?.toLocaleString()}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 capitalize">{payment.payment_method?.replace('_', ' ') || '-'}</td>
-                        <td className="py-4 px-6">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            payment.status === 'paid' ? 'bg-green-100 text-green-800' :
-                            payment.status === 'partially_used' ? 'bg-yellow-100 text-yellow-800' :
-                            payment.status === 'fully_used' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {payment.status}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          {parseFloat(payment.remaining_amount) > 0 && (
-                            <button
-                              onClick={() => {
-                                setSelectedAdvancePayment(payment);
-                                setOpenApplyAdvance(true);
-                              }}
-                              className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded"
-                            >
-                              Apply
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan="7" className="py-10 text-center text-subdued">
-                          <Shield className="mx-auto mb-3 text-subdued/50" size={32} />
-                          <p>{t('no_advance_payments_recorded')}</p>
-                          <p className="text-sm mt-1">{t('advance_payments_added_when_assigning_renter')}</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <Table
+                columns={[
+                  { key: 'date', title: t('date'), render: (row) => format(new Date(row.payment_date), 'dd MMM yyyy') },
+                  { key: 'amount', title: t('amount'), render: (row) => <span className="font-bold"><TkSymbol />{row.amount?.toLocaleString()}</span> },
+                  { key: 'paid_amount', title: t('paid_amount'), render: (row) => <span className="text-green-600"><TkSymbol />{row.paid_amount?.toLocaleString()}</span> },
+                  { key: 'remaining', title: t('remaining'), render: (row) => (
+                    <span className={`font-bold ${parseFloat(row.remaining_amount) > 0 ? 'text-green-600' : 'text-subdued'}`}>
+                      <TkSymbol />{row.remaining_amount?.toLocaleString()}
+                    </span>
+                  )},
+                  { key: 'method', title: t('method'), render: (row) => (row.payment_method?.replace('_', ' ') || '-') },
+                  { key: 'status', title: t('status'), render: (row) => (
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      row.status === 'paid' ? 'bg-green-100 text-green-800' :
+                      row.status === 'partially_used' ? 'bg-yellow-100 text-yellow-800' :
+                      row.status === 'fully_used' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {row.status}
+                    </span>
+                  )},
+                  { key: 'actions', title: t('actions'), render: (row) => (
+                    parseFloat(row.remaining_amount) > 0 ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedAdvancePayment(row);
+                          setOpenApplyAdvance(true);
+                        }}
+                        className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded"
+                      >
+                        Apply
+                      </button>
+                    ) : '-'
+                  )},
+                ]}
+                data={filteredAdvancePayments}
+                rowKey="id"
+                emptyMessage={t('no_advance_payments_recorded') || 'No advance payments recorded'}
+              />
             </div>
           </div>
         )}
@@ -673,27 +781,63 @@ const FlatDetails = () => {
         selectedAdvancePayment={selectedAdvancePayment}
       />
 
-      {/* Reminder Confirmation Dialog */}
+      {/* Reminder Confirmation / Result Dialog */}
       {openReminder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-lg p-4 max-w-md w-full shadow-xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">{t('send_reminder')}</h3>
-              <button onClick={() => setOpenReminder(false)}><X size={20}/></button>
+              <h3 className="text-lg font-bold">
+                {reminderResult ? (t('reminder_result') || 'Reminder Result') : t('send_reminder')}
+              </h3>
+              <button onClick={handleCloseReminderModal} className="p-1 hover:bg-subdued/10 rounded"><X size={20}/></button>
             </div>
-            <p className="text-subdued mb-6">
-              {t('send_reminder_message', { name: renter.name })}
-            </p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setOpenReminder(false)} className="px-4 py-2 text-subdued">{t('cancel')}</button>
-              <button 
-                onClick={handleSendReminder} 
-                disabled={isSendingReminder}
-                className="px-6 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
-              >
-                {isSendingReminder ? 'Sending...' : 'Confirm & Send'}
-              </button>
-            </div>
+
+            {reminderResult ? (
+              <>
+                <p className="text-green-600 font-medium mb-3">
+                  {t('reminder_sent_success') || 'Rent reminder sent successfully'}
+                </p>
+                <p className="text-subdued text-sm mb-4">
+                  {reminderResult.remindersSent} {t('reminder_sent_count') || 'reminder(s) sent'}
+                </p>
+                {reminderResult.results?.length > 0 && (
+                  <ul className="space-y-2 mb-4">
+                    {reminderResult.results.map((r, i) => (
+                      <li key={r.paymentId ?? i} className="p-3 bg-subdued/5 rounded-lg text-sm">
+                        <span className="font-medium">{r.renterName}</span>
+                        <span className="text-subdued mx-2">•</span>
+                        {r.sent ? (
+                          <span className="text-green-600">{t('sent_to') || 'Sent to'}: {r.sentTo || 'email, sms'}</span>
+                        ) : (
+                          <span className="text-orange-600">{t('not_sent') || 'Not sent'}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex justify-end">
+                  <button onClick={handleCloseReminderModal} className="px-6 py-2 bg-primary text-white rounded-lg">
+                    {t('close') || 'Close'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-subdued mb-6">
+                  {t('send_reminder_message', { name: renter.name })}
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button onClick={handleCloseReminderModal} className="px-4 py-2 text-subdued">{t('cancel')}</button>
+                  <button 
+                    onClick={handleSendReminder} 
+                    disabled={isSendingReminder}
+                    className="px-6 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
+                  >
+                    {isSendingReminder ? (t('sending') || 'Sending...') : (t('confirm_send') || 'Confirm & Send')}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
