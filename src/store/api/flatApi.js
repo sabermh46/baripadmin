@@ -131,6 +131,29 @@ export const flatApi = baseApi.injectEndpoints({
       }),
       providesTags: ['AdvancePayment'],
     }),
+
+    ///GET: /financial/payment-receipts
+    //const { flat_id } = req.query;
+    getPaymentReceipts: builder.query({
+      query: ({flatId}) => ({
+        url: `/financial/payment-receipts`,
+        method: 'GET',
+        params: { flat_id: flatId },
+      }),
+      providesTags: ['PaymentReceipt'],
+    }),
+
+    //POST: /financial/resend-payment-receipt'
+    // const { rent_payment_id } = req.body;
+    resendPaymentReceipt: builder.mutation({
+      query: ({rentPaymentId}) => ({
+        url: `/financial/resend-payment-receipt`,
+        method: 'POST',
+        data: { rent_payment_id: rentPaymentId },
+      }),
+      invalidatesTags: ['PaymentReceipt'],
+    }),
+
   }),
 });
 
@@ -149,4 +172,6 @@ export const {
   useSendRentReminderMutation,
   useApplyAdvancePaymentMutation,
   useGetFlatAdvancePaymentsQuery,
+  useGetPaymentReceiptsQuery,
+  useResendPaymentReceiptMutation,
 } = flatApi;

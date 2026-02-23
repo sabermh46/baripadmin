@@ -5,13 +5,15 @@ import {
   ArrowLeft, Edit, DollarSign, Calendar, User, Phone, Mail,
   Clock, AlertCircle, FileText, CreditCard, History,
   MessageSquare, Send, X, PlusCircle, TrendingUp, TrendingDown,
-  Shield, ArrowUpRight, ArrowDownRight
+  Shield, ArrowUpRight, ArrowDownRight, Eye, ScrollText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   useGetFlatDetailsQuery,
   useSendRentReminderMutation,
-  useGetFlatAdvancePaymentsQuery
+  useGetFlatAdvancePaymentsQuery,
+  useGetPaymentReceiptsQuery,
+  useResendPaymentReceiptMutation
 } from '../../store/api/flatApi';
 import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import FlatForm from './FlatForm';
@@ -23,6 +25,7 @@ import AssignRenterModal from './AssignRenterModal';
 import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
 import TkSymbol from '../common/TkSymbol';
 import Table from '../common/Table';
+import PrintEmailInfo from '../common/PrintEmailInfo';
 
 const FlatDetails = () => {
   const { id } = useParams();
@@ -39,7 +42,12 @@ const FlatDetails = () => {
   const [reminderResult, setReminderResult] = useState(null);
   const [selectedPaymentRenterId, setSelectedPaymentRenterId] = useState(null);
   const [selectedAdvanceRenterId, setSelectedAdvanceRenterId] = useState(null);
+  const [openReminderLog, setOpenReminderLog] = useState(false);
+  const [openPaymentEmailLog, setOpenPaymentEmailLog] = useState(false);
+  const [selectedPaymentForEmailLog, setSelectedPaymentForEmailLog] = useState(null);
 
+  const { data: paymentReceiptsData, refetch: refetchPaymentReceipts } = useGetPaymentReceiptsQuery({ flatId: id }, { skip: !id });
+  
   // Queries
   const { data: flatData, isLoading, refetch: refetchDetails } = useGetFlatDetailsQuery(id);
   // const { data: financialSummaryData, refetch: refetchFinancialSummary } = useGetFlatFinancialSummaryQuery({ flatId: id }, { skip: !id });
@@ -57,6 +65,7 @@ const FlatDetails = () => {
   );
 
   const [sendReminder, { isLoading: isSendingReminder }] = useSendRentReminderMutation();
+  const [resendPaymentReceipt, { isLoading: isResendingReceipt }] = useResendPaymentReceiptMutation();
 
   // Derived data (with fallbacks for loading state - hooks must run before early return)
   const flat = flatData?.data?.flat || {};
@@ -65,6 +74,17 @@ const FlatDetails = () => {
   const stats = flatData?.data?.stats || {};
   const advancePayments = useMemo(() => advancePaymentsData?.data || [], [advancePaymentsData?.data]);
   const availableRenters = useMemo(() => rentersResponse?.data || rentersResponse || [], [rentersResponse]);
+  const paymentReceipts = useMemo(() => paymentReceiptsData?.data || [], [paymentReceiptsData?.data]);
+
+  const handleResendReceipt = async (paymentId) => {
+    try {
+      await resendPaymentReceipt({ rentPaymentId: paymentId }).unwrap();
+      toast.success(t('receipt_resent') || 'Payment receipt resent successfully');
+      refetchPaymentReceipts();
+    } catch (error) {
+      toast.error(error?.data?.error || 'Failed to resend receipt');
+    }
+  };
 
   const renter = {
     name: flat.renterName,
@@ -252,6 +272,13 @@ const FlatDetails = () => {
               </button>
             </>
           )}
+          <button
+            onClick={() => setOpenReminderLog(true)}
+            className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 border border-subdued/30 rounded-lg bg-white hover:bg-subdued/10 transition-colors"
+          >
+            <ScrollText size={18} />
+            {t('see_reminder_log') || 'See Reminder Log'}
+          </button>
           <button
             onClick={() => setOpenEdit(true)}
             className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 bg-surface border border-subdued/30 text-text rounded-lg hover:bg-subdued/10 transition-colors"
@@ -608,6 +635,19 @@ const FlatDetails = () => {
                     {row.status}
                   </span>
                 )},
+                { key: 'actions', title: t('actions'), render: (row) => (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPaymentForEmailLog(row);
+                      setOpenPaymentEmailLog(true);
+                    }}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                    title={t('view') || 'View'}
+                  >
+                    <Eye size={18} />
+                  </button>
+                )},
               ]}
               data={filteredPayments}
               rowKey="id"
@@ -842,14 +882,100 @@ const FlatDetails = () => {
         </div>
       )}
 
+      {/* Reminder Log Modal */}
+      {openReminderLog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-xl flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-subdued/20">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <ScrollText size={20} />
+                {t('reminder_log') || 'Reminder Log'}
+              </h3>
+              <button onClick={() => setOpenReminderLog(false)} className="p-1 hover:bg-subdued/10 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 flex-1">
+              {(() => {
+                const rentReminderLogs = paymentReceipts.filter((log) => {
+                  let meta = {};
+                  try { meta = log.metadata ? JSON.parse(log.metadata) : {}; } catch { /* ignore */ }
+                  return meta?.type === 'rent_reminder';
+                });
+                if (rentReminderLogs.length === 0) {
+                  return <p className="text-subdued text-center py-8">{t('no_reminder_log') || 'No rent reminder logs found.'}</p>;
+                }
+                return (
+                  <ul className="space-y-3">
+                    {rentReminderLogs.map((log) => (
+                      <li key={log.id} className="p-4 bg-subdued/5 rounded-lg border border-subdued/10">
+                        <PrintEmailInfo log={log} htmlBody={log.htmlBody || log.html || log.body} />
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Email Log Modal (per payment) */}
+      {openPaymentEmailLog && selectedPaymentForEmailLog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-xl flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-subdued/20">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Eye size={20} />
+                {t('payment_email_log') || 'Payment Email Log'}
+              </h3>
+              <button onClick={() => { setOpenPaymentEmailLog(false); setSelectedPaymentForEmailLog(null); }} className="p-1 hover:bg-subdued/10 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 border-b border-subdued/20 flex justify-between items-center">
+              <p className="text-sm text-subdued">
+                {t('for_month') || 'For'} {selectedPaymentForEmailLog.for_month} • <TkSymbol />{selectedPaymentForEmailLog.amount}
+              </p>
+              <button
+                onClick={() => handleResendReceipt(selectedPaymentForEmailLog.id)}
+                disabled={isResendingReceipt}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 text-sm"
+              >
+                {isResendingReceipt ? (t('sending') || 'Sending...') : (t('resend_receipt') || 'Resend Payment Receipt')}
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 flex-1">
+              {(() => {
+                const paymentLogs = paymentReceipts.filter((l) => l.row_id === selectedPaymentForEmailLog.id);
+                if (paymentLogs.length === 0) {
+                  return <p className="text-subdued text-center py-8">{t('no_email_log_for_payment') || 'No email logs for this payment.'}</p>;
+                }
+                return (
+                  <ul className="space-y-3">
+                    {paymentLogs.map((log) => (
+                      <li key={log.id} className="p-4 bg-subdued/5 rounded-lg border border-subdued/10">
+                        <PrintEmailInfo log={log} htmlBody={log.htmlBody || log.html || log.body} />
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       <AssignRenterModal
-              open={openAssignModal}
-              onClose={() => {
-                setOpenAssignModal(false);
-              }}
-              flat={flatData?.data?.flat || null}
-              houseinfo={houseData?.data || null}
-            />
+        open={openAssignModal}
+        onClose={() => setOpenAssignModal(false)}
+        flat={flatData?.data?.flat || null}
+        houseinfo={houseData?.data || null}
+        onSuccess={() => {
+          refetchDetails();
+          refetchAdvancePayments();
+        }}
+      />
     </div>
   );
 };

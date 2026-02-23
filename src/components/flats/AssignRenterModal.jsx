@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import Btn from '../common/Button';
 
-const AssignRenterModal = ({ open, onClose, flat, houseinfo = null }) => {
+const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = () => {} }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRenter, setSelectedRenter] = useState(null);
   const [amenities, setAmenities] = useState([]);
@@ -225,6 +225,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null }) => {
         : `Renter "${selectedRenter.name}" assigned successfully`;
       
       toast.success(successMessage);
+      onSuccess?.();
       onClose();
       setSelectedRenter(null);
       setSearchTerm('');

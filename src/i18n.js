@@ -313,6 +313,14 @@ const resources = {
         "delete_failed": "Failed to delete house",
         "try_different_search": "Try a different search",
         "payments": "payments",
+        "see_reminder_log": "See Reminder Log",
+        "reminder_log": "Reminder Log",
+        "no_reminder_log": "No email logs found.",
+        "payment_email_log": "Payment Email Log",
+        "for_month": "For",
+        "resend_receipt": "Resend Payment Receipt",
+        "receipt_resent": "Payment receipt resent successfully",
+        "no_email_log_for_payment": "No email logs for this payment.",
 
         
     }
@@ -626,6 +634,14 @@ const resources = {
         "delete_failed": "বাড়ি মুছতে ব্যর্থ",
         "try_different_search": "অন্য অনুসন্ধান চেষ্টা করুন",
         "payments": "পেমেন্ট",
+        "see_reminder_log": "স্মরণ লগ দেখুন",
+        "reminder_log": "স্মরণ লগ",
+        "no_reminder_log": "কোনো ইমেল লগ পাওয়া যায়নি।",
+        "payment_email_log": "পেমেন্ট ইমেল লগ",
+        "for_month": "জন্য",
+        "resend_receipt": "পেমেন্ট রসিদ পুনরায় পাঠান",
+        "receipt_resent": "পেমেন্ট রসিদ সফলভাবে পুনরায় পাঠানো হয়েছে",
+        "no_email_log_for_payment": "এই পেমেন্টের জন্য কোনো ইমেল লগ নেই।",
 
 
     }
