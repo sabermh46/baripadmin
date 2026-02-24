@@ -7,31 +7,23 @@ import {
   Edit,
   Trash2,
   UserPlus,
-  UserMinus,
   Eye,
   Filter,
   Home,
-  DollarSign,
-  Calendar,
   Users,
   ChevronRight,
   ChevronLeft,
-  MoreVertical,
-  HouseHeartIcon,
   House
 } from 'lucide-react';
 import {
   useGetFlatsQuery,
-  useDeleteFlatMutation,
-  useRemoveRenterMutation
+  useDeleteFlatMutation
 } from '../../store/api/flatApi';
 import { format } from 'date-fns';
 import FlatForm from './FlatForm';
 import AssignRenterModal from './AssignRenterModal';
 import RenterForm from '../renters/RenterForm';
 import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
-import { toast } from 'react-toastify';
-import HouseStats from '../admin/house/HouseStats';
 import Btn from '../common/Button';
 
 const FlatList = () => {
@@ -59,7 +51,6 @@ const FlatList = () => {
   });
 
   const [deleteFlat] = useDeleteFlatMutation();
-  const [removeRenter] = useRemoveRenterMutation();
 
   const flats = flatsData?.data || [];
   const meta = flatsData?.meta || {};
@@ -83,17 +74,6 @@ const FlatList = () => {
   const handleAssignRenter = (flat) => {
     setSelectedFlat(flat);
     setOpenAssignModal(true);
-  };
-
-  const handleRemoveRenter = async (flat) => {
-    if (window.confirm(`Remove renter from flat ${flat.number || flat.name}?`)) {
-      try {
-        await removeRenter(flat.id).unwrap();
-      } catch (error) {
-        toast.error(`Failed to remove renter: ${error?.data?.error || error.message}`);
-        console.error('Failed to remove renter:', error);
-      }
-    }
   };
 
   const handleDelete = async () => {
@@ -333,15 +313,7 @@ const FlatList = () => {
                         >
                           <Edit size={18} className="text-blue-600" />
                         </button>
-                        {flat.renter_id ? (
-                          <button
-                            onClick={() => handleRemoveRenter(flat)}
-                            className="p-2 hover:bg-subdued/10 rounded-lg transition-colors"
-                            title="Remove Renter"
-                          >
-                            <UserMinus size={18} className="text-orange-600" />
-                          </button>
-                        ) : (
+                        {!flat.renter_id && (
                           <button
                             onClick={() => handleAssignRenter(flat)}
                             className="p-2 hover:bg-subdued/10 rounded-lg transition-colors"

@@ -63,9 +63,10 @@ export const flatApi = baseApi.injectEndpoints({
 
     // Remove renter from flat
     removeRenter: builder.mutation({
-      query: (flatId) => ({
+      query: ({flatId, refund_amount}) => ({
         url: `/flats/${flatId}/renter`,
         method: 'DELETE',
+        data: { refund_amount },
       }),
       invalidatesTags: ['Flat'],
     }),
@@ -97,6 +98,31 @@ export const flatApi = baseApi.injectEndpoints({
         method: 'GET',
         params,
       }),
+    }),
+
+
+    createAdvancePayment: builder.mutation({
+      query: ({ flatId, ...data }) => ({
+        url: `/flats/${flatId}/advance-payments`,
+        method: 'POST',
+        data, //{ amount, payment_method, payment_date, transaction_id, notes }
+      }),
+      invalidatesTags: ['AdvancePayment'],
+    }),
+    updateAdvancePayment: builder.mutation({ //{ flatId, advanceId } = req.params; { paid_amount } = req.body;
+      query: ({ flatId, advanceId, paid_amount }) => ({
+        url: `/flats/${flatId}/advance-payments/${advanceId}`,
+        method: 'PUT',
+        data: { paid_amount },
+      }),
+      invalidatesTags: ['AdvancePayment'],
+    }),
+    deleteAdvancePayment: builder.mutation({
+      query: ({ flatId, advanceId }) => ({
+        url: `/flats/${flatId}/advance-payments/${advanceId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['AdvancePayment'],
     }),
 
     // Get flat financial summary
@@ -174,4 +200,7 @@ export const {
   useGetFlatAdvancePaymentsQuery,
   useGetPaymentReceiptsQuery,
   useResendPaymentReceiptMutation,
+  useCreateAdvancePaymentMutation,
+  useUpdateAdvancePaymentMutation,
+  useDeleteAdvancePaymentMutation,
 } = flatApi;

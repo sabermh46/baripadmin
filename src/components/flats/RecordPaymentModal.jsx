@@ -25,6 +25,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
   const [showAmenitiesEditor, setShowAmenitiesEditor] = useState(false);
   const [useAdvancePayment, setUseAdvancePayment] = useState(false);
   const [availableAdvance, setAvailableAdvance] = useState(0);
+  const [renterPaidRemaining, setRenterPaidRemaining] = useState(0);
 
   // Calculate total available advance payments
   useEffect(() => {
@@ -125,6 +126,15 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
     ? Math.max(totalAmount - Math.min(availableAdvance, totalAmount), 0)
     : totalAmount;
 
+  // Default renterPaidRemaining when using advance
+  useEffect(() => {
+    if (!useAdvancePayment) {
+      setRenterPaidRemaining(0);
+      return;
+    }
+    setRenterPaidRemaining(amountAfterAdvance);
+  }, [useAdvancePayment, amountAfterAdvance]);
+
   const handleAddAmenity = () => {
     setAmenities([...amenities, { name: '', charge: 0 }]);
   };
@@ -141,6 +151,19 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
 
   const onSubmit = async (formData) => {
     try {
+      if (useAdvancePayment) {
+        const maxRemaining = amountAfterAdvance;
+        const val = parseFloat(renterPaidRemaining || 0);
+        if (isNaN(val) || val < 0) {
+          toast.error('Renter remaining amount must be a valid number');
+          return;
+        }
+        if (val - maxRemaining > 1e-6) {
+          toast.error('Renter remaining amount cannot exceed amount after advance');
+          return;
+        }
+      }
+
       // Build payload as expected by backend (excluding flatId)
       const paymentData = {
         ...formData,
@@ -150,6 +173,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
         amenities_total: amenitiesTotal,
         late_fee: lateFee,
         use_advance_payment: useAdvancePayment,
+        renter_paid_remaining: useAdvancePayment ? parseFloat(renterPaidRemaining || 0) : 0,
         // No advance_payment_id – backend uses oldest available advance
       };
 
@@ -321,13 +345,28 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
                   <div className="p-3 bg-white border border-green-300 rounded-lg">
                     <div className="flex justify-between text-sm">
                       <span className="text-green-700">Total Available Advance:</span>
-                      <span className="font-bold">${availableAdvance.toLocaleString()}</span>
+                      <span className="font-bold text-green-700"><TkSymbol />{availableAdvance.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm mt-2">
                       <span className="text-green-700">Amount to Apply:</span>
-                      <span className="font-bold">
-                        ${Math.min(availableAdvance, totalAmount).toLocaleString()}
+                      <span className="font-bold text-green-700">
+                        <TkSymbol />{Math.min(availableAdvance, totalAmount).toLocaleString()}
                       </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm mt-2">
+                      <span className="text-green-700">Renter Pays Now:</span>
+                      <div className="flex items-center gap-1">
+                        <TkSymbol />
+                        <input
+                          type="number"
+                          min="0"
+                          max={amountAfterAdvance}
+                          step="0.01"
+                          value={renterPaidRemaining}
+                          onChange={(e) => setRenterPaidRemaining(e.target.value)}
+                          className="w-24 px-2 py-1 border border-subdued/30 rounded text-right text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

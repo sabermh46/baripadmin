@@ -5,7 +5,8 @@ import {
   ArrowLeft, Edit, DollarSign, Calendar, User, Phone, Mail,
   Clock, AlertCircle, FileText, CreditCard, History,
   MessageSquare, Send, X, PlusCircle, TrendingUp, TrendingDown,
-  Shield, ArrowUpRight, ArrowDownRight, Eye, ScrollText
+  Shield, ArrowUpRight, ArrowDownRight, Eye, ScrollText,
+  UserMinus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -13,12 +14,14 @@ import {
   useSendRentReminderMutation,
   useGetFlatAdvancePaymentsQuery,
   useGetPaymentReceiptsQuery,
-  useResendPaymentReceiptMutation
+  useResendPaymentReceiptMutation,
+  useRemoveRenterMutation
 } from '../../store/api/flatApi';
 import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import FlatForm from './FlatForm';
 import RecordPaymentModal from './RecordPaymentModal';
-import ApplyAdvancePaymentModal from './ApplyAdvancePaymentModal'; // New component
+import ApplyAdvancePaymentModal from './ApplyAdvancePaymentModal';
+import AdvancePaymentFormModal from './AdvancePaymentFormModal';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import AssignRenterModal from './AssignRenterModal';
@@ -26,6 +29,7 @@ import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
 import TkSymbol from '../common/TkSymbol';
 import Table from '../common/Table';
 import PrintEmailInfo from '../common/PrintEmailInfo';
+import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 
 const FlatDetails = () => {
   const { id } = useParams();
@@ -45,6 +49,12 @@ const FlatDetails = () => {
   const [openReminderLog, setOpenReminderLog] = useState(false);
   const [openPaymentEmailLog, setOpenPaymentEmailLog] = useState(false);
   const [selectedPaymentForEmailLog, setSelectedPaymentForEmailLog] = useState(null);
+  const [openAdvancePaymentForm, setOpenAdvancePaymentForm] = useState(false);
+  const [selectedAdvancePaymentForForm, setSelectedAdvancePaymentForForm] = useState(null);
+  const [advancePaymentFormMode, setAdvancePaymentFormMode] = useState('view');
+  const [openRemoveRenterModal, setOpenRemoveRenterModal] = useState(false);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundError, setRefundError] = useState('');
 
   const { data: paymentReceiptsData, refetch: refetchPaymentReceipts } = useGetPaymentReceiptsQuery({ flatId: id }, { skip: !id });
   
@@ -65,6 +75,7 @@ const FlatDetails = () => {
   );
 
   const [sendReminder, { isLoading: isSendingReminder }] = useSendRentReminderMutation();
+  const [removeRenter, { isLoading: isRemovingRenter }] = useRemoveRenterMutation();
   const [resendPaymentReceipt, { isLoading: isResendingReceipt }] = useResendPaymentReceiptMutation();
 
   // Derived data (with fallbacks for loading state - hooks must run before early return)
@@ -75,6 +86,14 @@ const FlatDetails = () => {
   const advancePayments = useMemo(() => advancePaymentsData?.data || [], [advancePaymentsData?.data]);
   const availableRenters = useMemo(() => rentersResponse?.data || rentersResponse || [], [rentersResponse]);
   const paymentReceipts = useMemo(() => paymentReceiptsData?.data || [], [paymentReceiptsData?.data]);
+  const totalRemainingAdvance = useMemo(
+    () =>
+      advancePayments.reduce(
+        (sum, p) => sum + (parseFloat(p.remaining_amount) || 0),
+        0
+      ),
+    [advancePayments]
+  );
 
   const handleResendReceipt = async (paymentId) => {
     try {
@@ -269,6 +288,18 @@ const FlatDetails = () => {
               >
                 <Send size={18} />
                 {t('send_reminder')}
+              </button>
+              <button
+                onClick={() => {
+                  const defaultRefund = totalRemainingAdvance > 0 ? totalRemainingAdvance.toFixed(2) : '0';
+                  setRefundAmount(defaultRefund);
+                  setRefundError('');
+                  setOpenRemoveRenterModal(true);
+                }}
+                className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 border border-red-300 rounded-lg bg-white text-red-700 hover:bg-red-50 transition-colors"
+              >
+                <UserMinus size={18} />
+                {t('remove_renter') || 'Remove Renter'}
               </button>
             </>
           )}
@@ -615,14 +646,10 @@ const FlatDetails = () => {
                   <span className="text-orange-600">{row.late_fee_amount > 0 ? <><TkSymbol />{row.late_fee_amount}</> : '-'}</span>
                 )},
                 { key: 'advance_used', title: t('advance_used'), render: (row) => {
-                  let advanceUsed = null;
-                  try {
-                    const meta = row.metadata ? JSON.parse(row.metadata) : {};
-                    if (meta.advance_payment_used) advanceUsed = meta.advance_payment_used;
-                  } catch { /* ignore parse errors */ }
+                  let advanceUsed = row.advance_used;
                   return advanceUsed ? (
                     <div className="text-xs text-green-700">
-                      <div className="font-medium"><TkSymbol />{advanceUsed.amount}</div>
+                      <div className="font-medium"><TkSymbol />{advanceUsed}</div>
                       <div className="text-green-600">{t('advance_applied')}</div>
                     </div>
                   ) : '-';
@@ -737,8 +764,18 @@ const FlatDetails = () => {
 
             {/* Advance Payments List */}
             <div className="bg-surface rounded-lg border border-subdued/20 overflow-hidden">
-              <div className="p-4 border-b border-subdued/20">
+              <div className="p-4 border-b border-subdued/20 flex justify-between items-center">
                 <h3 className="text-lg font-bold text-text">{t('advance_payment_history')}</h3>
+                <button
+                  onClick={() => {
+                    setSelectedAdvancePaymentForForm(null);
+                    setAdvancePaymentFormMode('create');
+                    setOpenAdvancePaymentForm(true);
+                  }}
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-sm"
+                >
+                  {t('add_advance_payment') || 'Add Advance Payment'}
+                </button>
               </div>
               <Table
                 columns={[
@@ -762,18 +799,32 @@ const FlatDetails = () => {
                     </span>
                   )},
                   { key: 'actions', title: t('actions'), render: (row) => (
-                    parseFloat(row.remaining_amount) > 0 ? (
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedAdvancePayment(row);
-                          setOpenApplyAdvance(true);
+                          setSelectedAdvancePaymentForForm(row);
+                          setAdvancePaymentFormMode('view');
+                          setOpenAdvancePaymentForm(true);
                         }}
-                        className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded"
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                        title={t('view') || 'View'}
                       >
-                        Apply
+                        <Eye size={18} />
                       </button>
-                    ) : '-'
+                      {parseFloat(row.remaining_amount) > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAdvancePayment(row);
+                            setOpenApplyAdvance(true);
+                          }}
+                          className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded"
+                        >
+                          Apply
+                        </button>
+                      )}
+                    </div>
                   )},
                 ]}
                 data={filteredAdvancePayments}
@@ -966,6 +1017,21 @@ const FlatDetails = () => {
         </div>
       )}
 
+      <AdvancePaymentFormModal
+        open={openAdvancePaymentForm}
+        onClose={() => {
+          setOpenAdvancePaymentForm(false);
+          setSelectedAdvancePaymentForForm(null);
+        }}
+        flatId={id}
+        payment={selectedAdvancePaymentForForm}
+        mode={advancePaymentFormMode || 'view'}
+        onSuccess={() => {
+          refetchDetails();
+          refetchAdvancePayments();
+        }}
+      />
+
       <AssignRenterModal
         open={openAssignModal}
         onClose={() => setOpenAssignModal(false)}
@@ -976,6 +1042,119 @@ const FlatDetails = () => {
           refetchAdvancePayments();
         }}
       />
+
+      {/* Remove Renter Modal */}
+      {openRemoveRenterModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-lg p-4 max-w-md w-full shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">
+                {t('remove_renter') || 'Remove Renter'}
+              </h3>
+              <button
+                onClick={() => setOpenRemoveRenterModal(false)}
+                className="p-1 hover:bg-subdued/10 rounded"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-subdued text-sm mb-4">
+              {t('are_you_sure_you_want_to_remove_renter') ||
+                'Are you sure you want to remove this renter from the flat?'}
+            </p>
+            {totalRemainingAdvance > 0 && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                <p className="text-yellow-800 mb-2">
+                  {t('remaining_advance') || 'Remaining advance'}:{' '}
+                  <span className="font-bold">
+                    <TkSymbol /> {totalRemainingAdvance.toLocaleString()}
+                  </span>
+                </p>
+                <label className="block text-sm font-medium mb-1">
+                  {t('refund_amount') || 'Refund amount'}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={totalRemainingAdvance}
+                  step="0.01"
+                  value={refundAmount}
+                  onChange={(e) => {
+                    setRefundAmount(e.target.value);
+                    setRefundError('');
+                  }}
+                  className="w-full px-3 py-2 border border-subdued/30 rounded-lg"
+                />
+                {refundError && (
+                  <p className="text-red-600 text-xs mt-1">{refundError}</p>
+                )}
+                <p className="text-xs text-subdued mt-1">
+                  {t('refund_hint') ||
+                    'You cannot refund more than the remaining advance.'}
+                </p>
+              </div>
+            )}
+            <div className="flex justify-end gap-3 mt-2">
+              <button
+                onClick={() => setOpenRemoveRenterModal(false)}
+                className="px-4 py-2 text-subdued"
+                disabled={isRemovingRenter}
+              >
+                {t('cancel')}
+              </button>
+              <button
+                onClick={async () => {
+                  const max = totalRemainingAdvance;
+                  let refund = 0;
+                  if (max > 0) {
+                    const val = parseFloat(refundAmount || '0');
+                    if (isNaN(val) || val < 0) {
+                      setRefundError(
+                        t('amount_must_be_valid') ||
+                          'Refund amount must be a valid number'
+                      );
+                      return;
+                    }
+                    if (val > max + 1e-6) {
+                      setRefundError(
+                        t('refund_cannot_exceed_remaining_advance') ||
+                          'Refund amount cannot exceed remaining advance'
+                      );
+                      return;
+                    }
+                    refund = val;
+                  }
+                  try {
+                    await removeRenter({
+                      flatId: flat.id,
+                      refund_amount: refund,
+                    }).unwrap();
+                    toast.success(
+                      t('renter_removed_successfully') ||
+                        'Renter removed successfully'
+                    );
+                    setOpenRemoveRenterModal(false);
+                    refetchDetails();
+                    refetchAdvancePayments();
+                  } catch (err) {
+                    toast.error(
+                      showMessageInLanguage(err?.data?.error) ||
+                        err?.data?.error ||
+                        'Failed to remove renter'
+                    );
+                  }
+                }}
+                disabled={isRemovingRenter}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {isRemovingRenter
+                  ? t('removing') || 'Removing...'
+                  : t('remove_renter') || 'Remove Renter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

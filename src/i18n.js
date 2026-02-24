@@ -272,6 +272,14 @@ const resources = {
         "advance_payment_history": "Advance Payment History",
         "select_renter": "Select Renter",
         "no_payment_history": "No payment history found.",
+      "transaction_id": "Transaction ID",
+      "notes": "Notes",
+      "original_amount": "Original Amount",
+      "updating": "Updating...",
+      "update": "Update",
+      "edit": "Edit",
+      "delete_advance_payment": "Delete Advance Payment",
+      "are_you_sure_you_want_to_delete_this_advance_payment_this_action_cannot_be_undone": "Are you sure you want to delete this advance payment? This action cannot be undone.",
 
         "old_password": "Old Password",
         "change_your_password": "Change Your Password",
@@ -321,6 +329,16 @@ const resources = {
         "resend_receipt": "Resend Payment Receipt",
         "receipt_resent": "Payment receipt resent successfully",
         "no_email_log_for_payment": "No email logs for this payment.",
+        "add_advance_payment": "Add Advance Payment",
+      "remove_renter": "Remove Renter",
+      "are_you_sure_you_want_to_remove_renter": "Are you sure you want to remove this renter from the flat?",
+      "remaining_advance": "Remaining advance",
+      "refund_amount": "Refund amount",
+      "refund_hint": "You cannot refund more than the remaining advance.",
+      "amount_must_be_valid": "Refund amount must be a valid number",
+      "refund_cannot_exceed_remaining_advance": "Refund amount cannot exceed remaining advance",
+      "renter_removed_successfully": "Renter removed successfully",
+      "removing": "Removing...",
 
         
     }
@@ -595,6 +613,14 @@ const resources = {
         "advance_payment_history": "অগ্রিম পেমেন্ট ইতিহাস",
         "select_renter": "ভাড়াটিয়া নির্বাচন করুন",
         "no_payment_history": "কোনো পেমেন্ট ইতিহাস পাওয়া যায়নি।",
+        "transaction_id": "লেনদেন আইডি",
+        "notes": "নোট",
+        "original_amount": "মূল পরিমাণ",
+        "updating": "আপডেট হচ্ছে...",
+        "update": "আপডেট করুন",
+        "edit": "সম্পাদনা",
+        "delete_advance_payment": "অগ্রিম পেমেন্ট মুছুন",
+        "are_you_sure_you_want_to_delete_this_advance_payment_this_action_cannot_be_undone": "আপনি কি নিশ্চিত যে এই অগ্রিম পেমেন্ট মুছতে চান? এই ক্রিয়াটি ফিরিয়ে আনা যাবে না।",
 
         "old_password": "পুরানো পাসওয়ার্ড",
         "change_your_password": "আপনার পাসওয়ার্ড পরিবর্তন করুন",
@@ -642,6 +668,16 @@ const resources = {
         "resend_receipt": "পেমেন্ট রসিদ পুনরায় পাঠান",
         "receipt_resent": "পেমেন্ট রসিদ সফলভাবে পুনরায় পাঠানো হয়েছে",
         "no_email_log_for_payment": "এই পেমেন্টের জন্য কোনো ইমেল লগ নেই।",
+        "add_advance_payment": "অগ্রিম পেমেন্ট যোগ করুন",
+        "remove_renter": "ভাড়াটিয়া সরান",
+        "are_you_sure_you_want_to_remove_renter": "আপনি কি নিশ্চিত যে আপনি এই ফ্ল্যাট থেকে ভাড়াটিয়াকে সরাতে চান?",
+        "remaining_advance": "অবশিষ্ট অগ্রিম",
+        "refund_amount": "ফেরত পরিমাণ",
+        "refund_hint": "আপনি অবশিষ্ট অগ্রিমের বেশি ফেরত দিতে পারবেন না।",
+        "amount_must_be_valid": "ফেরত পরিমাণ একটি বৈধ সংখ্যা হতে হবে",
+        "refund_cannot_exceed_remaining_advance": "ফেরত পরিমাণ অবশিষ্ট অগ্রিমের বেশি হতে পারবে না",
+        "renter_removed_successfully": "ভাড়াটিয়া সফলভাবে সরানো হয়েছে",
+        "removing": "সরানো হচ্ছে...",
 
 
     }
