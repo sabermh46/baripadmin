@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks';
 import { appLogo } from '../assets';
 import NotificationIcon from './notifications/NotificationIcon';
@@ -7,12 +7,20 @@ import SideNav from './layout/SideNav';
 import { Menu, X } from 'lucide-react';
 import LanguageSwitcher from './common/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
+import { useAdminPendingAppFee } from '../hooks/useAdminPendingAppFee';
+import { addDays, format } from 'date-fns';
 
 const Layout = () => {
-  const { user } = useAuth();
+  const { user, isHouseOwner, isCaretaker } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { t } = useTranslation();
-  
+  const navigate = useNavigate();
+  const { pendingPayment } = useAdminPendingAppFee();
+
+
+  const loseAccessDate = pendingPayment
+    ? addDays(new Date(pendingPayment.start_date), pendingPayment.subscription_days + pendingPayment.offset_days)
+    : null;
 
 
 
@@ -60,6 +68,25 @@ const Layout = () => {
           </button>
           </div>
         </header>
+
+        {/* Subscription warning bar for house_owner / caretaker on warning day */}
+        {pendingPayment && (isHouseOwner || isCaretaker) && (
+          <div className="fixed max-w-[90%] w-100 mx-auto top-6 z-50 left-0 right-0 bg-red-200 rounded-2xl border border-amber-200">
+            <div className="max-w-5xl mx-auto px-4 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="text-xs sm:text-sm text-amber-900">
+                <span className="font-semibold">Your subscription has been overdue.</span>{' '}
+                You'll lose access at {loseAccessDate ? format(loseAccessDate, 'dd MMM yyyy') : ''}.
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/app-fee')}
+                className="self-start sm:self-auto px-3 py-1 bg-amber-600 text-white text-xs rounded-md hover:bg-amber-700"
+              >
+                View app fee
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 p-4 max-w-full overflow-x-clip relative">
           <Outlet />

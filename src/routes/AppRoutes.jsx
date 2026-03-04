@@ -32,6 +32,7 @@ import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
 import ChangePassword from '../pages/auth/ChangePassword';
 import HouseOwnerExpensesPage from '../pages/Expenses';
+import AppFeePage from '../pages/AppFee/AppFeePage';
 
 
 
@@ -174,6 +175,7 @@ const DynamicDashboard = () => {
 };
 
 const AppRoutes = () => {
+  const allRoles = ['web_owner', 'house_owner', 'staff', 'caretaker'];
   return (
       <Routes>
         {/* Public Routes */}
@@ -251,32 +253,32 @@ const AppRoutes = () => {
           } /> */}
 
             <Route path="/houses" element={
-              <ProtectedRoute roles={['web_owner', 'house_owner', 'staff', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <HousesPage />
               </ProtectedRoute>
             } />
             <Route path="/houses/:id" element={
-              <ProtectedRoute roles={['web_owner','house_owner', 'staff', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <HouseDetails />
               </ProtectedRoute>
             } />
             <Route path="/houses/:id/edit" element={
-              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <HouseEditForm />
               </ProtectedRoute>
             } />
             <Route path="/houses/:houseId/flats" element={
-              <ProtectedRoute roles={['web_owner', 'house_owner', 'staff', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <FlatList />
               </ProtectedRoute>
             } />
             <Route path="/renters" element={
-              <ProtectedRoute roles={['web_owner', 'house_owner', 'staff', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <RenterList />
               </ProtectedRoute>
             } />
             <Route path="/flats/:id" element={
-              <ProtectedRoute roles={['web_owner', 'house_owner', 'staff', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <FlatDetails />
               </ProtectedRoute>
             } />
@@ -292,12 +294,12 @@ const AppRoutes = () => {
               </ProtectedRoute>
             } />
             <Route path="/renters" element={
-              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <RenterList />
               </ProtectedRoute>
             } />
             <Route path="/notices" element={
-              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <ComingSoonPage />
               </ProtectedRoute>
             } />
@@ -343,13 +345,18 @@ const AppRoutes = () => {
               </ProtectedRoute>
             } />
             <Route path="/reports" element={
-              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <ReportGenPage />
               </ProtectedRoute>
             } />
             <Route path="/expenses" element={
-              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner', 'caretaker']}>
+              <ProtectedRoute roles={allRoles}>
                 <HouseOwnerExpensesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/app-fee" element={
+              <ProtectedRoute roles={allRoles}>
+                <AppFeePage />
               </ProtectedRoute>
             } />
         </Route>

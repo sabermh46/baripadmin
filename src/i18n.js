@@ -66,6 +66,7 @@ const resources = {
       "total_transaction": "Total Transaction",
       "monthly_rate": "Monthly Rate",
       "expenses": "Expenses",
+      "app_fee": "App Fee",
       "monthly_profit": "Monthly Profit",
 
       // Payments
@@ -405,6 +406,7 @@ const resources = {
       "total_transaction": "মোট লেনদেন",
       "monthly_rate": "মাসিক হার",
       "expenses": "খরচ",
+      "app_fee": "অ্যাপ ফি",
       "monthly_profit": "মাসিক লাভ",
 
       // Payments

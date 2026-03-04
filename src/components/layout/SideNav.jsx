@@ -2,6 +2,7 @@ import {
   BellDot,
   BookUser,
   CircleUser,
+  DollarSign,
   FileText,
   House,
   LayoutDashboard,
@@ -17,11 +18,11 @@ import usePushNotifications from "../../hooks/usePushNotifications";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 
-export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
+export const SideNav = ({ onClicked }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
 
-    const { unsubscribe, subscription } = usePushNotifications();
+    const { unsubscribe } = usePushNotifications();
   const dispatch = useAppDispatch();
   const [logoutMutation] = useLogoutMutation();
   const navigate = useNavigate();
@@ -94,6 +95,12 @@ export const SideNav = ({ isMobileMenuOpen = false, onClicked }) => {
       label: t("expenses"),
       icon: <FileText />,
       roles: ["developer", "web_owner", "staff", "house_owner", "caretaker" ],
+    },
+    {
+      path: "/app-fee",
+      label: t("app_fee"),
+      icon: <DollarSign />,
+      roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
     },
     {
       path: "/reports",

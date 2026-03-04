@@ -18,7 +18,7 @@ import MetadataInput from '../../../components/common/MetaDataInput';
 import { useGetManagedOwnersQuery } from '../../../store/api/houseApi';
 
 const GenerateToken = () => {
-  const { isHouseOwner, isStaff, isWebOwner, user } = useAuth();
+  const { isHouseOwner, user } = useAuth();
   const [generateToken, { isLoading }] = useGenerateTokenMutation();
   const [deleteToken, { isLoading: isDeleting }] = useDeleteTokenMutation();
   const { data: tokensResponse, isLoading: isTokensLoading, refetch } = useGetRegistrationTokensQuery();
@@ -56,7 +56,7 @@ const GenerateToken = () => {
   const itemsPerPage = 10;
 
   const tokens = tokensResponse || [];
-  const tokensMeta = tokensResponse?.meta || { total: 0, totalPages: 1 };
+  // const tokensMeta = tokensResponse?.meta || { total: 0, totalPages: 1 };
   
   // Pagination calculations for tokens
   const totalTokens = tokens?.length || 0;
@@ -104,40 +104,40 @@ const GenerateToken = () => {
     []
   );
 
-  const getFixedFields = () => {
-    const fields = [];
+  // const getFixedFields = () => {
+  //   const fields = [];
 
-    if (formData.roleSlug === 'caretaker') {
-      if (!isHouseOwner) {
-        fields.push({
-          label: 'House Owner',
-          key: 'house_owner_id',
-          type: 'select',
-          required: true,
-          options: getManagedOwnersOptions(),
-          description: 'Select the house owner for whom this caretaker will work',
-          onSearch: debouncedSearch, // Add search functionality
-          isLoading: ownersLoading || ownersFetching,
-          pagination: managedOwnersResponse?.meta ? {
-            current: managedOwnersResponse.meta.page,
-            total: managedOwnersResponse.meta.total,
-            totalPages: managedOwnersResponse.meta.totalPages,
-            onPageChange: setOwnersPage
-          } : null
-        });
-      } else if (isHouseOwner && user?.id) {
-        fields.push({
-          label: 'House Owner',
-          key: 'house_owner_id',
-          type: 'hidden',
-          defaultValue: user.id.toString(),
-          required: true
-        });
-      }
-    }
+  //   if (formData.roleSlug === 'caretaker') {
+  //     if (!isHouseOwner) {
+  //       fields.push({
+  //         label: 'House Owner',
+  //         key: 'house_owner_id',
+  //         type: 'select',
+  //         required: true,
+  //         options: getManagedOwnersOptions(),
+  //         description: 'Select the house owner for whom this caretaker will work',
+  //         onSearch: debouncedSearch, // Add search functionality
+  //         isLoading: ownersLoading || ownersFetching,
+  //         pagination: managedOwnersResponse?.meta ? {
+  //           current: managedOwnersResponse.meta.page,
+  //           total: managedOwnersResponse.meta.total,
+  //           totalPages: managedOwnersResponse.meta.totalPages,
+  //           onPageChange: setOwnersPage
+  //         } : null
+  //       });
+  //     } else if (isHouseOwner && user?.id) {
+  //       fields.push({
+  //         label: 'House Owner',
+  //         key: 'house_owner_id',
+  //         type: 'hidden',
+  //         defaultValue: user.id.toString(),
+  //         required: true
+  //       });
+  //     }
+  //   }
 
-    return fields;
-  };
+  //   return fields;
+  // };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -281,8 +281,9 @@ const GenerateToken = () => {
     try {
       await navigator.clipboard.writeText(text);
       toast.success(`${type} copied to clipboard!`);
-    } catch (err) {
-      toast.error('Failed to copy to clipboard');
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+        toast.error('Failed to copy to clipboard');
     }
   };
 
@@ -650,7 +651,7 @@ const GenerateToken = () => {
               <input
                 type="hidden"
                 value={user.id}
-                onChange={(e) => handleMetadataChange({
+                onChange={() => handleMetadataChange({
                   ...formData.metadata,
                   house_owner_id: user.id.toString()
                 })}
@@ -790,7 +791,7 @@ const GenerateToken = () => {
               {/* Warning Message */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <div className="flex">
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
@@ -863,7 +864,7 @@ const GenerateToken = () => {
                   onClick={() => {
                     window.open(generatedToken.registrationLink, '_blank');
                   }}
-                  className="!bg-green-600 text-white rounded-lg !hover:bg-green-700 transition"
+                  className="bg-green-600! text-white rounded-lg !hover:bg-green-700 transition"
                 >
                   Open Link
                 </Btn>
