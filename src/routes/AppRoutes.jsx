@@ -18,6 +18,7 @@ import { LoaderMinimal } from '../components/common/RouteLoader';
 import { Loader } from 'lucide-react';
 import SystemSettings from '../pages/Admin/SystemSettings';
 import HouseOwnersPage from '../pages/Admin/HouseOwnersPage';
+import HouseOwnerDetailPage from '../pages/Admin/HouseOwnerDetail';
 import HousesPage from '../pages/House';
 import CreateHouseForm from '../components/admin/house/CreateHouseForm';
 import HouseDetails from '../components/admin/house/HouseDetails';
@@ -342,6 +343,11 @@ const AppRoutes = () => {
             <Route path="admin/house-owners" element={
               <ProtectedRoute roles={['web_owner']}>
                 <HouseOwnersPage />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/house-owners/:ownerId" element={
+              <ProtectedRoute roles={['web_owner']}>
+                <HouseOwnerDetailPage />
               </ProtectedRoute>
             } />
             <Route path="/reports" element={

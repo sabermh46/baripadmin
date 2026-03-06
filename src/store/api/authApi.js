@@ -125,6 +125,24 @@ export const authApi = baseApi.injectEndpoints({
         data,
       }),
     }),
+
+    createUser: builder.mutation({
+      query: (data) => ({
+        url: '/auth/create-user',
+        method: 'POST',
+        data,
+      }),
+      invalidatesTags: ['ManagedOwners'],
+    }),
+
+    getManagedUsers: builder.query({
+      query: ({ role, expand, userId } = {}) => ({
+        url: '/auth/managed-users',
+        method: 'GET',
+        params: { role, expand, userId },
+      }),
+      providesTags: ['ManagedUsers'],
+    }),
   }),
 });
 
@@ -144,4 +162,6 @@ export const {
   useRefreshTokenMutation,
   useValidateTokenMutation,
   useGetPublicRegistrationStatusQuery,
+  useCreateUserMutation,
+  useGetManagedUsersQuery,
 } = authApi;

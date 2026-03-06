@@ -1,22 +1,19 @@
 // HouseOwnersPage - Updated to use Table component
 import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  Plus, 
-  Mail, 
-  Home, 
-  UserPlus,
-  MoreVertical
-} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Mail, Home, UserPlus, Eye } from 'lucide-react';
 import { useGetManagedOwnersQuery } from '../../store/api/houseApi';
 import debounce from 'lodash/debounce';
-import Table from '../../components/common/Table'; // Import the Table component
+import Table from '../../components/common/Table';
+import CreateHouseOwnerModal from '../AppFee/CreateHouseOwnerModal';
 import { t } from 'i18next';
 
 const HouseOwnersPage = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const limit = 10;
+  const [createOwnerOpen, setCreateOwnerOpen] = useState(false);
 
   const debouncedSearch = useMemo(
     () => debounce((value) => {
@@ -108,9 +105,14 @@ const HouseOwnersPage = () => {
     {
       title: t('actions'),
       key: 'actions',
-      render: () => (
-        <button className="text-gray-400 hover:text-gray-600 p-1">
-          <MoreVertical size={18} />
+      render: (owner) => (
+        <button
+          type="button"
+          onClick={() => navigate(`/admin/house-owners/${owner.id}`)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors"
+        >
+          <Eye size={16} />
+          View
         </button>
       )
     }
@@ -139,7 +141,10 @@ const HouseOwnersPage = () => {
           <h1 className="text-2xl font-bold text-text">{t('house_owners')}</h1>
           <p className="text-subdued text-sm">Manage and monitor all registered property owners.</p>
         </div>
-        <button className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-fit">
+        <button
+          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-fit"
+          onClick={() => setCreateOwnerOpen(true)}
+        >
           <UserPlus size={18} />
           Add Owner
         </button>
@@ -182,6 +187,12 @@ const HouseOwnersPage = () => {
           className="border-0"
         />
       </div>
+
+      <CreateHouseOwnerModal
+        isOpen={createOwnerOpen}
+        onClose={() => setCreateOwnerOpen(false)}
+        onSuccess={() => setCreateOwnerOpen(false)}
+      />
     </div>
   );
 };

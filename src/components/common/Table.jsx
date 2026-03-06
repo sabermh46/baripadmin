@@ -46,7 +46,7 @@ const Table = ({
                     scope="col"
                     className={`
                       px-${compact ? '3' : '6'} py-${compact ? '2' : '3'} 
-                      text-left text-xs font-medium text-black/70 uppercase tracking-wider
+                      text-left text-xs font-bold text-black uppercase tracking-wider
                       ${column.className || ''}
                     `}
                   >
