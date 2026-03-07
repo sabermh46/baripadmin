@@ -5,6 +5,7 @@ import {
   DollarSign,
   FileText,
   House,
+  Landmark,
   LayoutDashboard,
   SettingsIcon,
   Users,
@@ -100,6 +101,12 @@ export const SideNav = ({ onClicked }) => {
       path: "/app-fee",
       label: t("app_fee"),
       icon: <DollarSign />,
+      roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
+    },
+    {
+      path: "/loans",
+      label: t("loans"),
+      icon: <Landmark />,
       roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
     },
     {

@@ -34,6 +34,7 @@ import ResetPassword from '../pages/auth/ResetPassword';
 import ChangePassword from '../pages/auth/ChangePassword';
 import HouseOwnerExpensesPage from '../pages/Expenses';
 import AppFeePage from '../pages/AppFee/AppFeePage';
+import LoansPage from '../pages/Loans';
 
 
 
@@ -363,6 +364,11 @@ const AppRoutes = () => {
             <Route path="/app-fee" element={
               <ProtectedRoute roles={allRoles}>
                 <AppFeePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/loans" element={
+              <ProtectedRoute roles={allRoles}>
+                <LoansPage />
               </ProtectedRoute>
             } />
         </Route>

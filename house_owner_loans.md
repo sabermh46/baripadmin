@@ -45,9 +45,20 @@ This document describes the loan management APIs and workflows for **house owner
 
 ---
 
+## API endpoint naming
+
+All loan routes use clear prefixes so you can tell them apart:
+
+- **`loan-`** — operations on a **loan** (house_loan): create, list by house, get one, update, delete.
+- **`loan-payment-`** — operations on a **loan payment** (house_loan_payment): create, update.
+
+Base path: **`/api/loans`**.
+
+---
+
 ## Workflow 1: Create a Loan (Mark House Has a Loan)
 
-**Endpoint:** `POST /api/loans`
+**Endpoint:** `POST /api/loans/loan-create`
 
 **Purpose:** House owner marks that they have a loan for a house.
 
@@ -117,7 +128,7 @@ This document describes the loan management APIs and workflows for **house owner
 
 ## Workflow 2: Record a Paid Amount (Payment Record)
 
-**Endpoint:** `POST /api/loans/:loanId/payments`
+**Endpoint:** `POST /api/loans/loan-payment-create/:loanId`
 
 **Purpose:** Record a payment made toward the loan. This is purely for record-keeping; no payment gateway integration.
 
@@ -185,15 +196,47 @@ This document describes the loan management APIs and workflows for **house owner
 
 ---
 
-## Other API Endpoints
+## Fetch APIs: Payments Attached
+
+Both loan fetch APIs attach `house_loan_payment` to each loan:
+
+- **GET /api/loans/loan/:loanId** — Returns one loan with a `payments` array (payment history, newest first).
+- **GET /api/loans/loan-by-house/:houseId** — Returns an array of loans; each loan includes a `payments` array.
+
+---
+
+## Edit a Loan Payment
+
+**Endpoint:** `PUT /api/loans/loan-payment/:loanPaymentId`
+
+**Purpose:** Edit an existing payment record (amount, date, transaction_id, notes). Updating `amount` recalculates the loan’s `paid_amount` and may set loan `status` to `paid` or back to `active`.
+
+**Path params:** `loanPaymentId` — ID of the `house_loan_payment` row.
+
+**Request body (JSON):** All fields optional.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `amount` | number | New payment amount (updates loan total paid) |
+| `payment_date` | string | ISO date |
+| `transaction_id` | string | Reference |
+| `notes` | string | Notes |
+
+**Response 200:** Updated payment object. Same ownership checks as other loan endpoints.
+
+---
+
+## All API endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/loans/house/:houseId` | List all loans for a house |
-| GET | `/api/loans/:id` | Get loan details (including payment history) |
-| PUT | `/api/loans/:id` | Update loan |
-| DELETE | `/api/loans/:id` | Delete loan |
-| PUT | `/api/loans/payments/:paymentId` | Update a payment record |
+| POST | `/api/loans/loan-create` | Create a loan |
+| GET | `/api/loans/loan-by-house/:houseId` | List all loans for a house (each with `payments`) |
+| GET | `/api/loans/loan/:loanId` | Get loan details (including `payments`) |
+| PUT | `/api/loans/loan/:loanId` | Update loan |
+| DELETE | `/api/loans/loan/:loanId` | Delete loan |
+| POST | `/api/loans/loan-payment-create/:loanId` | Record a payment |
+| PUT | `/api/loans/loan-payment/:loanPaymentId` | Edit a payment record |
 
 All of these enforce the same ownership checks for house_owner.
 
@@ -214,10 +257,10 @@ Example: `GET /auth/managed-users?role=house_owner&expand=dna` returns house own
 
 | Action | Endpoint | Purpose |
 |--------|----------|---------|
-| Create loan | `POST /api/loans` | Mark house has a loan |
-| Record payment | `POST /api/loans/:loanId/payments` | Record paid amount (for record only) |
-| List loans | `GET /api/loans/house/:houseId` | List loans for a house |
-| Loan details | `GET /api/loans/:id` | Loan + payment history |
-| Update loan | `PUT /api/loans/:id` | Edit loan details |
-| Delete loan | `DELETE /api/loans/:id` | Remove loan |
-| Update payment | `PUT /api/loans/payments/:paymentId` | Edit a payment record |
+| Create loan | `POST /api/loans/loan-create` | Mark house has a loan |
+| List loans | `GET /api/loans/loan-by-house/:houseId` | List loans for a house |
+| Loan details | `GET /api/loans/loan/:loanId` | Loan + payment history |
+| Update loan | `PUT /api/loans/loan/:loanId` | Edit loan details |
+| Delete loan | `DELETE /api/loans/loan/:loanId` | Remove loan |
+| Record payment | `POST /api/loans/loan-payment-create/:loanId` | Record paid amount (for record only) |
+| Update payment | `PUT /api/loans/loan-payment/:loanPaymentId` | Edit a payment record |
