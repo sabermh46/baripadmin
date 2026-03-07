@@ -104,6 +104,10 @@ const resources = {
       "loan_payment_history": "Loan Payment History",
       "no_loan_payments": "No payments recorded yet",
       "payment_history": "Payment history",
+      "all_owners": "All owners",
+      "search_houses_placeholder": "Search by name or address...",
+      "search_owners_placeholder": "Search by name or email...",
+      "no_owners_found": "No owners found",
 
       // Payments
       "date": "Date",
@@ -480,6 +484,10 @@ const resources = {
       "loan_payment_history": "ঋণ পেমেন্টের ইতিহাস",
       "no_loan_payments": "এখনও কোনো পেমেন্ট রেকর্ড নেই",
       "payment_history": "পেমেন্টের ইতিহাস",
+      "all_owners": "সব মালিক",
+      "search_houses_placeholder": "নাম বা ঠিকানা দিয়ে খুঁজুন...",
+      "search_owners_placeholder": "নাম বা ইমেইল দিয়ে খুঁজুন...",
+      "no_owners_found": "কোনো মালিক পাওয়া যায়নি",
 
       // Payments
       "date": "তারিখ",

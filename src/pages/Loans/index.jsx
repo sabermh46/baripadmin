@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Landmark, Plus, CreditCard, Pencil, Trash2, History } from 'lucide-react';
-import { useGetHousesQuery } from '../../store/api/houseApi';
+import HouseSelector from '../../components/loans/HouseSelector';
 import {
   useGetLoansByHouseQuery,
   useCreateLoanMutation,
@@ -31,7 +31,7 @@ const formatAmount = (val) => {
 };
 
 // Create Loan Modal
-const CreateLoanModal = ({ isOpen, onClose, houses, selectedHouseId, onSuccess }) => {
+const CreateLoanModal = ({ isOpen, onClose, selectedHouseId, onSuccess }) => {
   const { t } = useTranslation();
   const [createLoan, { isLoading }] = useCreateLoanMutation();
   const [form, setForm] = useState({
@@ -107,19 +107,11 @@ const CreateLoanModal = ({ isOpen, onClose, houses, selectedHouseId, onSuccess }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t('house') || 'House'}</label>
-          <select
+          <HouseSelector
             value={form.house_id}
-            onChange={handleChange('house_id')}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="">{t('select_house') || 'Select house'}</option>
-            {houses?.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name || h.address || `House #${h.id}`}
-              </option>
-            ))}
-          </select>
+            onChange={(id) => setForm((p) => ({ ...p, house_id: id }))}
+            label={t('house') || 'House'}
+          />
           {errors.house_id && <p className="text-red-500 text-sm mt-1">{errors.house_id}</p>}
         </div>
         <div>
@@ -639,9 +631,6 @@ const LoansPage = () => {
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [selectedPayment, setSelectedPayment] = useState(null);
 
-  const { data: housesData } = useGetHousesQuery({ page: 1, limit: 100 });
-  const houses = housesData?.data || [];
-
   const { data: loansResponse, isLoading: loansLoading } = useGetLoansByHouseQuery(selectedHouseId, {
     skip: !selectedHouseId,
   });
@@ -711,20 +700,12 @@ const LoansPage = () => {
       </div>
 
       <div className="bg-surface rounded-xl border border-subdued/20 p-4">
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-4">
-          <label className="text-sm font-medium text-gray-700">{t('select_house') || 'Select House'}</label>
-          <select
+        <div className="mb-4">
+          <HouseSelector
             value={selectedHouseId}
-            onChange={(e) => setSelectedHouseId(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 min-w-[200px]"
-          >
-            <option value="">{t('select_house') || 'Select house'}</option>
-            {houses.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name || h.address || `House #${h.id}`}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedHouseId}
+            label={t('select_house') || 'Select House'}
+          />
         </div>
 
         {selectedHouseId ? (
@@ -748,45 +729,50 @@ const LoansPage = () => {
               {
                 key: 'action',
                 title: t('action'),
+                className: 'text-center!',
                 render: (r) => (
-                  <div className="flex flex-wrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      onClick={() => handleViewPayments(r)}
-                      className="p-1.5 text-subdued hover:bg-gray-100 rounded-lg transition-colors"
-                      title={t('payment_history') || 'Payment history'}
-                    >
-                      <History size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleEditLoan(r)}
-                      className="p-1.5 text-subdued hover:bg-gray-100 rounded-lg transition-colors"
-                      title={t('edit_loan') || 'Edit loan'}
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    {r.status !== 'paid' && (
+                  <div className="flex flex-wrap items-center gap-3 " onClick={(e) => e.stopPropagation()}>
+                    <div className="flex-1 flex gap-3">
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (r?.id) handleRecordPayment(r);
-                        }}
-                        className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                        title={t('record_payment') || 'Record payment'}
+                        onClick={() => handleViewPayments(r)}
+                        className="cursor-pointer p-1.5 text-subdued bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        title={t('payment_history') || 'Payment history'}
                       >
-                        <CreditCard size={16} />
+                        <History size={16} />
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => openDeleteConfirm(r)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title={t('delete_loan') || 'Delete loan'}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => handleEditLoan(r)}
+                        className="cursor-pointer p-1.5 text-subdued bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        title={t('edit_loan') || 'Edit loan'}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    </div>
+                    <div className="flex-1 flex gap-3">
+                      {r.status !== 'paid' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (r?.id) handleRecordPayment(r);
+                          }}
+                          className="cursor-pointer p-1.5 text-primary bg-primary/10 hover:bg-primary/40 rounded-lg transition-colors"
+                          title={t('record_payment') || 'Record payment'}
+                        >
+                          <CreditCard size={16} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openDeleteConfirm(r)}
+                        className="cursor-pointer p-1.5 text-red-600 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
+                        title={t('delete_loan') || 'Delete loan'}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 ),
               },
@@ -807,7 +793,6 @@ const LoansPage = () => {
       <CreateLoanModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
-        houses={houses}
         selectedHouseId={selectedHouseId || undefined}
         onSuccess={() => {}}
       />

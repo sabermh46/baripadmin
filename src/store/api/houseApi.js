@@ -14,10 +14,10 @@ export const houseApi = baseApi.injectEndpoints({
 
     // Get all houses with pagination
     getHouses: builder.query({
-      query: ({ page = 1, limit = 20, search, ownerId, sortBy = 'createdAt', sortOrder = 'desc' }) => ({
+      query: ({ page = 1, limit = 20, search, ownerId, sortBy = 'createdAt', sortOrder = 'desc', withRenters } = {}) => ({
         url: '/houses',
         method: 'GET',
-        params: { page, limit, search, ownerId, sortBy, sortOrder },
+        params: { page, limit, search, ownerId, sortBy, sortOrder, ...(withRenters != null ? { withRenters } : {}) },
       }),
       providesTags: ['Houses'],
     }), //useGetHousesQuery
