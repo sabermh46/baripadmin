@@ -14,16 +14,19 @@ const HouseOwnerDetailPage = () => {
   const { ownerId } = useParams();
   const navigate = useNavigate();
 
-  const { data: users, isLoading, error } = useGetManagedUsersQuery(
+  const { data: users, isLoading, error, refetch } = useGetManagedUsersQuery(
     { role: 'house_owner', expand: 'dna', userId: ownerId },
     { skip: !ownerId }
   );
 
   const owner = users?.[0] ?? null;
 
-  const handleSectionSuccess = useCallback((payload) => {
-    // Reserved for later use (e.g. refetch, analytics, toast).
-  }, []);
+  const handleSectionSuccess = useCallback(
+    (payload) => {
+      if (payload?.section === 'houses') refetch();
+    },
+    [refetch]
+  );
 
   if (isLoading) {
     return (
@@ -81,7 +84,13 @@ const HouseOwnerDetailPage = () => {
 
       <div className="flex flex-col gap-6">
         <ProfileSection profile={profile} user={owner} onSuccess={handleSectionSuccess} />
-        <HousesSection houses={houses} flats={flats} onSuccess={handleSectionSuccess} />
+        <HousesSection
+          houses={houses}
+          flats={flats}
+          ownerId={ownerId}
+          ownerName={owner?.name}
+          onSuccess={handleSectionSuccess}
+        />
         <AppFeePaymentsSection appFeePayments={appFeePayments} onSuccess={handleSectionSuccess} />
         <IncomeSection income={income} onSuccess={handleSectionSuccess} />
         <ExpensesSection expenses={expenses} onSuccess={handleSectionSuccess} />

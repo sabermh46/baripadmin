@@ -57,7 +57,7 @@ export const SideNav = ({ onClicked }) => {
       label: t("houses"),
       icon: <House />,
       roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
-      toMatch: ["houses", "/houses/create", "/house-owners/houses", "/flats"]
+      toMatch: ["houses", "/houses/create", "/flats"]
       
     },
     {

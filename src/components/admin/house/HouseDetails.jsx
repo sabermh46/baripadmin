@@ -202,14 +202,6 @@ const HouseDetails = () => {
                 Care Takers
                 <ChevronRight className="w-4 h-4" />
               </Btn>
-              <Btn
-                onClick={() => navigate(`/notices`)}
-                className="flex-1"
-                type='primary'
-              >
-                Notices
-                <ChevronRight className="w-4 h-4" />
-              </Btn>
             </div>
 
             
@@ -271,7 +263,7 @@ const HouseDetails = () => {
                 )}
               </div>
               <button
-                onClick={() => navigate(`/users/${house.owner?.id}`)}
+                onClick={() => navigate(`/admin/house-owners/${house.owner?.id}`)}
                 className="w-full mt-4 px-4 py-2 border border-surface text-text rounded-lg hover:bg-surface transition-colors flex items-center justify-between"
               >
                 <span>View Owner Profile</span>

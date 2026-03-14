@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { 
-    Bell, 
-    CheckCircle, 
-    AlertTriangle, 
-    Info, 
-    XCircle, 
+import { useNavigate } from 'react-router-dom';
+import {
+    Bell,
+    CheckCircle,
+    AlertTriangle,
+    Info,
+    XCircle,
     Filter,
     Check,
     Trash2,
@@ -15,9 +16,11 @@ import { format } from 'date-fns';
 import useNotifications from '../../hooks/useNotifications';
 import Btn from '../../components/common/Button';
 import { useTranslation } from 'react-i18next';
+import { getNotificationRedirectLink } from '../../utils/notifications';
 
 const NotificationsPage = () => {
-    const {t} = useTranslation();
+    const { t } = useTranslation();
+    const navigate = useNavigate();
     const {
         notifications,
         unreadCount,
@@ -84,7 +87,8 @@ const NotificationsPage = () => {
             case 'success': return <CheckCircle className="w-5 h-5 text-green-500" />;
             case 'warning': return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
             case 'error': return <XCircle className="w-5 h-5 text-red-500" />;
-            case 'info': 
+            case 'system_common':
+            case 'info':
             default: return <Info className="w-5 h-5 text-primary-500" />;
         }
     };
@@ -94,8 +98,27 @@ const NotificationsPage = () => {
             case 'success': return 'bg-green-50 border-green-200';
             case 'warning': return 'bg-yellow-50 border-yellow-200';
             case 'error': return 'bg-red-50 border-red-200';
-            case 'info': 
+            case 'system_common':
+            case 'info':
             default: return 'bg-blue-50 border-blue-200';
+        }
+    };
+
+    const handleNotificationClick = async (notification) => {
+        if (!notification.read) {
+            try {
+                await markAsRead(notification.id);
+            } catch (err) {
+                console.error('Failed to mark as read:', err);
+            }
+        }
+        const link = getNotificationRedirectLink(notification);
+        if (link) {
+            if (link.startsWith('/')) {
+                navigate(link);
+            } else {
+                window.location.href = link;
+            }
         }
     };
 
@@ -246,17 +269,23 @@ const NotificationsPage = () => {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-y-4">
-                        {notifications.map((notification) => (
+                        {notifications.map((notification) => {
+                            const hasRedirect = !!getNotificationRedirectLink(notification);
+                            return (
                             <div
                                 key={notification.id}
+                                role={hasRedirect ? 'button' : undefined}
+                                tabIndex={hasRedirect ? 0 : undefined}
+                                onClick={hasRedirect ? () => handleNotificationClick(notification) : undefined}
+                                onKeyDown={hasRedirect ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNotificationClick(notification); } } : undefined}
                                 className={`bg-surface rounded-lg shadow ${getTypeColor(notification.type)} ${
                                     !notification.read ? 'border-l-4 border-l-primary' : ''
-                                }`}
+                                } ${hasRedirect ? 'cursor-pointer hover:opacity-95 transition-opacity' : ''}`}
                             >
                                 <div className="p-2 md:p-4">
                                     <div className="flex items-start">
                                         {/* Checkbox for selection */}
-                                        <div className='flex flex-col gap-3 items-center w-4 justify-center'>
+                                        <div className='flex flex-col gap-3 items-center w-4 justify-center' onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="checkbox"
                                                 checked={selectedNotifications.includes(notification.id)}
@@ -285,8 +314,9 @@ const NotificationsPage = () => {
                                                     </p>
                                                 </div>
                                                 
-                                                {/* Actions */}
-                                                <div className="flex items-center justify-center flex-col gap-3 ml-2 md:ml-4">
+                                                {/* Actions - hidden for system_common */}
+                                                {notification.type !== 'system_common' && (
+                                                <div className="flex items-center justify-center flex-col gap-3 ml-2 md:ml-4" onClick={(e) => e.stopPropagation()}>
                                                     <button
                                                         onClick={() => toggleRead(notification.id)}
                                                         className="p-1 text-gray-400 hover:text-gray-600"
@@ -304,12 +334,14 @@ const NotificationsPage = () => {
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 

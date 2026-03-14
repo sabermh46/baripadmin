@@ -26,24 +26,25 @@ const NotificationButton = () => {
         }
     }, [isSupported, permission, isSubscribed, subscribe]);
 
-    return user?.email && (
-        <div className='fixed bottom-4 right-4 z-50'>
-            {isSupported && permission !== 'granted' && !isSubscribed && (
-                <button 
-                    className='px-4 cursor-pointer py-2 rounded-lg shadow-lg bg-primary text-black capitalize hover:bg-primary-800 hover:text-white duration-200'
-                    onClick={() => {
-                        Notification.requestPermission().then(permission => {
-                            if (permission === 'granted') {
-                                toggleSubscription();
-                            }
-                        });
-                    }}
-                >
-                    {'enable notifications'}
-                </button>
-            )}
-        </div>
-    );
+    return <></>;
+    // user?.email && (
+    //     <div className='fixed bottom-4 right-4 z-50'>
+    //         {isSupported && permission !== 'granted' && !isSubscribed && (
+    //             <button 
+    //                 className='px-4 cursor-pointer py-2 rounded-lg shadow-lg bg-primary text-black capitalize hover:bg-primary-800 hover:text-white duration-200'
+    //                 onClick={() => {
+    //                     Notification.requestPermission().then(permission => {
+    //                         if (permission === 'granted') {
+    //                             toggleSubscription();
+    //                         }
+    //                     });
+    //                 }}
+    //             >
+    //                 {'enable notifications'}
+    //             </button>
+    //         )}
+    //     </div>
+    // );
 };
 
 export default NotificationButton;

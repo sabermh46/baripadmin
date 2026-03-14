@@ -199,7 +199,7 @@ const AdvancePaymentFormModal = ({
                     className="w-full px-3 py-2 border border-subdued/30 rounded-lg"
                   >
                     <option value="cash">Cash</option>
-                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="bank">Bank Transfer</option>
                     <option value="card">Card</option>
                     <option value="mobile_payment">Mobile Payment</option>
                     <option value="cheque">Cheque</option>

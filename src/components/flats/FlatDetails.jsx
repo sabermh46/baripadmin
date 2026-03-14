@@ -273,15 +273,6 @@ const FlatDetails = () => {
         <div className="flex flex-wrap gap-3">
           {flat.renter_id && (
             <>
-              {availableAdvance > 0 && pendingPayments.length > 0 && (
-                <button
-                  onClick={() => setOpenApplyAdvance(true)}
-                  className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Shield size={18} />
-                  {t('apply_advance')}
-                </button>
-              )}
               <button
                 onClick={() => setOpenReminder(true)}
                 className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 border border-subdued/30 rounded-lg bg-white hover:bg-subdued/10 transition-colors"
@@ -441,7 +432,7 @@ const FlatDetails = () => {
                     <p className="text-sm text-green-800">
                       <span className="font-bold">{pendingPayments.length} pending payment(s)</span> can be paid using advance.
                       <button
-                        onClick={() => setOpenApplyAdvance(true)}
+                        onClick={() => setOpenPayment(true)}
                         className="ml-2 text-green-700 hover:text-green-900 underline"
                       >
                         Apply now →
@@ -583,12 +574,6 @@ const FlatDetails = () => {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setOpenApplyAdvance(true)}
-                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
-                  >
-                    {t('apply_advance')}
-                  </button>
                 </div>
               </div>
             )}

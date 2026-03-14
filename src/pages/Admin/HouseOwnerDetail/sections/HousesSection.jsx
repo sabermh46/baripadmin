@@ -1,7 +1,11 @@
-import React, { useEffect } from 'react';
-import { Home } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Home, Plus } from 'lucide-react';
+import Modal from '../../../../components/common/Modal';
+import CreateHouseFormContent from '../../../../components/admin/house/CreateHouseFormContent';
 
-const HousesSection = ({ houses = [], flats = [], onSuccess }) => {
+const HousesSection = ({ houses = [], flats = [], ownerId, ownerName, onSuccess }) => {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
   const flatByHouseId = React.useMemo(() => {
     const map = {};
     (flats || []).forEach((f) => {
@@ -20,10 +24,22 @@ const HousesSection = ({ houses = [], flats = [], onSuccess }) => {
 
   return (
     <section className="bg-surface rounded-xl border border-subdued/20 p-4">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-3">
-        <Home className="h-4 w-4" />
-        Houses ({houses?.length ?? 0})
-      </h3>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+          <Home className="h-4 w-4" />
+          Houses ({houses?.length ?? 0})
+        </h3>
+        {ownerId && (
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Create new house
+          </button>
+        )}
+      </div>
       <div className="space-y-3">
         {!houses?.length ? (
           <p className="text-sm text-gray-500 py-2">No houses assigned</p>
@@ -70,6 +86,21 @@ const HousesSection = ({ houses = [], flats = [], onSuccess }) => {
           })
         )}
       </div>
+
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Add New Property"
+        subtitle={ownerName ? `Creating house for ${ownerName}` : undefined}
+        size="xl"
+      >
+        <CreateHouseFormContent
+          ownerId={ownerId}
+          ownerName={ownerName}
+          onSuccess={() => onSuccess?.({ section: 'houses' })}
+          onClose={() => setIsCreateModalOpen(false)}
+        />
+      </Modal>
     </section>
   );
 };

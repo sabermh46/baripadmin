@@ -1,5 +1,9 @@
 import axios from 'axios';
 
+/** Get visit link for a notification (e.g. system_common with redirectLink). */
+export const getNotificationRedirectLink = (notification) =>
+  notification?.redirectLink || notification?.data?.redirectLink || notification?.metadata?.url || null;
+
 class NotificationUtils {
   constructor() {
     this.baseURL = import.meta.env.VITE_APP_API_URL;

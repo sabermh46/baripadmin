@@ -1,12 +1,15 @@
 // src/components/notifications/NotificationIcon.jsx - Updated version
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Check, Trash2, RefreshCw } from 'lucide-react';
 import useNotifications from '../../hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { getNotificationRedirectLink } from '../../utils/notifications';
 
 const NotificationIcon = () => {
-    const {t} = useTranslation();
+    const { t } = useTranslation();
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -73,11 +76,15 @@ const NotificationIcon = () => {
             }
         }
         
-        // Navigate to notification action if available
-        if (notification.metadata?.url) {
-            window.location.href = notification.metadata.url;
+        const link = getNotificationRedirectLink(notification);
+        if (link) {
+            if (link.startsWith('/')) {
+                navigate(link);
+            } else {
+                window.location.href = link;
+            }
         }
-        
+
         setIsOpen(false);
     };
 
@@ -110,6 +117,8 @@ const NotificationIcon = () => {
                 return '❌';
             case 'info':
                 return 'ℹ️';
+            case 'system_common':
+                return '🔔';
             default:
                 return '🔔';
         }
@@ -232,7 +241,8 @@ const NotificationIcon = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Actions */}
+                                            {/* Actions - hidden for system_common */}
+                                            {notification.type !== 'system_common' && (
                                             <div className="flex flex-col ml-2 space-y-1">
                                                 <button
                                                     onClick={(e) => handleToggleRead(e, notification)}
@@ -251,6 +261,7 @@ const NotificationIcon = () => {
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
