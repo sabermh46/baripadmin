@@ -60,42 +60,47 @@ const HouseStats = () => {
 
   return !isLoading && !error && (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text">{t('house_statistics')}</h1>
-      </div>
+      
+      {
+        isWebOwner || isDeveloper || isStaff ? 
+        <>
+            <div>
+              <h1 className="text-2xl font-bold text-text">{t('house_statistics')}</h1>
+            </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title={t('total_properties')}
-          value={stats?.totalHouses}
-          icon={Building}
-          color="blue"
-          trend={12}
-        />
-        <StatCard
-          title={t('total_flats')}
-          value={stats?.totalFlats}
-          icon={Layers}
-          color="green"
-          trend={8}
-        />
-        <StatCard
-          title={t('active_caretakers')}
-          value={stats?.totalCaretakers}
-          icon={Users}
-          color="purple"
-          trend={-3}
-        />
-        <StatCard
-          title={t('active_renters')}
-          value={stats?.totalRenters}
-          icon={Users}
-          color="primary"
-          trend={-3}
-        />
-      </div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title={t('total_properties')}
+                value={stats?.totalHouses}
+                icon={Building}
+                color="blue"
+                trend={12}
+              />
+              <StatCard
+                title={t('total_flats')}
+                value={stats?.totalFlats}
+                icon={Layers}
+                color="green"
+                trend={8}
+              />
+              <StatCard
+                title={t('active_caretakers')}
+                value={stats?.totalCaretakers}
+                icon={Users}
+                color="purple"
+                trend={-3}
+              />
+              <StatCard
+                title={t('active_renters')}
+                value={stats?.totalRenters}
+                icon={Users}
+                color="primary"
+                trend={-3}
+              />
+            </div>
+        </> : null
+      }
 
       {
         shouldShowRecentHouses ?

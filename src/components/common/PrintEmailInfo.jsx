@@ -72,21 +72,22 @@ const PrintEmailInfo = ({ log, meta: metaProp, htmlBody }) => {
           <p className="text-xs text-subdued mt-1">
             {log?.toEmail} • {log?.sentAt ? format(new Date(log.sentAt), 'dd MMM yyyy HH:mm') : '-'}
           </p>
-          <span
-            className={`inline-block mt-2 px-2 py-0.5 rounded text-xs ${
-              log?.status === 'sent' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-            }`}
-          >
-            {log?.status}
-          </span>
+          
+          <div className="flex gap-4 items-center mt-2 ">
+            <span
+              className={`block px-2 py-0.5 rounded text-xs ${
+                log?.status === 'sent' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}
+            >
+              {log?.status}
+            </span>
+            {
+              meta?.invoicePdfPath && (
+                <a href={ `${import.meta.env.VITE_APP_API_URL}${meta?.invoicePdfPath}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 text-xs hover:underline">PDF Attachment</a>
+              )
+            }
+          </div>
         </div>
-        <button
-          onClick={handlePrint}
-          className="p-2 text-subdued hover:bg-subdued/10 rounded-lg transition-colors"
-          title="Print"
-        >
-          <Printer size={18} />
-        </button>
       </div>
 
       {(isRentReminder || isPaymentReceipt) && meta && (

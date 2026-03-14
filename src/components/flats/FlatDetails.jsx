@@ -3,10 +3,11 @@ import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Edit, DollarSign, Calendar, User, Phone, Mail,
-  Clock, AlertCircle, FileText, CreditCard, History,
-  MessageSquare, Send, X, PlusCircle, TrendingUp, TrendingDown,
-  Shield, ArrowUpRight, ArrowDownRight, Eye, ScrollText,
-  UserMinus
+  Clock, AlertCircle, FileText,  History,
+   Send, X, PlusCircle, TrendingUp, 
+  Shield,  ArrowDownRight, Eye, ScrollText,
+  UserMinus,
+  MailCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -20,7 +21,6 @@ import {
 import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import FlatForm from './FlatForm';
 import RecordPaymentModal from './RecordPaymentModal';
-import ApplyAdvancePaymentModal from './ApplyAdvancePaymentModal';
 import AdvancePaymentFormModal from './AdvancePaymentFormModal';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
@@ -40,8 +40,6 @@ const FlatDetails = () => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openPayment, setOpenPayment] = useState(false);
   const [openReminder, setOpenReminder] = useState(false);
-  const [openApplyAdvance, setOpenApplyAdvance] = useState(false); // New state
-  const [selectedAdvancePayment, setSelectedAdvancePayment] = useState(null);
   const [openAssignModal, setOpenAssignModal] = useState(false);
   const [reminderResult, setReminderResult] = useState(null);
   const [selectedPaymentRenterId, setSelectedPaymentRenterId] = useState(null);
@@ -801,8 +799,7 @@ const FlatDetails = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedAdvancePayment(row);
-                            setOpenApplyAdvance(true);
+                            setOpenPayment(true);
                           }}
                           className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded"
                         >
@@ -842,7 +839,7 @@ const FlatDetails = () => {
         advancePayments={advancePayments}
       />
 
-      <ApplyAdvancePaymentModal 
+      {/* <ApplyAdvancePaymentModal 
         open={openApplyAdvance} 
         onClose={() => { 
           setOpenApplyAdvance(false); 
@@ -855,7 +852,7 @@ const FlatDetails = () => {
         pendingPayments={pendingPayments}
         advancePayments={advancePayments}
         selectedAdvancePayment={selectedAdvancePayment}
-      />
+      /> */}
 
       {/* Reminder Confirmation / Result Dialog */}
       {openReminder && (
@@ -962,7 +959,7 @@ const FlatDetails = () => {
           <div className="bg-surface rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-xl flex flex-col">
             <div className="flex justify-between items-center p-4 border-b border-subdued/20">
               <h3 className="text-lg font-bold flex items-center gap-2">
-                <Eye size={20} />
+                <MailCheck size={20} />
                 {t('payment_email_log') || 'Payment Email Log'}
               </h3>
               <button onClick={() => { setOpenPaymentEmailLog(false); setSelectedPaymentForEmailLog(null); }} className="p-1 hover:bg-subdued/10 rounded">

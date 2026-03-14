@@ -185,17 +185,6 @@ useEffect(() => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-text mb-2">
-              Additional Notes
-            </label>
-            <textarea
-              {...register('metadata')}
-              rows={3}
-              className="w-full px-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
-              placeholder="Any additional information about the flat..."
-            />
-          </div>
 
           <div className="flex justify-end gap-3 pt-6 border-t border-subdued/20">
             <button

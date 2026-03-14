@@ -271,9 +271,16 @@ const HouseCard = ({ house, t, onDelete, isWebOwner, onClick, navigate }) => (
 
     <div className="flex items-center justify-between pt-4 border-t border-gray-50">
       <div className="flex gap-4 flex-1">
-        <div onClick={(e)=>{e.stopPropagation(); navigate(`/houses/${house.id}/flats`)}} className="cursor-pointer bg-gray-200 hover:bg-gray-300 transition-colors px-2 py-1 rounded-lg text-center pt-2 flex-1">
+        <div onClick={(e)=>{e.stopPropagation(); navigate(`/houses/${house.id}/flats`)}} className="cursor-pointer bg-gray-200 hover:bg-gray-300 transition-colors px-2 py-1 rounded-lg text-center pt-2 flex-1 relative">
           <p className="text-[10px] text-subdued uppercase font-bold leading-none mb-1">{t('flats')}</p>
           <p className="text-sm font-black text-text">{house?.stats?.flats || 0}</p>
+          {
+            house?.stats?.vacantFlats ? 
+            <span className="absolute top-0 right-0 bg-red-200 text-black text-[10px] px-1 py-0.5 rounded-full">
+              {t('vacant')} {house?.stats?.vacantFlats}
+            </span>
+            : null
+          }
         </div>
         <div onClick={(e)=>{e.stopPropagation(); navigate(`/caretakers`)}} className='bg-gray-200 hover:bg-gray-300 transition-colors px-2 py-1 rounded-lg text-center pt-2 flex-1'>
           <p className="text-[10px] text-subdued uppercase font-bold leading-none mb-1">{t('caretakers')}</p>

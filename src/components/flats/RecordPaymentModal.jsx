@@ -17,6 +17,7 @@ const paymentSchema = z.object({
   status: z.enum(['pending', 'paid', 'overdue', 'partial', 'cancelled']).default('paid'),
   calculate_next_payment: z.boolean().default(true),
   use_advance_payment: z.boolean().default(false),
+  send_pdf_attachment: z.boolean().default(true),
 });
 
 const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] }) => {
@@ -90,6 +91,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
       status: 'paid',
       calculate_next_payment: true,
       use_advance_payment: false,
+      send_pdf_attachment: true,
     }
   });
 
@@ -175,6 +177,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
         use_advance_payment: useAdvancePayment,
         renter_paid_remaining: useAdvancePayment ? parseFloat(renterPaidRemaining || 0) : 0,
         // No advance_payment_id – backend uses oldest available advance
+        send_pdf_attachment: formData.send_pdf_attachment,
       };
 
       // Pass flatId as separate parameter (adjust if your mutation signature differs)
@@ -545,6 +548,21 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
                 {...register('calculate_next_payment')} 
                 className="sr-only peer" 
                 defaultChecked
+              />
+              <div className="w-11 h-6 bg-subdued/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+
+          {/* Send PDF Attachment */}
+          <div className="bg-surface border border-subdued/20 rounded-lg p-4 flex items-center justify-between">
+            <label className="block text-sm font-medium text-text">
+              Send PDF Attachment
+            </label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                {...register('send_pdf_attachment')}
+                className="sr-only peer"
               />
               <div className="w-11 h-6 bg-subdued/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
