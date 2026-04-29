@@ -349,8 +349,71 @@ const FlatDetails = () => {
       <div className="pt-2">
         {activeTab === 'overview' && (
           <div className="space-y-4">
+            {/* Financial Stats Card */}
+            <div className="bg-surface rounded-lg p-4 border border-subdued/20">
+              <h2 className="text-lg font-bold text-text mb-4">{t('financial_statistics')}</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Total Paid */}
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-green-700 uppercase tracking-wider">{t('total_paid')}</p>
+                    <TrendingUp className="text-green-600" size={16} />
+                  </div>
+                  <p className="text-xl font-bold text-green-700 mt-1">
+                    <TkSymbol /> {Number(stats.totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                  {availableAdvance > 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      +<TkSymbol /> {availableAdvance.toLocaleString()} advance available
+                    </p>
+                  )}
+                </div>
+                
+                {/* Total Due/Pending - only shows due for this month (totalDue - totalPaid) */}
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-red-700 uppercase tracking-wider">{t('total_due')}</p>
+                    <AlertCircle className="text-red-600" size={16} />
+                  </div>
+                  <p className="text-xl font-bold text-red-700 mt-1">
+                    <TkSymbol /> {Math.max(0, Number(stats.totalDue || 0) - Number(stats.totalPaid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+
+                {/* Payment Status */}
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg col-span-2">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-xs text-blue-700 uppercase tracking-wider">{t('payment_status')}</p>
+                      <p className="text-md font-semibold text-blue-800 mt-1">
+                        {stats.pendingCount || 0} {t('pending_months')}
+                      </p>
+                      {stats.overdueCount > 0 && (
+                        <p className="text-sm text-red-600 mt-1">
+                          {stats.overdueCount} {t('overdue')}
+                        </p>
+                      )}
+                    </div>
+                    {stats.overdueCount > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-bold rounded-full">
+                          {t('overdue')}
+                        </span>
+                        <button
+                          onClick={() => setOpenPayment(true)}
+                          className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                        >
+                          {t('pay_now')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Summary Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-surface rounded-lg p-4 border border-subdued/20">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 rounded-lg"><DollarSign className="text-blue-600" size={24} /></div>
@@ -373,26 +436,6 @@ const FlatDetails = () => {
                     Next: {format(nextDueDate, 'dd MMM yyyy')}
                   </p>
                 )}
-              </div>
-              <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-100 rounded-lg"><AlertCircle className="text-orange-600" size={24} /></div>
-                  <div>
-                    <p className="text-sm text-subdued">{t('late_fee')}</p>
-                    <p className="text-xl font-bold">{flat.late_fee_percentage ?? 5}%</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg"><Clock className="text-purple-600" size={24} /></div>
-                  <div>
-                    <p className="text-sm text-subdued">{t('status')}</p>
-                    <p className={`text-xl font-bold ${flat.renter_id ? 'text-green-600' : 'text-yellow-600'}`}>
-                      {flat.renter_id ? 'Occupied' : 'Vacant'}
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -491,64 +534,28 @@ const FlatDetails = () => {
                 )}
               </div>
 
-              {/* Financial Stats Card */}
+              {/* Flat Status & Charges */}
               <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <h2 className="text-lg font-bold text-text mb-4">{t('financial_statistics')}</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Total Paid */}
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-green-700 uppercase tracking-wider">{t('total_paid')}</p>
-                      <TrendingUp className="text-green-600" size={16} />
-                    </div>
-                    <p className="text-xl font-bold text-green-700 mt-1">
-                      <TkSymbol /> {Number(stats.totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </p>
-                    {availableAdvance > 0 && (
-                      <p className="text-xs text-green-600 mt-1">
-                        +<TkSymbol /> {availableAdvance.toLocaleString()} advance available
-                      </p>
-                    )}
-                  </div>
-                  
-                  {/* Total Due/Pending - only shows due for this month (totalDue - totalPaid) */}
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-red-700 uppercase tracking-wider">{t('total_due')}</p>
-                      <AlertCircle className="text-red-600" size={16} />
-                    </div>
-                    <p className="text-xl font-bold text-red-700 mt-1">
-                      <TkSymbol /> {Math.max(0, Number(stats.totalDue || 0) - Number(stats.totalPaid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-
-                  {/* Payment Status */}
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg col-span-2">
-                    <div className="flex justify-between items-center">
+                <h2 className="text-lg font-bold text-text mb-4">{t('status_and_charges') || 'Status & Charges'}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-100 rounded-lg"><AlertCircle className="text-orange-600" size={24} /></div>
                       <div>
-                        <p className="text-xs text-blue-700 uppercase tracking-wider">{t('payment_status')}</p>
-                        <p className="text-md font-semibold text-blue-800 mt-1">
-                          {stats.pendingCount || 0} {t('pending_months')}
-                        </p>
-                        {stats.overdueCount > 0 && (
-                          <p className="text-sm text-red-600 mt-1">
-                            {stats.overdueCount} {t('overdue')}
-                          </p>
-                        )}
+                        <p className="text-sm text-orange-700">{t('late_fee')}</p>
+                        <p className="text-xl font-bold text-orange-700">{flat.late_fee_percentage ?? 5}%</p>
                       </div>
-                      {stats.overdueCount > 0 && (
-                        <div className="flex items-center gap-2">
-                          <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-bold rounded-full">
-                            {t('overdue')}
-                          </span>
-                          <button
-                            onClick={() => setOpenPayment(true)}
-                            className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                          >
-                            {t('pay_now')}
-                          </button>
-                        </div>
-                      )}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-lg"><Clock className="text-purple-600" size={24} /></div>
+                      <div>
+                        <p className="text-sm text-purple-700">{t('status')}</p>
+                        <p className={`text-xl font-bold ${flat.renter_id ? 'text-green-600' : 'text-yellow-600'}`}>
+                          {flat.renter_id ? 'Occupied' : 'Vacant'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

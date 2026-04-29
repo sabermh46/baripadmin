@@ -40,7 +40,7 @@ export default function StatsCardGrid({ stats = [] }) {
               <div className="flex flex-wrap gap-4 bg-white p-6 rounded-lg shadow-lg max-w-3xl">
                 {
                   isClicked?.cardFor === "houses" &&isClicked?.data.map((item, index)=>(
-                    <Link to={'/houses/' + item.id} key={index} className="p-4 border border-gray-400 rounded-lg hover:shadow-md transition-shadow">
+                    <Link to={'/houses/' + item.id + '/flats'} key={index} className="p-4 border border-gray-400 rounded-lg hover:shadow-md transition-shadow">
                       <p className="font-medium text-text mb-2 font-roboto">{item.name}</p>
                       <p className="text-sm text-subdued">
                         {t('flats')}: {item?.flats?.length || 0}
