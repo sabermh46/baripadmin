@@ -1,41 +1,49 @@
 // components/flats/FlatDetails.jsx
 import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Edit, DollarSign, Calendar, User, Phone, Mail,
-  Clock, AlertCircle, FileText,  History,
-   Send, X, PlusCircle, TrendingUp, 
-  Shield,  ArrowDownRight, Eye, ScrollText,
-  UserMinus,
-  MailCheck
+  ArrowLeft, Edit, FileText, History,
+  Send, PlusCircle, Shield,
+  ScrollText, UserMinus, MoreVertical,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import {
   useGetFlatDetailsQuery,
   useSendRentReminderMutation,
   useGetFlatAdvancePaymentsQuery,
   useGetPaymentReceiptsQuery,
   useResendPaymentReceiptMutation,
-  useRemoveRenterMutation
+  useRemoveRenterMutation,
+  useSendPaymentReceiptPdfMutation,
+  useUpdateRentPaymentMutation,
+  useDeleteRentPaymentMutation,
 } from '../../store/api/flatApi';
 import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
+import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
 import FlatForm from './FlatForm';
 import RecordPaymentModal from './RecordPaymentModal';
 import AdvancePaymentFormModal from './AdvancePaymentFormModal';
-import { toast } from 'react-toastify';
-import { useTranslation } from 'react-i18next';
 import AssignRenterModal from './AssignRenterModal';
-import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
-import TkSymbol from '../common/TkSymbol';
-import Table from '../common/Table';
-import PrintEmailInfo from '../common/PrintEmailInfo';
+import InvoicePreviewModal from '../common/InvoicePreviewModal';
+import { generateRentReceiptPdf } from '../../utils/invoiceGenerator';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
+
+import OverviewTab from './FlatDetails/OverviewTab';
+import PaymentsTab from './FlatDetails/PaymentsTab';
+import AdvanceTab from './FlatDetails/AdvanceTab';
+import ReminderModal from './FlatDetails/ReminderModal';
+import ReminderLogModal from './FlatDetails/ReminderLogModal';
+import PaymentEmailLogModal from './FlatDetails/PaymentEmailLogModal';
+import RemoveRenterModal from './FlatDetails/RemoveRenterModal';
+import EditPaymentModal from './FlatDetails/EditPaymentModal';
 
 const FlatDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const {t} = useTranslation();
-  // State Management
+  const { t } = useTranslation();
+
+  // ── UI state ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('overview');
   const [openEdit, setOpenEdit] = useState(false);
   const [openPayment, setOpenPayment] = useState(false);
@@ -53,55 +61,66 @@ const FlatDetails = () => {
   const [openRemoveRenterModal, setOpenRemoveRenterModal] = useState(false);
   const [refundAmount, setRefundAmount] = useState('');
   const [refundError, setRefundError] = useState('');
+  const [openActionsMenu, setOpenActionsMenu] = useState(false);
+  const [resendPreviewOpen, setResendPreviewOpen] = useState(false);
+  const [resendPdfBase64, setResendPdfBase64] = useState(null);
+  const [resendInvoiceData, setResendInvoiceData] = useState(null);
+  const [resendPaymentId, setResendPaymentId] = useState(null);
+  const [openEditPayment, setOpenEditPayment] = useState(false);
+  const [selectedPaymentForEdit, setSelectedPaymentForEdit] = useState(null);
+  const [openDeletePayment, setOpenDeletePayment] = useState(false);
+  const [selectedPaymentForDelete, setSelectedPaymentForDelete] = useState(null);
 
-  const { data: paymentReceiptsData, refetch: refetchPaymentReceipts } = useGetPaymentReceiptsQuery({ flatId: id }, { skip: !id });
-  
-  // Queries
-  const { data: flatData, isLoading, refetch: refetchDetails } = useGetFlatDetailsQuery(id);
-  // const { data: financialSummaryData, refetch: refetchFinancialSummary } = useGetFlatFinancialSummaryQuery({ flatId: id }, { skip: !id });
-  const { data: houseData } = useGetHouseDetailsQuery(flatData?.data?.flat?.house_id, { skip: !flatData?.data?.flat?.house_id });
-  
-  // New query for advance payments
-  const { data: advancePaymentsData, refetch: refetchAdvancePayments } = useGetFlatAdvancePaymentsQuery(
-    { flatId: id },
-    { skip: !id }
+  // ── Queries ───────────────────────────────────────────────────────────────
+  const { data: paymentReceiptsData, refetch: refetchPaymentReceipts } =
+    useGetPaymentReceiptsQuery({ flatId: id }, { skip: !id });
+  const { data: flatData, isLoading, refetch: refetchDetails } =
+    useGetFlatDetailsQuery(id);
+  const { data: houseData } = useGetHouseDetailsQuery(
+    flatData?.data?.flat?.house_id,
+    { skip: !flatData?.data?.flat?.house_id }
   );
-
+  const { data: advancePaymentsData, refetch: refetchAdvancePayments } =
+    useGetFlatAdvancePaymentsQuery({ flatId: id }, { skip: !id });
   const { data: rentersResponse } = useGetAvailableRentersQuery(
     { houseId: flatData?.data?.flat?.house_id, search: '' },
     { skip: !flatData?.data?.flat?.house_id || !id, refetchOnMountOrArgChange: true }
   );
 
+  // ── Mutations ─────────────────────────────────────────────────────────────
   const [sendReminder, { isLoading: isSendingReminder }] = useSendRentReminderMutation();
   const [removeRenter, { isLoading: isRemovingRenter }] = useRemoveRenterMutation();
-  const [resendPaymentReceipt, { isLoading: isResendingReceipt }] = useResendPaymentReceiptMutation();
+  const [, ] = useResendPaymentReceiptMutation();
+  const [sendPaymentReceiptPdf, { isLoading: isSendingResendReceipt }] =
+    useSendPaymentReceiptPdfMutation();
+  const [updateRentPayment, { isLoading: isUpdatingPayment }] = useUpdateRentPaymentMutation();
+  const [deleteRentPayment, { isLoading: isDeletingPayment }] = useDeleteRentPaymentMutation();
 
-  // Derived data (with fallbacks for loading state - hooks must run before early return)
+  // ── Derived data ──────────────────────────────────────────────────────────
   const flat = flatData?.data?.flat || {};
   const house = flatData?.data?.house || {};
   const payments = useMemo(() => flatData?.data?.payments || [], [flatData?.data?.payments]);
   const stats = flatData?.data?.stats || {};
-  const advancePayments = useMemo(() => advancePaymentsData?.data || [], [advancePaymentsData?.data]);
-  const availableRenters = useMemo(() => rentersResponse?.data || rentersResponse || [], [rentersResponse]);
-  const paymentReceipts = useMemo(() => paymentReceiptsData?.data || [], [paymentReceiptsData?.data]);
+  const advancePayments = useMemo(
+    () => advancePaymentsData?.data || [],
+    [advancePaymentsData?.data]
+  );
+  const availableRenters = useMemo(
+    () => rentersResponse?.data || rentersResponse || [],
+    [rentersResponse]
+  );
+  const paymentReceipts = useMemo(
+    () => paymentReceiptsData?.data || [],
+    [paymentReceiptsData?.data]
+  );
   const totalRemainingAdvance = useMemo(
-    () =>
-      advancePayments.reduce(
-        (sum, p) => sum + (parseFloat(p.remaining_amount) || 0),
-        0
-      ),
+    () => advancePayments.reduce((sum, p) => sum + (parseFloat(p.remaining_amount) || 0), 0),
     [advancePayments]
   );
-
-  const handleResendReceipt = async (paymentId) => {
-    try {
-      await resendPaymentReceipt({ rentPaymentId: paymentId }).unwrap();
-      toast.success(t('receipt_resent') || 'Payment receipt resent successfully');
-      refetchPaymentReceipts();
-    } catch (error) {
-      toast.error(error?.data?.error || 'Failed to resend receipt');
-    }
-  };
+  const availableAdvance = useMemo(
+    () => advancePayments.reduce((sum, p) => sum + (parseFloat(p.remaining_amount) || 0), 0),
+    [advancePayments]
+  );
 
   const renter = {
     name: flat.renterName,
@@ -110,26 +129,20 @@ const FlatDetails = () => {
     id: flat.renterId,
   };
 
-  // Unique renter IDs from payments (for payment history tab)
-  const paymentRenterIds = useMemo(() => {
-    return [...new Set(payments.map(p => p.renter_id).filter(Boolean))];
-  }, [payments]);
-
-  // Unique renter IDs from advance payments (for advance tab)
+  const paymentRenterIds = useMemo(
+    () => [...new Set(payments.map(p => p.renter_id).filter(Boolean))],
+    [payments]
+  );
   const advanceRenterIds = useMemo(() => {
     const ids = [...new Set(advancePayments.map(p => p.renter_id).filter(Boolean))];
     return ids.length > 0 ? ids : (flat.renter_id ? [flat.renter_id] : []);
   }, [advancePayments, flat.renter_id]);
 
-  // Renter options for payment history (include current renter + any from payments)
   const paymentRenterOptions = useMemo(() => {
     const idsSet = new Set(paymentRenterIds);
     if (flat.renter_id) idsSet.add(flat.renter_id);
-    const ids = Array.from(idsSet);
-    return ids.map(rid => {
-      if (rid === flat.renter_id) {
-        return { value: rid, label: flat.renterName || `Renter #${rid}` };
-      }
+    return Array.from(idsSet).map(rid => {
+      if (rid === flat.renter_id) return { value: rid, label: flat.renterName || `Renter #${rid}` };
       const r = availableRenters.find(x => x.id === rid || x.id === parseInt(rid, 10));
       return { value: rid, label: r ? r.name : `Renter #${rid}` };
     });
@@ -138,102 +151,89 @@ const FlatDetails = () => {
   const advanceRenterOptions = useMemo(() => {
     const idsSet = new Set(advanceRenterIds);
     if (flat.renter_id) idsSet.add(flat.renter_id);
-    const ids = Array.from(idsSet);
-    return ids.map(rid => {
-      if (rid === flat.renter_id) {
-        return { value: rid, label: flat.renterName || `Renter #${rid}` };
-      }
+    return Array.from(idsSet).map(rid => {
+      if (rid === flat.renter_id) return { value: rid, label: flat.renterName || `Renter #${rid}` };
       const r = availableRenters.find(x => x.id === rid || x.id === parseInt(rid, 10));
       return { value: rid, label: r ? r.name : `Renter #${rid}` };
     });
   }, [advanceRenterIds, flat.renter_id, flat.renterName, availableRenters]);
 
-  // Default to current renter when null (derived, no effect needed)
   const effectivePaymentRenterId = selectedPaymentRenterId ?? flat.renter_id;
   const effectiveAdvanceRenterId = selectedAdvanceRenterId ?? flat.renter_id;
 
   const filteredPayments = useMemo(() => {
     if (!effectivePaymentRenterId) return payments;
-    return payments.filter(p => p.renter_id === effectivePaymentRenterId || p.renter_id === parseInt(effectivePaymentRenterId, 10));
+    return payments.filter(
+      p => p.renter_id === effectivePaymentRenterId ||
+           p.renter_id === parseInt(effectivePaymentRenterId, 10)
+    );
   }, [payments, effectivePaymentRenterId]);
 
   const filteredAdvancePayments = useMemo(() => {
     if (!effectiveAdvanceRenterId) return advancePayments;
-    return advancePayments.filter(p => !p.renter_id || p.renter_id === effectiveAdvanceRenterId || p.renter_id === parseInt(effectiveAdvanceRenterId, 10));
+    return advancePayments.filter(
+      p => !p.renter_id ||
+           p.renter_id === effectiveAdvanceRenterId ||
+           p.renter_id === parseInt(effectiveAdvanceRenterId, 10)
+    );
   }, [advancePayments, effectiveAdvanceRenterId]);
 
   const selectedPaymentRenterInfo = useMemo(() => {
-    if (effectivePaymentRenterId === flat.renter_id) {
+    if (effectivePaymentRenterId === flat.renter_id)
       return { name: flat.renterName, phone: flat.renterPhone, email: flat.renterEmail };
-    }
-    const r = availableRenters.find(x => x.id === effectivePaymentRenterId || x.id === parseInt(effectivePaymentRenterId, 10));
+    const r = availableRenters.find(
+      x => x.id === effectivePaymentRenterId || x.id === parseInt(effectivePaymentRenterId, 10)
+    );
     return r ? { name: r.name, phone: r.phone, email: r.email } : null;
   }, [effectivePaymentRenterId, flat.renter_id, flat.renterName, flat.renterPhone, flat.renterEmail, availableRenters]);
 
   const selectedAdvanceRenterInfo = useMemo(() => {
-    if (effectiveAdvanceRenterId === flat.renter_id) {
+    if (effectiveAdvanceRenterId === flat.renter_id)
       return { name: flat.renterName, phone: flat.renterPhone, email: flat.renterEmail };
-    }
-    const r = availableRenters.find(x => x.id === effectiveAdvanceRenterId || x.id === parseInt(effectiveAdvanceRenterId, 10));
+    const r = availableRenters.find(
+      x => x.id === effectiveAdvanceRenterId || x.id === parseInt(effectiveAdvanceRenterId, 10)
+    );
     return r ? { name: r.name, phone: r.phone, email: r.email } : null;
   }, [effectiveAdvanceRenterId, flat.renter_id, flat.renterName, flat.renterPhone, flat.renterEmail, availableRenters]);
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
-  // Parse metadata to get advance payment summary
   let flatMetadata = {};
   try {
     flatMetadata = flat.metadata && typeof flat.metadata === 'string'
       ? JSON.parse(flat.metadata)
       : flat.metadata || {};
-  } catch (err) {
-    console.error("Error parsing flat metadata:", err);
-  }
+  } catch { /* ignore parse error */ }
 
-  // Calculate available advance amount
-  const availableAdvance = advancePayments.reduce((sum, payment) => 
-    sum + (parseFloat(payment.remaining_amount) || 0), 0
-  );
-
-  // Calculate next due date - use custom next_payment_date if available
   const calculateNextDueDate = () => {
-    // First check if custom next payment date is set
-    if (flat.rent_due_date) {
-      return new Date(flat.rent_due_date);
-    }
-    
-    // Fall back to calculation based on rent day
+    if (flat.rent_due_date) return new Date(flat.rent_due_date);
     if (!flat.should_pay_rent_day) return null;
     const today = new Date();
-    let dueDate = new Date(today.getFullYear(), today.getMonth(), flat.should_pay_rent_day);
-    if (today.getDate() > flat.should_pay_rent_day) {
-      dueDate.setMonth(dueDate.getMonth() + 1);
-    }
-    return dueDate;
+    let d = new Date(today.getFullYear(), today.getMonth(), flat.should_pay_rent_day);
+    if (today.getDate() > flat.should_pay_rent_day) d.setMonth(d.getMonth() + 1);
+    return d;
   };
-
   const nextDueDate = calculateNextDueDate();
 
-  // Calculate pending payments that can be paid with advance
-  const pendingPayments = payments.filter(p => 
-    ['pending', 'overdue'].includes(p.status) && 
-    parseFloat(p.amount) > (parseFloat(p.paid_amount) || 0)
+  const pendingPayments = payments.filter(
+    p => ['pending', 'overdue'].includes(p.status) &&
+         parseFloat(p.amount) > (parseFloat(p.paid_amount) || 0)
   );
 
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSendReminder = async () => {
     try {
       const response = await sendReminder({ flat_id: id, houseId: flat.house_id }).unwrap();
       const result = response?.data ?? response;
       setReminderResult(result || { remindersSent: 1, results: [] });
-    } catch (error) {
+    } catch {
       toast.error('Failed to send reminder');
-      console.error('Failed to send reminder:', error);
     }
   };
 
@@ -242,101 +242,224 @@ const FlatDetails = () => {
     setReminderResult(null);
   };
 
+  const handleResendReceiptClick = async (payment) => {
+    const renterInfo = selectedPaymentRenterInfo || { name: flat.renterName, email: flat.renterEmail };
+    const invoiceData = {
+      renterName: renterInfo.name || 'N/A',
+      houseName: flat.houseName || house.name || 'N/A',
+      flatNumber: flat.number,
+      totalAmount: payment.amount || payment.paid_amount || 0,
+      paymentDate: payment.paid_date,
+      transactionId: payment.transaction_id || null,
+      baseRent: payment.base_amount || payment.amount || 0,
+      amenitiesTotal: payment.amenities_charge || 0,
+      lateFee: payment.late_fee_amount || 0,
+      amenities: [],
+      forMonth: payment.for_month || null,
+      paymentMethod: payment.payment_method || null,
+      paymentId: payment.id,
+    };
+    try {
+      const pdfBase64 = await generateRentReceiptPdf(invoiceData);
+      setResendInvoiceData(invoiceData);
+      setResendPdfBase64(pdfBase64);
+      setResendPaymentId(payment.id);
+      setResendPreviewOpen(true);
+    } catch {
+      toast.error('Failed to generate PDF preview');
+    }
+  };
+
+  const handleResendConfirm = async (note) => {
+    try {
+      let finalBase64 = resendPdfBase64;
+      if (note) finalBase64 = await generateRentReceiptPdf({ ...resendInvoiceData, note });
+      await sendPaymentReceiptPdf({ paymentId: resendPaymentId, pdfBase64: finalBase64 }).unwrap();
+      toast.success(t('receipt_resent') || 'Payment receipt resent successfully');
+      refetchPaymentReceipts();
+    } catch (error) {
+      toast.error(error?.data?.error || 'Failed to resend receipt');
+    } finally {
+      setResendPreviewOpen(false);
+      setResendPdfBase64(null);
+      setResendInvoiceData(null);
+      setResendPaymentId(null);
+    }
+  };
+
+  const handleEditPayment = (payment) => {
+    setSelectedPaymentForEdit(payment);
+    setOpenEditPayment(true);
+  };
+
+  const handleEditPaymentSave = async (data) => {
+    try {
+      await updateRentPayment({ id: selectedPaymentForEdit.id, ...data }).unwrap();
+      toast.success(t('payment_updated') || 'Payment updated successfully');
+      setOpenEditPayment(false);
+      setSelectedPaymentForEdit(null);
+      refetchDetails();
+    } catch (err) {
+      toast.error(err?.data?.error || 'Failed to update payment');
+    }
+  };
+
+  const handleDeletePayment = (payment) => {
+    setSelectedPaymentForDelete(payment);
+    setOpenDeletePayment(true);
+  };
+
+  const handleDeletePaymentConfirm = async () => {
+    try {
+      await deleteRentPayment(selectedPaymentForDelete.id).unwrap();
+      toast.success(t('payment_deleted') || 'Payment deleted successfully');
+      setOpenDeletePayment(false);
+      setSelectedPaymentForDelete(null);
+      refetchDetails();
+    } catch (err) {
+      toast.error(err?.data?.error || 'Failed to delete payment');
+    }
+  };
+
+  const handleRemoveRenterConfirm = async (refund) => {
+    try {
+      await removeRenter({ flatId: flat.id, refund_amount: refund }).unwrap();
+      toast.success(t('renter_removed_successfully') || 'Renter removed successfully');
+      setOpenRemoveRenterModal(false);
+      refetchDetails();
+      refetchAdvancePayments();
+    } catch (err) {
+      toast.error(
+        showMessageInLanguage(err?.data?.error) || err?.data?.error || 'Failed to remove renter'
+      );
+    }
+  };
+
+  // ── Tabs config ───────────────────────────────────────────────────────────
   const tabs = [
-    { id: 'overview', label: t('overview'), icon: FileText },
-    { id: 'payments', label: t('payment_history'), icon: History },
-    { id: 'advance', label: t('advance_payments'), icon: Shield }, // New tab
+    { id: 'overview',  label: t('overview'),         icon: FileText },
+    { id: 'payments',  label: t('payment_history'),  icon: History  },
+    { id: 'advance',   label: t('advance_payments'), icon: Shield   },
   ];
 
-  
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between mb-6">
+    <div>
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap md:items-center gap-4 justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-subdued/10 rounded-lg transition-colors">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-subdued/10 rounded-lg transition-colors"
+          >
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-text">
+            <h1 className="text-xl font-bold text-text">
               {flat.number ? `Flat ${flat.number}` : flat.name}
             </h1>
-            <p className="text-subdued">
+            <p className="text-subdued text-sm md:text-base">
               {house.name || flat.houseName} • {house.address || flat.houseAddress}
             </p>
           </div>
         </div>
-        
-        <div className="flex flex-wrap gap-3">
-          {flat.renter_id && (
-            <>
-              <button
-                onClick={() => setOpenReminder(true)}
-                className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 border border-subdued/30 rounded-lg bg-white hover:bg-subdued/10 transition-colors"
-              >
-                <Send size={18} />
-                {t('send_reminder')}
-              </button>
-              <button
-                onClick={() => {
-                  const defaultRefund = totalRemainingAdvance > 0 ? totalRemainingAdvance.toFixed(2) : '0';
-                  setRefundAmount(defaultRefund);
-                  setRefundError('');
-                  setOpenRemoveRenterModal(true);
-                }}
-                className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 border border-red-300 rounded-lg bg-white text-red-700 hover:bg-red-50 transition-colors"
-              >
-                <UserMinus size={18} />
-                {t('remove_renter') || 'Remove Renter'}
-              </button>
-            </>
-          )}
-          <button
-            onClick={() => setOpenReminderLog(true)}
-            className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 border border-subdued/30 rounded-lg bg-white hover:bg-subdued/10 transition-colors"
-          >
-            <ScrollText size={18} />
-            {t('see_reminder_log') || 'See Reminder Log'}
-          </button>
-          <button
-            onClick={() => setOpenEdit(true)}
-            className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 bg-surface border border-subdued/30 text-text rounded-lg hover:bg-subdued/10 transition-colors"
-          >
-            <Edit size={18} />
-            {t('edit_flat')}
-          </button>
+
+        <div className="flex items-center gap-3 ml-auto">
+          {/* Primary CTA */}
           <button
             onClick={() => setOpenPayment(true)}
             disabled={!flat.renter_id}
-            className="flex items-center whitespace-nowrap gap-2 px-2 py-1 flex-1 md:px-4 md:py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            className="flex items-center whitespace-nowrap gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             <PlusCircle size={18} />
             {t('record_payment')}
           </button>
+
+          {/* 3-dot actions menu */}
+          <div className="relative">
+            <button
+              onClick={() => setOpenActionsMenu(v => !v)}
+              className="flex items-center justify-center w-10 h-10 border border-subdued/30 rounded-lg bg-white hover:bg-subdued/10 transition-colors"
+              title="More actions"
+            >
+              <MoreVertical size={20} />
+            </button>
+            {openActionsMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setOpenActionsMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-lg border border-subdued/20 min-w-48 py-1 overflow-hidden">
+                  {flat.renter_id && (
+                    <>
+                      <button
+                        onClick={() => { setOpenReminder(true); setOpenActionsMenu(false); }}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text hover:bg-subdued/10 transition-colors"
+                      >
+                        <Send size={16} className="text-subdued" />
+                        {t('send_reminder')}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const defaultRefund = totalRemainingAdvance > 0
+                            ? totalRemainingAdvance.toFixed(2) : '0';
+                          setRefundAmount(defaultRefund);
+                          setRefundError('');
+                          setOpenRemoveRenterModal(true);
+                          setOpenActionsMenu(false);
+                        }}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <UserMinus size={16} />
+                        {t('remove_renter') || 'Remove Renter'}
+                      </button>
+                      <div className="border-t border-subdued/10 my-1" />
+                    </>
+                  )}
+                  <button
+                    onClick={() => { setOpenReminderLog(true); setOpenActionsMenu(false); }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text hover:bg-subdued/10 transition-colors"
+                  >
+                    <ScrollText size={16} className="text-subdued" />
+                    {t('see_reminder_log') || 'See Reminder Log'}
+                  </button>
+                  <button
+                    onClick={() => { setOpenEdit(true); setOpenActionsMenu(false); }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text hover:bg-subdued/10 transition-colors"
+                  >
+                    <Edit size={16} className="text-subdued" />
+                    {t('edit_flat')}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
+      {/* ── Tabs nav ─────────────────────────────────────────────────────── */}
       <div className="pt-4 border-t-2 border-subdued/20 mb-2">
         <div className="flex gap-2 flex-wrap">
           {tabs.map((tab, index) => {
             const Icon = tab.icon;
+            const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 hover:bg-secondary/40 px-2 py-2 rounded-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-secondary/80 text-white'
-                    : 'text-subdued bg-secondary/30 hover:text-text'
+                className={`flex items-center justify-center hover:bg-secondary/40 px-2 py-2 rounded-sm font-medium transition-all duration-300 min-w-10 ${
+                  active ? 'bg-secondary/80 text-white' : 'text-subdued bg-secondary/30 hover:text-text'
                 } ${index === 0 ? 'rounded-tl-2xl' : ''} ${index === tabs.length - 1 ? 'rounded-tr-2xl' : ''}`}
               >
                 <Icon size={18} />
-                {tab.label}
+                <span
+                  className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
+                    active ? 'max-w-xs opacity-100 pl-2' : 'max-w-0 opacity-0'
+                  }`}
+                >
+                  {tab.label}
+                </span>
                 {tab.id === 'advance' && availableAdvance > 0 && (
                   <span className="ml-1 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">
-                    <TkSymbol /> {availableAdvance.toLocaleString()}
+                    {availableAdvance.toLocaleString()}
                   </span>
                 )}
               </button>
@@ -345,680 +468,101 @@ const FlatDetails = () => {
         </div>
       </div>
 
-      {/* Tab Content */}
+      {/* ── Tab content ──────────────────────────────────────────────────── */}
       <div className="pt-2">
         {activeTab === 'overview' && (
-          <div className="space-y-4">
-            {/* Financial Stats Card */}
-            <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-              <h2 className="text-lg font-bold text-text mb-4">{t('financial_statistics')}</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {/* Total Paid */}
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-green-700 uppercase tracking-wider">{t('total_paid')}</p>
-                    <TrendingUp className="text-green-600" size={16} />
-                  </div>
-                  <p className="text-xl font-bold text-green-700 mt-1">
-                    <TkSymbol /> {Number(stats.totalPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </p>
-                  {availableAdvance > 0 && (
-                    <p className="text-xs text-green-600 mt-1">
-                      +<TkSymbol /> {availableAdvance.toLocaleString()} advance available
-                    </p>
-                  )}
-                </div>
-                
-                {/* Total Due/Pending - only shows due for this month (totalDue - totalPaid) */}
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-red-700 uppercase tracking-wider">{t('total_due')}</p>
-                    <AlertCircle className="text-red-600" size={16} />
-                  </div>
-                  <p className="text-xl font-bold text-red-700 mt-1">
-                    <TkSymbol /> {Math.max(0, Number(stats.totalDue || 0) - Number(stats.totalPaid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-
-                {/* Payment Status */}
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg col-span-2">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-blue-700 uppercase tracking-wider">{t('payment_status')}</p>
-                      <p className="text-md font-semibold text-blue-800 mt-1">
-                        {stats.pendingCount || 0} {t('pending_months')}
-                      </p>
-                      {stats.overdueCount > 0 && (
-                        <p className="text-sm text-red-600 mt-1">
-                          {stats.overdueCount} {t('overdue')}
-                        </p>
-                      )}
-                    </div>
-                    {stats.overdueCount > 0 && (
-                      <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-bold rounded-full">
-                          {t('overdue')}
-                        </span>
-                        <button
-                          onClick={() => setOpenPayment(true)}
-                          className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                        >
-                          {t('pay_now')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Summary Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg"><DollarSign className="text-blue-600" size={24} /></div>
-                  <div>
-                    <p className="text-sm text-subdued">{t('monthly_rent')}</p>
-                    <p className="text-xl font-bold"><TkSymbol /> {flat.rent_amount?.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg"><Calendar className="text-green-600" size={24} /></div>
-                  <div>
-                    <p className="text-sm text-subdued">{t('due_day')}</p>
-                    <p className="text-xl font-bold">Day {flat.should_pay_rent_day}</p>
-                  </div>
-                </div>
-                {nextDueDate && (
-                  <p className="text-xs text-subdued mt-2">
-                    Next: {format(nextDueDate, 'dd MMM yyyy')}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Advance Payments Summary */}
-            {availableAdvance > 0 && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-green-800 flex items-center gap-2">
-                    <Shield size={20} /> {t('advance_payments_available')}
-                  </h3>
-                  <span className="text-2xl font-bold text-green-700">
-                    <TkSymbol /> {availableAdvance.toLocaleString()}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <p className="text-sm text-green-700">{t('total_advance')}</p>
-                    <p className="text-xl font-bold">
-                      <TkSymbol /> {advancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-green-700">{t('remaining')}</p>
-                    <p className="text-xl font-bold"><TkSymbol /> {availableAdvance.toLocaleString()}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-green-700">{t('covers_months')}</p>
-                    <p className="text-xl font-bold">
-                      {flat.rent_amount > 0 ? (availableAdvance / flat.rent_amount).toFixed(1) : '0'} {t('months')}
-                    </p>
-                  </div>
-                </div>
-                {pendingPayments.length > 0 && (
-                  <div className="mt-4 p-3 bg-white border border-green-300 rounded-lg">
-                    <p className="text-sm text-green-800">
-                      <span className="font-bold">{pendingPayments.length} pending payment(s)</span> can be paid using advance.
-                      <button
-                        onClick={() => setOpenPayment(true)}
-                        className="ml-2 text-green-700 hover:text-green-900 underline"
-                      >
-                        Apply now →
-                      </button>
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Renter Details Card */}
-              <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <h2 className="text-lg font-bold text-text mb-4 flex items-center gap-2">
-                  <User size={20} /> {t('renter_details')}
-                </h2>
-                {flat.renter_id ? (
-                  <Link to={`/renters?view=${flat.renter_id}`} className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
-                        {renter.name?.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-lg">{renter.name}</p>
-                        <div className="flex flex-col gap-1 mt-1">
-                          {renter.phone && <span className="text-sm text-subdued flex items-center gap-2"><Phone size={14}/> {renter.phone}</span>}
-                          {renter.email && <span className="text-sm text-subdued flex items-center gap-2"><Mail size={14}/> {renter.email}</span>}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Advance payment summary from metadata */}
-                    {flatMetadata.advance_payments_summary && (
-                      <div className="mt-4 pt-4 border-t border-subdued/20">
-                        <p className="text-sm font-medium text-text mb-2">{t('advance_payment_summary')}</p>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-subdued">{t('total_advance_paid')}:</span>
-                            <span className="font-bold text-green-600">
-                              <TkSymbol /> {flatMetadata.advance_payments_summary.total_advance?.toLocaleString() || '0'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-subdued">{t('payment_count')}:</span>
-                            <span>{flatMetadata.advance_payments_summary.payment_count || 0}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </Link>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-subdued mb-4">{t('no_renter_assigned')}</p>
-                    <button onClick={() => setOpenAssignModal(true)} className="text-primary font-medium hover:underline">
-                      + {t('assign_a_renter')}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Flat Status & Charges */}
-              <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <h2 className="text-lg font-bold text-text mb-4">{t('status_and_charges') || 'Status & Charges'}</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-orange-100 rounded-lg"><AlertCircle className="text-orange-600" size={24} /></div>
-                      <div>
-                        <p className="text-sm text-orange-700">{t('late_fee')}</p>
-                        <p className="text-xl font-bold text-orange-700">{flat.late_fee_percentage ?? 5}%</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 rounded-lg"><Clock className="text-purple-600" size={24} /></div>
-                      <div>
-                        <p className="text-sm text-purple-700">{t('status')}</p>
-                        <p className={`text-xl font-bold ${flat.renter_id ? 'text-green-600' : 'text-yellow-600'}`}>
-                          {flat.renter_id ? 'Occupied' : 'Vacant'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <OverviewTab
+            flat={flat}
+            house={house}
+            stats={stats}
+            renter={renter}
+            advancePayments={advancePayments}
+            availableAdvance={availableAdvance}
+            pendingPayments={pendingPayments}
+            flatMetadata={flatMetadata}
+            nextDueDate={nextDueDate}
+            setOpenPayment={setOpenPayment}
+            setOpenAssignModal={setOpenAssignModal}
+          />
         )}
 
         {activeTab === 'payments' && (
-          <div className="space-y-4">
-            {/* Advance Payment Notice */}
-            {availableAdvance > 0 && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Shield className="text-green-600" size={20} />
-                    <div>
-                      <p className="font-medium text-green-800">{t('advance_payment_available')}</p>
-                      <p className="text-sm text-green-700">
-                        <TkSymbol /> {availableAdvance.toLocaleString()} {t('can_be_applied_to_pending_payments')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Renter selector */}
-            <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-subdued mb-2">{t('select_renter')}</label>
-                  <select
-                    value={effectivePaymentRenterId ?? ''}
-                    onChange={(e) => setSelectedPaymentRenterId(e.target.value ? parseInt(e.target.value, 10) : null)}
-                    className="w-full sm:max-w-xs px-3 py-2 border border-subdued/30 rounded-lg bg-white text-text focus:ring-2 focus:ring-primary/30"
-                  >
-                    {paymentRenterOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                {selectedPaymentRenterInfo && (
-                  <div className="flex items-center gap-4 p-3 bg-subdued/5 rounded-lg">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
-                      {selectedPaymentRenterInfo.name?.charAt(0) || '?'}
-                    </div>
-                    <div>
-                      <p className="font-semibold">{selectedPaymentRenterInfo.name || '-'}</p>
-                      {selectedPaymentRenterInfo.phone && (
-                        <p className="text-sm text-subdued flex items-center gap-1"><Phone size={14}/> {selectedPaymentRenterInfo.phone}</p>
-                      )}
-                      {selectedPaymentRenterInfo.email && (
-                        <p className="text-sm text-subdued flex items-center gap-1"><Mail size={14}/> {selectedPaymentRenterInfo.email}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <Table
-              columns={[
-                { key: 'due_date', title: t('due_date'), dataIndex: 'due_date', render: (row) => row.due_date ? format(new Date(row.due_date), 'dd MMM yyyy') : '-' },
-                { key: 'amount', title: t('amount'), render: (row) => (
-                  <div>
-                    <div className="font-bold"><TkSymbol />{row.amount?.toLocaleString()}</div>
-                    {row.base_amount && row.amenities_charge && (
-                      <div className="text-xs text-subdued">
-                        Base: <TkSymbol />{row.base_amount} + Amenities: <TkSymbol />{row.amenities_charge}
-                      </div>
-                    )}
-                  </div>
-                )},
-                { key: 'paid_date', title: t('paid_date'), render: (row) => row.paid_date ? format(new Date(row.paid_date), 'dd MMM yyyy') : '-' },
-                { key: 'method', title: t('method'), render: (row) => (row.payment_method?.replace('_', ' ') || '-') },
-                { key: 'late_fee', title: t('late_fee'), render: (row) => (
-                  <span className="text-orange-600">{row.late_fee_amount > 0 ? <><TkSymbol />{row.late_fee_amount}</> : '-'}</span>
-                )},
-                { key: 'advance_used', title: t('advance_used'), render: (row) => {
-                  let advanceUsed = row.advance_used;
-                  return advanceUsed ? (
-                    <div className="text-xs text-green-700">
-                      <div className="font-medium"><TkSymbol />{advanceUsed}</div>
-                      <div className="text-green-600">{t('advance_applied')}</div>
-                    </div>
-                  ) : '-';
-                }},
-                { key: 'status', title: t('status'), render: (row) => (
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    row.status === 'paid' ? 'bg-green-100 text-green-800' : 
-                    row.status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {row.status}
-                  </span>
-                )},
-                { key: 'actions', title: t('actions'), render: (row) => (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedPaymentForEmailLog(row);
-                      setOpenPaymentEmailLog(true);
-                    }}
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                    title={t('view') || 'View'}
-                  >
-                    <Eye size={18} />
-                  </button>
-                )},
-              ]}
-              data={filteredPayments}
-              rowKey="id"
-              emptyMessage={t('no_payment_history') || 'No payment history found.'}
-            />
-          </div>
+          <PaymentsTab
+            filteredPayments={filteredPayments}
+            availableAdvance={availableAdvance}
+            paymentRenterOptions={paymentRenterOptions}
+            effectivePaymentRenterId={effectivePaymentRenterId}
+            setSelectedPaymentRenterId={setSelectedPaymentRenterId}
+            selectedPaymentRenterInfo={selectedPaymentRenterInfo}
+            setSelectedPaymentForEmailLog={setSelectedPaymentForEmailLog}
+            setOpenPaymentEmailLog={setOpenPaymentEmailLog}
+            onEditPayment={handleEditPayment}
+            onDeletePayment={handleDeletePayment}
+          />
         )}
 
         {activeTab === 'advance' && (
-          <div className="space-y-4">
-            {/* Advance Payments Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <DollarSign className="text-blue-600" size={24} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-subdued">{t('total_advance')}</p>
-                    <p className="text-xl font-bold">
-                      <TkSymbol />{filteredAdvancePayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <ArrowDownRight className="text-green-600" size={24} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-subdued">{t('remaining_available')}</p>
-                    <p className="text-xl font-bold text-green-600">
-                      <TkSymbol />{filteredAdvancePayments.reduce((sum, p) => sum + (parseFloat(p.remaining_amount) || 0), 0).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <TrendingUp className="text-orange-600" size={24} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-subdued">{t('months_covered')}</p>
-                    <p className="text-xl font-bold">
-                      {flat.rent_amount > 0 ? (filteredAdvancePayments.reduce((sum, p) => sum + (parseFloat(p.remaining_amount) || 0), 0) / flat.rent_amount).toFixed(1) : '0'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Renter selector */}
-            <div className="bg-surface rounded-lg p-4 border border-subdued/20">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-subdued mb-2">{t('select_renter')}</label>
-                  <select
-                    value={effectiveAdvanceRenterId ?? ''}
-                    onChange={(e) => setSelectedAdvanceRenterId(e.target.value ? parseInt(e.target.value, 10) : null)}
-                    className="w-full sm:max-w-xs px-3 py-2 border border-subdued/30 rounded-lg bg-white text-text focus:ring-2 focus:ring-primary/30"
-                  >
-                    {advanceRenterOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                {selectedAdvanceRenterInfo && (
-                  <div className="flex items-center gap-4 p-3 bg-subdued/5 rounded-lg">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
-                      {selectedAdvanceRenterInfo.name?.charAt(0) || '?'}
-                    </div>
-                    <div>
-                      <p className="font-semibold">{selectedAdvanceRenterInfo.name || '-'}</p>
-                      {selectedAdvanceRenterInfo.phone && (
-                        <p className="text-sm text-subdued flex items-center gap-1"><Phone size={14}/> {selectedAdvanceRenterInfo.phone}</p>
-                      )}
-                      {selectedAdvanceRenterInfo.email && (
-                        <p className="text-sm text-subdued flex items-center gap-1"><Mail size={14}/> {selectedAdvanceRenterInfo.email}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Advance Payments List */}
-            <div className="bg-surface rounded-lg border border-subdued/20 overflow-hidden">
-              <div className="p-4 border-b border-subdued/20 flex justify-between items-center">
-                <h3 className="text-lg font-bold text-text">{t('advance_payment_history')}</h3>
-                <button
-                  onClick={() => {
-                    setSelectedAdvancePaymentForForm(null);
-                    setAdvancePaymentFormMode('create');
-                    setOpenAdvancePaymentForm(true);
-                  }}
-                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-sm"
-                >
-                  {t('add_advance_payment') || 'Add Advance Payment'}
-                </button>
-              </div>
-              <Table
-                columns={[
-                  { key: 'date', title: t('date'), render: (row) => format(new Date(row.payment_date), 'dd MMM yyyy') },
-                  { key: 'amount', title: t('amount'), render: (row) => <span className="font-bold"><TkSymbol />{row.amount?.toLocaleString()}</span> },
-                  { key: 'paid_amount', title: t('paid_amount'), render: (row) => <span className="text-green-600"><TkSymbol />{row.paid_amount?.toLocaleString()}</span> },
-                  { key: 'remaining', title: t('remaining'), render: (row) => (
-                    <span className={`font-bold ${parseFloat(row.remaining_amount) > 0 ? 'text-green-600' : 'text-subdued'}`}>
-                      <TkSymbol />{row.remaining_amount?.toLocaleString()}
-                    </span>
-                  )},
-                  { key: 'method', title: t('method'), render: (row) => (row.payment_method?.replace('_', ' ') || '-') },
-                  { key: 'status', title: t('status'), render: (row) => (
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      row.status === 'paid' ? 'bg-green-100 text-green-800' :
-                      row.status === 'partially_used' ? 'bg-yellow-100 text-yellow-800' :
-                      row.status === 'fully_used' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {row.status}
-                    </span>
-                  )},
-                  { key: 'actions', title: t('actions'), render: (row) => (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedAdvancePaymentForForm(row);
-                          setAdvancePaymentFormMode('view');
-                          setOpenAdvancePaymentForm(true);
-                        }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                        title={t('view') || 'View'}
-                      >
-                        <Eye size={18} />
-                      </button>
-                      {parseFloat(row.remaining_amount) > 0 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenPayment(true);
-                          }}
-                          className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded"
-                        >
-                          Apply
-                        </button>
-                      )}
-                    </div>
-                  )},
-                ]}
-                data={filteredAdvancePayments}
-                rowKey="id"
-                emptyMessage={t('no_advance_payments_recorded') || 'No advance payments recorded'}
-              />
-            </div>
-          </div>
+          <AdvanceTab
+            filteredAdvancePayments={filteredAdvancePayments}
+            flat={flat}
+            advanceRenterOptions={advanceRenterOptions}
+            effectiveAdvanceRenterId={effectiveAdvanceRenterId}
+            setSelectedAdvanceRenterId={setSelectedAdvanceRenterId}
+            selectedAdvanceRenterInfo={selectedAdvanceRenterInfo}
+            setSelectedAdvancePaymentForForm={setSelectedAdvancePaymentForForm}
+            setAdvancePaymentFormMode={setAdvancePaymentFormMode}
+            setOpenAdvancePaymentForm={setOpenAdvancePaymentForm}
+            setOpenPayment={setOpenPayment}
+          />
         )}
-
       </div>
 
-      {/* Modals */}
-      <FlatForm 
-        open={openEdit} 
-        onClose={() => { setOpenEdit(false); refetchDetails(); }} 
-        houseId={flat.house_id} 
-        flat={flat} 
+      {/* ── Modals ───────────────────────────────────────────────────────── */}
+      <FlatForm
+        open={openEdit}
+        onClose={() => { setOpenEdit(false); refetchDetails(); }}
+        houseId={flat.house_id}
+        flat={flat}
       />
 
-      <RecordPaymentModal 
-        open={openPayment} 
-        onClose={() => { 
-          setOpenPayment(false); 
-          refetchDetails();
-          refetchAdvancePayments();
-        }} 
-        flat={flat} 
-        renter={renter} 
-        advancePayments={advancePayments}
-      />
-
-      {/* <ApplyAdvancePaymentModal 
-        open={openApplyAdvance} 
-        onClose={() => { 
-          setOpenApplyAdvance(false); 
-          setSelectedAdvancePayment(null);
-          refetchDetails();
-          refetchAdvancePayments();
-        }} 
-        flat={flat} 
+      <RecordPaymentModal
+        open={openPayment}
+        onClose={() => { setOpenPayment(false); refetchDetails(); refetchAdvancePayments(); }}
+        flat={flat}
         renter={renter}
-        pendingPayments={pendingPayments}
         advancePayments={advancePayments}
-        selectedAdvancePayment={selectedAdvancePayment}
-      /> */}
+      />
 
-      {/* Reminder Confirmation / Result Dialog */}
-      {openReminder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-lg p-4 max-w-md w-full shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">
-                {reminderResult ? (t('reminder_result') || 'Reminder Result') : t('send_reminder')}
-              </h3>
-              <button onClick={handleCloseReminderModal} className="p-1 hover:bg-subdued/10 rounded"><X size={20}/></button>
-            </div>
+      <ReminderModal
+        open={openReminder}
+        reminderResult={reminderResult}
+        onClose={handleCloseReminderModal}
+        onSend={handleSendReminder}
+        isSending={isSendingReminder}
+        renterName={renter.name}
+      />
 
-            {reminderResult ? (
-              <>
-                <p className="text-green-600 font-medium mb-3">
-                  {t('reminder_sent_success') || 'Rent reminder sent successfully'}
-                </p>
-                <p className="text-subdued text-sm mb-4">
-                  {reminderResult.remindersSent} {t('reminder_sent_count') || 'reminder(s) sent'}
-                </p>
-                {reminderResult.results?.length > 0 && (
-                  <ul className="space-y-2 mb-4">
-                    {reminderResult.results.map((r, i) => (
-                      <li key={r.paymentId ?? i} className="p-3 bg-subdued/5 rounded-lg text-sm">
-                        <span className="font-medium">{r.renterName}</span>
-                        <span className="text-subdued mx-2">•</span>
-                        {r.sent ? (
-                          <span className="text-green-600">{t('sent_to') || 'Sent to'}: {r.sentTo || 'email, sms'}</span>
-                        ) : (
-                          <span className="text-orange-600">{t('not_sent') || 'Not sent'}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div className="flex justify-end">
-                  <button onClick={handleCloseReminderModal} className="px-6 py-2 bg-primary text-white rounded-lg">
-                    {t('close') || 'Close'}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-subdued mb-6">
-                  {t('send_reminder_message', { name: renter.name })}
-                </p>
-                <div className="flex justify-end gap-3">
-                  <button onClick={handleCloseReminderModal} className="px-4 py-2 text-subdued">{t('cancel')}</button>
-                  <button 
-                    onClick={handleSendReminder} 
-                    disabled={isSendingReminder}
-                    className="px-6 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
-                  >
-                    {isSendingReminder ? (t('sending') || 'Sending...') : (t('confirm_send') || 'Confirm & Send')}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <ReminderLogModal
+        open={openReminderLog}
+        onClose={() => setOpenReminderLog(false)}
+        paymentReceipts={paymentReceipts}
+      />
 
-      {/* Reminder Log Modal */}
-      {openReminderLog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-xl flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b border-subdued/20">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <ScrollText size={20} />
-                {t('reminder_log') || 'Reminder Log'}
-              </h3>
-              <button onClick={() => setOpenReminderLog(false)} className="p-1 hover:bg-subdued/10 rounded">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-4 flex-1">
-              {(() => {
-                const rentReminderLogs = paymentReceipts.filter((log) => {
-                  let meta = {};
-                  try { meta = log.metadata ? JSON.parse(log.metadata) : {}; } catch { /* ignore */ }
-                  return meta?.type === 'rent_reminder';
-                });
-                if (rentReminderLogs.length === 0) {
-                  return <p className="text-subdued text-center py-8">{t('no_reminder_log') || 'No rent reminder logs found.'}</p>;
-                }
-                return (
-                  <ul className="space-y-3">
-                    {rentReminderLogs.map((log) => (
-                      <li key={log.id} className="p-4 bg-subdued/5 rounded-lg border border-subdued/10">
-                        <PrintEmailInfo log={log} htmlBody={log.htmlBody || log.html || log.body} />
-                      </li>
-                    ))}
-                  </ul>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Payment Email Log Modal (per payment) */}
-      {openPaymentEmailLog && selectedPaymentForEmailLog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-xl flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b border-subdued/20">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <MailCheck size={20} />
-                {t('payment_email_log') || 'Payment Email Log'}
-              </h3>
-              <button onClick={() => { setOpenPaymentEmailLog(false); setSelectedPaymentForEmailLog(null); }} className="p-1 hover:bg-subdued/10 rounded">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4 border-b border-subdued/20 flex justify-between items-center">
-              <p className="text-sm text-subdued">
-                {t('for_month') || 'For'} {selectedPaymentForEmailLog.for_month} • <TkSymbol />{selectedPaymentForEmailLog.amount}
-              </p>
-              <button
-                onClick={() => handleResendReceipt(selectedPaymentForEmailLog.id)}
-                disabled={isResendingReceipt}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 text-sm"
-              >
-                {isResendingReceipt ? (t('sending') || 'Sending...') : (t('resend_receipt') || 'Resend Payment Receipt')}
-              </button>
-            </div>
-            <div className="overflow-y-auto p-4 flex-1">
-              {(() => {
-                const paymentLogs = paymentReceipts.filter((l) => l.row_id === selectedPaymentForEmailLog.id);
-                if (paymentLogs.length === 0) {
-                  return <p className="text-subdued text-center py-8">{t('no_email_log_for_payment') || 'No email logs for this payment.'}</p>;
-                }
-                return (
-                  <ul className="space-y-3">
-                    {paymentLogs.map((log) => (
-                      <li key={log.id} className="p-4 bg-subdued/5 rounded-lg border border-subdued/10">
-                        <PrintEmailInfo log={log} htmlBody={log.htmlBody || log.html || log.body} />
-                      </li>
-                    ))}
-                  </ul>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
+      <PaymentEmailLogModal
+        open={openPaymentEmailLog}
+        selectedPayment={selectedPaymentForEmailLog}
+        paymentReceipts={paymentReceipts}
+        onClose={() => { setOpenPaymentEmailLog(false); setSelectedPaymentForEmailLog(null); }}
+        onResend={handleResendReceiptClick}
+      />
 
       <AdvancePaymentFormModal
         open={openAdvancePaymentForm}
-        onClose={() => {
-          setOpenAdvancePaymentForm(false);
-          setSelectedAdvancePaymentForForm(null);
-        }}
+        onClose={() => { setOpenAdvancePaymentForm(false); setSelectedAdvancePaymentForForm(null); }}
         flatId={id}
         payment={selectedAdvancePaymentForForm}
         mode={advancePaymentFormMode || 'view'}
-        onSuccess={() => {
-          refetchDetails();
-          refetchAdvancePayments();
-        }}
+        onSuccess={() => { refetchDetails(); refetchAdvancePayments(); }}
       />
 
       <AssignRenterModal
@@ -1026,124 +570,72 @@ const FlatDetails = () => {
         onClose={() => setOpenAssignModal(false)}
         flat={flatData?.data?.flat || null}
         houseinfo={houseData?.data || null}
-        onSuccess={() => {
-          refetchDetails();
-          refetchAdvancePayments();
-        }}
+        onSuccess={() => { refetchDetails(); refetchAdvancePayments(); }}
       />
 
-      {/* Remove Renter Modal */}
-      {openRemoveRenterModal && (
+      <RemoveRenterModal
+        open={openRemoveRenterModal}
+        onClose={() => setOpenRemoveRenterModal(false)}
+        totalRemainingAdvance={totalRemainingAdvance}
+        refundAmount={refundAmount}
+        setRefundAmount={setRefundAmount}
+        refundError={refundError}
+        setRefundError={setRefundError}
+        onConfirm={handleRemoveRenterConfirm}
+        isRemoving={isRemovingRenter}
+      />
+
+      <EditPaymentModal
+        open={openEditPayment}
+        payment={selectedPaymentForEdit}
+        onClose={() => { setOpenEditPayment(false); setSelectedPaymentForEdit(null); }}
+        onSave={handleEditPaymentSave}
+        isSaving={isUpdatingPayment}
+      />
+
+      {openDeletePayment && selectedPaymentForDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-lg p-4 max-w-md w-full shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">
-                {t('remove_renter') || 'Remove Renter'}
-              </h3>
-              <button
-                onClick={() => setOpenRemoveRenterModal(false)}
-                className="p-1 hover:bg-subdued/10 rounded"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <p className="text-subdued text-sm mb-4">
-              {t('are_you_sure_you_want_to_remove_renter') ||
-                'Are you sure you want to remove this renter from the flat?'}
+          <div className="bg-surface rounded-xl max-w-sm w-full shadow-xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-text">
+              {t('delete_payment') || 'Delete Payment'}
+            </h3>
+            <p className="text-sm text-subdued">
+              {t('delete_payment_confirm') ||
+                'Are you sure you want to permanently delete this payment record? This cannot be undone.'}
             </p>
-            {totalRemainingAdvance > 0 && (
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
-                <p className="text-yellow-800 mb-2">
-                  {t('remaining_advance') || 'Remaining advance'}:{' '}
-                  <span className="font-bold">
-                    <TkSymbol /> {totalRemainingAdvance.toLocaleString()}
-                  </span>
-                </p>
-                <label className="block text-sm font-medium mb-1">
-                  {t('refund_amount') || 'Refund amount'}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max={totalRemainingAdvance}
-                  step="0.01"
-                  value={refundAmount}
-                  onChange={(e) => {
-                    setRefundAmount(e.target.value);
-                    setRefundError('');
-                  }}
-                  className="w-full px-3 py-2 border border-subdued/30 rounded-lg"
-                />
-                {refundError && (
-                  <p className="text-red-600 text-xs mt-1">{refundError}</p>
-                )}
-                <p className="text-xs text-subdued mt-1">
-                  {t('refund_hint') ||
-                    'You cannot refund more than the remaining advance.'}
-                </p>
-              </div>
-            )}
-            <div className="flex justify-end gap-3 mt-2">
+            <div className="flex justify-end gap-3 pt-2">
               <button
-                onClick={() => setOpenRemoveRenterModal(false)}
-                className="px-4 py-2 text-subdued"
-                disabled={isRemovingRenter}
+                onClick={() => { setOpenDeletePayment(false); setSelectedPaymentForDelete(null); }}
+                disabled={isDeletingPayment}
+                className="px-4 py-2 text-subdued hover:text-text transition-colors disabled:opacity-50"
               >
-                {t('cancel')}
+                {t('cancel') || 'Cancel'}
               </button>
               <button
-                onClick={async () => {
-                  const max = totalRemainingAdvance;
-                  let refund = 0;
-                  if (max > 0) {
-                    const val = parseFloat(refundAmount || '0');
-                    if (isNaN(val) || val < 0) {
-                      setRefundError(
-                        t('amount_must_be_valid') ||
-                          'Refund amount must be a valid number'
-                      );
-                      return;
-                    }
-                    if (val > max + 1e-6) {
-                      setRefundError(
-                        t('refund_cannot_exceed_remaining_advance') ||
-                          'Refund amount cannot exceed remaining advance'
-                      );
-                      return;
-                    }
-                    refund = val;
-                  }
-                  try {
-                    await removeRenter({
-                      flatId: flat.id,
-                      refund_amount: refund,
-                    }).unwrap();
-                    toast.success(
-                      t('renter_removed_successfully') ||
-                        'Renter removed successfully'
-                    );
-                    setOpenRemoveRenterModal(false);
-                    refetchDetails();
-                    refetchAdvancePayments();
-                  } catch (err) {
-                    toast.error(
-                      showMessageInLanguage(err?.data?.error) ||
-                        err?.data?.error ||
-                        'Failed to remove renter'
-                    );
-                  }
-                }}
-                disabled={isRemovingRenter}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                onClick={handleDeletePaymentConfirm}
+                disabled={isDeletingPayment}
+                className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
-                {isRemovingRenter
-                  ? t('removing') || 'Removing...'
-                  : t('remove_renter') || 'Remove Renter'}
+                {isDeletingPayment ? (t('deleting') || 'Deleting…') : (t('delete') || 'Delete')}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <InvoicePreviewModal
+        open={resendPreviewOpen}
+        pdfBase64={resendPdfBase64}
+        renterName={resendInvoiceData?.renterName}
+        onConfirm={handleResendConfirm}
+        onSkip={() => {
+          setResendPreviewOpen(false);
+          setResendPdfBase64(null);
+          setResendInvoiceData(null);
+          setResendPaymentId(null);
+        }}
+        isSending={isSendingResendReceipt}
+      />
     </div>
   );
 };

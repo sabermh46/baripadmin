@@ -22,6 +22,7 @@ const PrintEmailInfo = ({ log, meta: metaProp, htmlBody }) => {
   }
   meta = meta || {};
 
+  // eslint-disable-next-line no-unused-vars
   const handlePrint = () => {
     if (!printRef.current) return;
     // Clone content but replace iframe with raw HTML for print
@@ -83,7 +84,7 @@ const PrintEmailInfo = ({ log, meta: metaProp, htmlBody }) => {
             </span>
             {
               meta?.invoicePdfPath && (
-                <a href={ `${import.meta.env.VITE_APP_API_URL}${meta?.invoicePdfPath}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 text-xs hover:underline">PDF Attachment</a>
+                <a href={ `${import.meta.env.VITE_APP_API_URL}/${meta?.invoicePdfPath}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 text-xs hover:underline">PDF Attachment</a>
               )
             }
           </div>

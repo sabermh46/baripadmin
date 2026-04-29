@@ -180,6 +180,35 @@ export const flatApi = baseApi.injectEndpoints({
       invalidatesTags: ['PaymentReceipt'],
     }),
 
+    // POST: /financial/rent-payment/:id/send-receipt
+    // Sends a frontend-generated PDF receipt to the renter's email
+    sendPaymentReceiptPdf: builder.mutation({
+      query: ({ paymentId, pdfBase64 }) => ({
+        url: `/financial/rent-payment/${paymentId}/send-receipt`,
+        method: 'POST',
+        data: { pdfBase64 },
+      }),
+    }),
+
+    // PUT /payments/rent/:id — edit a rent payment record
+    updateRentPayment: builder.mutation({
+      query: ({ id, ...data }) => ({
+        url: `/payments/rent/${id}`,
+        method: 'PUT',
+        data,
+      }),
+      invalidatesTags: ['Payment', 'Flat'],
+    }),
+
+    // DELETE /payments/rent/:id — remove a rent payment record
+    deleteRentPayment: builder.mutation({
+      query: (id) => ({
+        url: `/payments/rent/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Payment', 'Flat'],
+    }),
+
   }),
 });
 
@@ -203,4 +232,7 @@ export const {
   useCreateAdvancePaymentMutation,
   useUpdateAdvancePaymentMutation,
   useDeleteAdvancePaymentMutation,
+  useSendPaymentReceiptPdfMutation,
+  useUpdateRentPaymentMutation,
+  useDeleteRentPaymentMutation,
 } = flatApi;
