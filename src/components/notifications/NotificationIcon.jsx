@@ -214,7 +214,7 @@ const NotificationIcon = () => {
                                     >
                                         <div className="flex items-start">
                                             {/* Icon */}
-                                            <div className="flex-shrink-0 mr-3">
+                                            <div className="shrink-0 mr-3">
                                                 <span className="text-lg" aria-hidden="true">
                                                     {getNotificationIcon(notification.type)}
                                                 </span>
@@ -241,26 +241,39 @@ const NotificationIcon = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Actions - hidden for system_common */}
-                                            {notification.type !== 'system_common' && (
-                                            <div className="flex flex-col ml-2 space-y-1">
-                                                <button
-                                                    onClick={(e) => handleToggleRead(e, notification)}
-                                                    className="p-1 text-gray-400 hover:text-blue-600"
-                                                    title={notification.read ? 'Mark as unread' : 'Mark as read'}
-                                                    aria-label={notification.read ? 'Mark as unread' : 'Mark as read'}
-                                                >
-                                                    <Check className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => handleDeleteNotification(e, notification.id)}
-                                                    className="p-1 text-gray-400 hover:text-red-600"
-                                                    title="Delete"
-                                                    aria-label="Delete notification"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
+                                            {/* Actions */}
+                                            {notification.type === 'system_common' ? (
+                                                !notification.read && (
+                                                    <div className="ml-2">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); markAsRead(notification.id); }}
+                                                            className="p-1 text-gray-400 hover:text-blue-600"
+                                                            title="Mark as read"
+                                                            aria-label="Mark as read"
+                                                        >
+                                                            <Check className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <div className="flex flex-col ml-2 space-y-1">
+                                                    <button
+                                                        onClick={(e) => handleToggleRead(e, notification)}
+                                                        className="p-1 text-gray-400 hover:text-blue-600"
+                                                        title={notification.read ? 'Mark as unread' : 'Mark as read'}
+                                                        aria-label={notification.read ? 'Mark as unread' : 'Mark as read'}
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleDeleteNotification(e, notification.id)}
+                                                        className="p-1 text-gray-400 hover:text-red-600"
+                                                        title="Delete"
+                                                        aria-label="Delete notification"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
