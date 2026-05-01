@@ -111,7 +111,6 @@ import LoansPage from '../pages/Loans';
 // Protected route wrapper
 const ProtectedRoute = ({ children, roles = [], permissions = [] }) => {
   const { isAuthenticated, user, isLoading, hasPermission } = useAuth();
-  console.log(user);
   
   if (isLoading) {
     return (
