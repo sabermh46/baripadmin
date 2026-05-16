@@ -2,6 +2,10 @@
 @import "tailwindcss";
 
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   /* Primary Colors - Orange */
   --color-primary-100: #feead8;

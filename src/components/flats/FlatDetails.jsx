@@ -247,6 +247,9 @@ const FlatDetails = () => {
     const invoiceData = {
       renterName: renterInfo.name || 'N/A',
       houseName: flat.houseName || house.name || 'N/A',
+      houseAddress: flat.houseAddress || house.address || null,
+      ownerEmail: flat.ownerEmail || null,
+      ownerPhone: flat.ownerPhone || null,
       flatNumber: flat.number,
       totalAmount: payment.amount || payment.paid_amount || 0,
       paymentDate: payment.paid_date,

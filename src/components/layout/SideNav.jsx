@@ -6,6 +6,7 @@ import {
   FileText,
   House,
   Landmark,
+  Layout,
   LayoutDashboard,
   SettingsIcon,
   Users,
@@ -120,6 +121,12 @@ export const SideNav = ({ onClicked }) => {
       label: t("settings"),
       icon: <SettingsIcon />,
       roles: ["developer", "web_owner"],
+    },
+    {
+      path: "/admin/landing-editor",
+      label: t("landing_editor") || "Landing Page",
+      icon: <Layout />,
+      roles: ["web_owner"],
     },
   ];
 

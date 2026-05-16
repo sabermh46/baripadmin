@@ -35,6 +35,7 @@ import ChangePassword from '../pages/auth/ChangePassword';
 import HouseOwnerExpensesPage from '../pages/Expenses';
 import AppFeePage from '../pages/AppFee/AppFeePage';
 import LoansPage from '../pages/Loans';
+import LandingPageEditor from '../pages/Admin/LandingPageEditor';
 
 
 
@@ -368,6 +369,11 @@ const AppRoutes = () => {
             <Route path="/loans" element={
               <ProtectedRoute roles={allRoles}>
                 <LoansPage />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/landing-editor" element={
+              <ProtectedRoute roles={['web_owner', 'developer']}>
+                <LandingPageEditor />
               </ProtectedRoute>
             } />
         </Route>

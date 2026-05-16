@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useLoginMutation } from "../../store/api/authApi"; // your original version
 import { useAppDispatch } from "../../hooks";
 import { setCredentials } from "../../store/slices/authSlice";
@@ -8,12 +8,26 @@ import { buildingShade } from "../../assets";
 import TextField from "../../components/common/TextField";
 import SmartFrom from "../../components/common/SmartForm";
 import { ChevronLeft } from "lucide-react";
+
+const GOOGLE_ERROR_MESSAGES = {
+  registration_disabled: 'New registrations are currently closed. Please contact an administrator to get access.',
+  google_auth_failed: 'Google sign-in failed. Please try again or use email and password.',
+};
+
 export default function LoginPage() {
 
   const [error, setError] = useState("");
   const [loginMutation, { isLoading }] = useLoginMutation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const errorCode = searchParams.get('error');
+    if (errorCode) {
+      setError(GOOGLE_ERROR_MESSAGES[errorCode] || 'An error occurred. Please try again.');
+    }
+  }, []);
 
     const fields = [
       {

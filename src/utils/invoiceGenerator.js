@@ -43,6 +43,9 @@ function formatMonth(rawMonth) {
  * @param {object} data
  * @param {string} data.renterName
  * @param {string} data.houseName
+ * @param {string} [data.houseAddress]
+ * @param {string} [data.ownerEmail]
+ * @param {string} [data.ownerPhone]
  * @param {string} data.flatNumber
  * @param {number} data.totalAmount
  * @param {string} data.paymentDate   ISO date string
@@ -61,6 +64,9 @@ export async function generateRentReceiptPdf(data) {
   const {
     renterName = 'N/A',
     houseName = 'N/A',
+    houseAddress,
+    ownerEmail,
+    ownerPhone,
     flatNumber = 'N/A',
     totalAmount = 0,
     paymentDate,
@@ -124,9 +130,22 @@ export async function generateRentReceiptPdf(data) {
   // ── Info Boxes ───────────────────────────────────────────────────────────
   const boxY = 34;
 
+  // Pre-compute right box address lines (max 2) for dynamic height
+  const addrLines = houseAddress
+    ? doc.splitTextToSize(houseAddress, 78).slice(0, 2)
+    : [];
+  const rightLineCount =
+    1 + // house name
+    (forMonth ? 1 : 0) +
+    addrLines.length +
+    (ownerEmail ? 1 : 0) +
+    (ownerPhone ? 1 : 0);
+  // 7 title + 7 first-line gap + remaining lines at 7px each + 4 bottom padding
+  const BOX_H = Math.max(38, 7 + 7 + (rightLineCount * 7) + 4);
+
   // Left box: Renter details
   doc.setFillColor(255, 248, 242);
-  doc.roundedRect(14, boxY, 86, 38, 2, 2, 'F');
+  doc.roundedRect(14, boxY, 86, BOX_H, 2, 2, 'F');
 
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
@@ -150,7 +169,7 @@ export async function generateRentReceiptPdf(data) {
 
   // Right box: Property details
   doc.setFillColor(255, 248, 242);
-  doc.roundedRect(104, boxY, 92, 38, 2, 2, 'F');
+  doc.roundedRect(104, boxY, 92, BOX_H, 2, 2, 'F');
 
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
@@ -164,15 +183,32 @@ export async function generateRentReceiptPdf(data) {
 
   doc.setFontSize(8);
   doc.setTextColor(80);
+  let rY = boxY + 21;
   if (forMonth) {
-    doc.text(`For Month: ${formatMonth(forMonth)}`, 108, boxY + 21);
+    doc.text(`For Month: ${formatMonth(forMonth)}`, 108, rY);
+    rY += 7;
+  }
+  if (addrLines.length > 0) {
+    addrLines.forEach(line => {
+      doc.text(line, 108, rY);
+      rY += 7;
+    });
+  }
+  if (ownerEmail) {
+    doc.setFontSize(7.5);
+    doc.text(`Email: ${ownerEmail}`, 108, rY);
+    doc.setFontSize(8);
+    rY += 7;
+  }
+  if (ownerPhone) {
+    doc.text(`Phone: ${ownerPhone}`, 108, rY);
   }
 
   // ── Payment Breakdown Table ──────────────────────────────────────────────
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...BRAND);
-  doc.text('Payment Breakdown', 14, boxY + 48);
+  doc.text('Payment Breakdown', 14, boxY + BOX_H + 10);
 
   const breakdownRows = [
     ['Base Rent', `BDT ${formatMoney(baseRent)}`],
@@ -185,7 +221,7 @@ export async function generateRentReceiptPdf(data) {
   }
 
   autoTable(doc, {
-    startY: boxY + 52,
+    startY: boxY + BOX_H + 14,
     margin: { left: 14, right: 14 },
     tableWidth: 100,
     head: [['Description', 'Amount']],

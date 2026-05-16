@@ -219,6 +219,9 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
           const invoiceData = {
             renterName: renter.name,
             houseName: flat.houseName || flat.house_name || 'N/A',
+            houseAddress: flat.houseAddress || flat.house_address || null,
+            ownerEmail: flat.ownerEmail || null,
+            ownerPhone: flat.ownerPhone || null,
             flatNumber: flat.number,
             totalAmount,
             paymentDate: formData.paid_date,
