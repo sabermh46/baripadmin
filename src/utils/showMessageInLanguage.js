@@ -6,7 +6,6 @@ import i18n from '../i18n';
  * @returns {string} Message in current language, or original if no split, or empty string if falsy
  */
 export const showMessageInLanguage = (message) => {
-  console.log(message);
   if (message == null || typeof message !== 'string') {
     return '';
   }

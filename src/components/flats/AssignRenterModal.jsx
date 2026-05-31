@@ -4,6 +4,7 @@ import { useAssignRenterMutation } from '../../store/api/flatApi';
 import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 import Btn from '../common/Button';
 
 const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = () => {} }) => {
@@ -235,7 +236,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
       setNextPaymentDate('');
     } catch (error) {
       console.error('Failed to assign renter:', error);
-      toast.error(`Failed to assign renter: ${error?.data?.error || error.message}`);
+      toast.error(showMessageInLanguage(error?.data?.error) || `Failed to assign renter: ${error.message}`);
     }
   };
 

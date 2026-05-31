@@ -64,26 +64,12 @@ class PushService {
       keys: Object.keys(subscription.toJSON().keys)
     });
 
-    // 5. Send to backend
+    // 5. Send to backend via axiosInstance (auth header injected automatically)
     console.log('📤 Sending subscription to backend...');
-    const response = await fetch('/notifications/subscribe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-      },
-      body: JSON.stringify({ 
-        subscription: subscription.toJSON() 
-      })
+    const { axiosInstance } = await import('../store/api/baseApi.js');
+    const { data } = await axiosInstance.post('/push/subscribe', {
+      subscription: subscription.toJSON()
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Backend error:', response.status, errorText);
-      throw new Error(`Backend error: ${response.status} ${errorText}`);
-    }
-
-    const data = await response.json();
     console.log('✅ Subscription saved to server:', data);
     
     return subscription;
@@ -115,16 +101,10 @@ class PushService {
       
       if (subscription) {
         await subscription.unsubscribe();
-        
+
         // Notify backend
-        await fetch('/notifications/unsubscribe', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-          },
-          body: JSON.stringify({ endpoint: subscription.endpoint })
-        });
+        const { axiosInstance } = await import('../store/api/baseApi.js');
+        await axiosInstance.post('/push/unsubscribe', { endpoint: subscription.endpoint });
         
         console.log('Unsubscribed from push notifications');
       }
@@ -136,13 +116,9 @@ class PushService {
   // Send test notification
   async sendTest() {
     try {
-      const response = await fetch('/notifications/test', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        }
-      });
-      return await response.json();
+      const { axiosInstance } = await import('../store/api/baseApi.js');
+      const { data } = await axiosInstance.post('/notifications/test');
+      return data;
     } catch (error) {
       console.error('Test notification failed:', error);
       return { success: false, error: error.message };

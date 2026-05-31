@@ -1,30 +1,22 @@
 // components/renter/ViewRenterModal.jsx
 import React from 'react';
 import { useGetRenterDetailsQuery } from '../../store/api/renterApi';
-import { 
-  User, 
-  Phone, 
-  Mail, 
-  FileText, 
+import {
+  User,
+  Phone,
+  Mail,
+  FileText,
   Home,
   Calendar,
-  Clock,
   Download,
   ChevronRight
 } from 'lucide-react';
 import Modal from '../common/Modal';
+import ProtectedImage, { downloadProtectedFile } from '../common/ProtectedImage';
 import { Link } from 'react-router-dom';
 
 const ViewRenterModal = ({ isOpen, onClose, renterId }) => {
   const { data, isLoading } = useGetRenterDetailsQuery(renterId);
-
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    
-    
-    // Use the proxy endpoint
-    return `${import.meta.env.VITE_APP_API_URL}${imagePath}`;
-  };
 
   const renter = data?.data?.renter;
   const flats = data?.data?.flats || [];
@@ -117,48 +109,38 @@ const ViewRenterModal = ({ isOpen, onClose, renterId }) => {
                   <div className="border rounded-lg p-3 bg-white">
                     <p className="text-xs text-gray-500 mb-2">NID Front Image</p>
                     <div className="relative">
-                      <img
-                        src={getImageUrl(renter.nidFrontImageUrl)}
+                      <ProtectedImage
+                        src={renter.nidFrontImageUrl}
                         alt="NID Front"
                         className="w-full h-48 object-contain rounded"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                        }}
                       />
-                      <a 
-                        href={getImageUrl(renter.nidFrontImageUrl)}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => downloadProtectedFile(renter.nidFrontImageUrl, 'nid_front')}
                         className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow hover:bg-gray-100"
                       >
                         <Download className="h-4 w-4 text-gray-600" />
-                      </a>
+                      </button>
                     </div>
                   </div>
                 )}
-                
+
                 {renter.nidBackImageUrl && (
                   <div className="border rounded-lg p-3 bg-white">
                     <p className="text-xs text-gray-500 mb-2">NID Back Image</p>
                     <div className="relative">
-                      <img
-                        src={getImageUrl(renter.nidBackImageUrl)}
+                      <ProtectedImage
+                        src={renter.nidBackImageUrl}
                         alt="NID Back"
                         className="w-full h-48 object-contain rounded"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                        }}
                       />
-                      <a 
-                        href={getImageUrl(renter.nidBackImageUrl)}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => downloadProtectedFile(renter.nidBackImageUrl, 'nid_back')}
                         className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow hover:bg-gray-100"
                       >
                         <Download className="h-4 w-4 text-gray-600" />
-                      </a>
+                      </button>
                     </div>
                   </div>
                 )}

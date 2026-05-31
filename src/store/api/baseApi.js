@@ -1,6 +1,9 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
-import axios, { AxiosError } from 'axios';
-// import { RootState } from '..'; // Import removed
+import axios from 'axios';
+
+// Store is injected after creation to avoid circular imports.
+let store;
+export const injectStore = (_store) => { store = _store; };
 
 // Create axios instance
 export const axiosInstance = axios.create({
@@ -9,27 +12,21 @@ export const axiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // For session cookies
+  withCredentials: true, // sends HttpOnly refresh-token cookie automatically
 });
 
-// Request interceptor to add token
+// Request interceptor — read access token from Redux memory only (never localStorage)
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = store?.getState().auth.accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Automatically handle FormData - remove Content-Type for FormData
+    // Let browser set Content-Type + boundary for FormData
     if (config.data instanceof FormData) {
-      // Remove the Content-Type header so browser sets it with boundary
       delete config.headers['Content-Type'];
-      
-      // Also ensure we don't have any other JSON-specific headers
       delete config.headers['Accept'];
-      
-      // If you need to set any specific headers for FormData, do it here
-      // For example, you might want to set a boundary or other headers
     }
 
     return config;
@@ -37,16 +34,14 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for token refresh
+// Response interceptor — use HttpOnly cookie for silent token refresh
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // ❌ DO NOT retry refresh endpoint itself
     if (originalRequest.url.includes("/auth/refresh")) {
-      // Clear tokens and redirect to login
-      localStorage.clear();
+      store?.dispatch({ type: 'auth/logout' });
       window.location.replace("/login");
       return Promise.reject(error);
     }
@@ -55,33 +50,26 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (!refreshToken) throw new Error("No refresh token");
-
-        // ✅ Use plain axios WITHOUT interceptor for refresh call
+        // Refresh token is in the HttpOnly cookie — no body needed.
         const { data } = await axios({
           method: 'POST',
           url: `${import.meta.env.VITE_APP_API_URL}/auth/refresh`,
-          data: { refreshToken: refreshToken },
-          headers: {
-            'Content-Type': 'application/json'
-          }
-          // NO Authorization header, NO withCredentials
+          withCredentials: true,
+          headers: { 'Content-Type': 'application/json' },
         });
 
-        localStorage.setItem("accessToken", data.accessToken);
-        localStorage.setItem("refreshToken", data.refreshToken);
+        // Store new access token in Redux only
+        store?.dispatch({ type: 'auth/setCredentials', payload: {
+          user: store.getState().auth.user,
+          accessToken: data.accessToken,
+        }});
 
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-  localStorage.clear();
-  return Promise.reject({
-    ...refreshError,
-    isAuthError: true
-  });
-}
-
+        store?.dispatch({ type: 'auth/logout' });
+        return Promise.reject({ ...refreshError, isAuthError: true });
+      }
     }
 
     return Promise.reject(error);

@@ -79,67 +79,34 @@ const useNotifications = (initialFilters = {}) => {
     }
   }, [pagination.hasNextPage]);
 
-  // Listen for real-time updates
+  // Listen for real-time update events and visibility changes (stable — no polling deps)
   useEffect(() => {
-    const handleRefreshNotifications = () => {
-      console.log('Handling refresh notifications event');
-      refresh(true);
-    };
+    const handleRefreshNotifications = () => refresh(true);
+    const handleNotificationReceived = () => refresh(true);
+    const handleVisibilityChange = () => { if (!document.hidden) refresh(); };
 
-    const handleNotificationReceived = (event) => {
-      console.log('Notification received event:', event.detail);
-      refresh(true);
-      
-      // Optional: Show a toast or visual indicator
-      if ('Notification' in window && Notification.permission === 'granted') {
-        // You could show a subtle toast here
-      }
-    };
-
-    // Listen for custom events
     window.addEventListener('refreshNotifications', handleRefreshNotifications);
     window.addEventListener('notificationReceived', handleNotificationReceived);
-
-    // Also listen for visibility change to refresh when tab becomes visible
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        refresh();
-      }
-    };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Poll for updates when tab is visible
-    let pollInterval;
-    const startPolling = () => {
-      if (!document.hidden && unreadCount > 0) {
-        pollInterval = setInterval(() => {
-          refresh();
-        }, 60000); // Poll every minute when there are unread notifications
-      }
-    };
-
-    startPolling();
-
-    // Restart polling when tab becomes visible
-    const handlePollingRestart = () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-      startPolling();
-    };
-
-    document.addEventListener('visibilitychange', handlePollingRestart);
 
     return () => {
       window.removeEventListener('refreshNotifications', handleRefreshNotifications);
       window.removeEventListener('notificationReceived', handleNotificationReceived);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      document.removeEventListener('visibilitychange', handlePollingRestart);
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
     };
+  }, [refresh]);
+
+  // Separate effect for the polling interval — only restarts when unreadCount changes
+  useEffect(() => {
+    if (unreadCount <= 0 || document.hidden) return;
+
+    const pollInterval = setInterval(() => refresh(), 60000);
+
+    const handleVisibilityChange = () => {
+      // interval is managed by this effect's lifecycle; tab-hide/show handled by effect above
+    };
+
+    return () => clearInterval(pollInterval);
   }, [refresh, unreadCount]);
 
   // Handle mark as read

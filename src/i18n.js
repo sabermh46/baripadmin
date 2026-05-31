@@ -518,6 +518,55 @@ const resources = {
       "landing_footer_rights": "All rights reserved.",
       "landing_login": "Login",
       "landing_signup": "Sign Up",
+      "landing_editor": "Landing Page",
+
+      // House edit form
+      "address_is_required": "Address is required",
+      "back_to_property_details": "Back to Property Details",
+      "edit_property": "Edit Property",
+      "update_property_information": "Update Property Information",
+
+      // Auth
+      "failed_to_send_reset_link": "Failed to send reset link",
+
+      // Payment actions
+      "save_changes": "Save Changes",
+      "edit_payment": "Edit Payment",
+      "delete_payment": "Delete Payment",
+      "delete_payment_confirm": "Are you sure you want to permanently delete this payment record? This cannot be undone.",
+      "payment_deleted": "Payment deleted successfully",
+      "deleting": "Deleting…",
+      "view_receipt": "View Receipt",
+
+      // Payment breakdown labels
+      "base": "Base",
+      "amenities": "Amenities",
+      "advance_payment_available": "Advance Payment Available",
+      "pending_payments": "pending payment(s)",
+      "can_be_paid_with_advance": "can be paid using advance.",
+      "apply_now": "Apply now",
+      "apply": "Apply",
+      "advance_available": "advance available",
+      "status_and_charges": "Status & Charges",
+      "day": "Day",
+      "next": "Next",
+
+      // Remove renter modal
+      "remove_renter_warning": "Are you sure you want to remove this renter? This action will vacate the flat and cannot be undone.",
+      "advance_refund_notice": "This renter has a remaining advance balance.",
+      "enter_refund_amount": "Enter the amount to refund (leave 0 to forfeit).",
+      "max": "max",
+      "invalid_amount": "Invalid amount",
+      "refund_exceeds_advance": "Refund cannot exceed",
+
+      // Reminder modal
+      "send_reminder_confirm": "Send reminder to",
+
+      // Charts & stats
+      "percentage": "Percentage",
+      "expense_categories": "Expense Categories",
+      "click_any_payment_to_view_details": "Click any payment to view details",
+      "due": "Due",
 
     }
   },
@@ -1035,6 +1084,55 @@ const resources = {
       "landing_footer_rights": "সমস্ত অধিকার সংরক্ষিত।",
       "landing_login": "লগইন",
       "landing_signup": "সাইন আপ",
+      "landing_editor": "ল্যান্ডিং পেজ",
+
+      // House edit form
+      "address_is_required": "ঠিকানা প্রয়োজন",
+      "back_to_property_details": "বাড়ির বিবরণে ফিরে যান",
+      "edit_property": "বাড়ি সম্পাদনা",
+      "update_property_information": "বাড়ির তথ্য আপডেট করুন",
+
+      // Auth
+      "failed_to_send_reset_link": "রিসেট লিঙ্ক পাঠাতে ব্যর্থ হয়েছে",
+
+      // Payment actions
+      "save_changes": "পরিবর্তন সংরক্ষণ করুন",
+      "edit_payment": "পেমেন্ট সম্পাদনা",
+      "delete_payment": "পেমেন্ট মুছুন",
+      "delete_payment_confirm": "আপনি কি নিশ্চিত যে এই পেমেন্ট রেকর্ড স্থায়ীভাবে মুছতে চান? এটি পূর্বাবস্থায় ফেরানো যাবে না।",
+      "payment_deleted": "পেমেন্ট সফলভাবে মুছে ফেলা হয়েছে",
+      "deleting": "মুছে ফেলা হচ্ছে...",
+      "view_receipt": "রসিদ দেখুন",
+
+      // Payment breakdown labels
+      "base": "মূল",
+      "amenities": "সুযোগ-সুবিধা",
+      "advance_payment_available": "অগ্রিম পেমেন্ট উপলব্ধ",
+      "pending_payments": "বাকি পেমেন্ট",
+      "can_be_paid_with_advance": "অগ্রিম দিয়ে পরিশোধ করা যাবে।",
+      "apply_now": "এখনই প্রয়োগ করুন",
+      "apply": "প্রয়োগ করুন",
+      "advance_available": "অগ্রিম উপলব্ধ",
+      "status_and_charges": "স্ট্যাটাস ও চার্জ",
+      "day": "দিন",
+      "next": "পরবর্তী",
+
+      // Remove renter modal
+      "remove_renter_warning": "আপনি কি নিশ্চিত যে এই ভাড়াটিয়াকে সরাতে চান? এই ক্রিয়াটি ফ্ল্যাট খালি করবে এবং পূর্বাবস্থায় ফেরানো যাবে না।",
+      "advance_refund_notice": "এই ভাড়াটিয়ার একটি অবশিষ্ট অগ্রিম ব্যালেন্স রয়েছে।",
+      "enter_refund_amount": "ফেরত পরিমাণ লিখুন (০ রাখলে বাজেয়াপ্ত হবে)।",
+      "max": "সর্বোচ্চ",
+      "invalid_amount": "অবৈধ পরিমাণ",
+      "refund_exceeds_advance": "ফেরত পরিমাণ অতিক্রম করতে পারবে না",
+
+      // Reminder modal
+      "send_reminder_confirm": "স্মরণ পাঠান",
+
+      // Charts & stats
+      "percentage": "শতাংশ",
+      "expense_categories": "খরচের বিভাগ",
+      "click_any_payment_to_view_details": "বিবরণ দেখতে যেকোনো পেমেন্টে ক্লিক করুন",
+      "due": "বাকি",
 
     }
   }
@@ -1053,6 +1151,10 @@ i18n
       caches: ['localStorage', 'cookie'],
     },
     interpolation: {
+      // React already escapes all JSX interpolations, so i18next double-escaping
+      // is intentionally disabled to avoid &amp;lt; artifacts.
+      // IMPORTANT: never pass translation strings to dangerouslySetInnerHTML —
+      // use the <Trans> component instead, which handles HTML safely.
       escapeValue: false
     }
   });

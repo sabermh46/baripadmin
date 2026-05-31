@@ -1,23 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useAuth } from '../../hooks';
-import { useSetPasswordMutation, useLinkGoogleAccountMutation } from '../../store/api/authApi';
+import { useSetPasswordMutation, useLinkGoogleAccountMutation, useUploadAvatarMutation } from '../../store/api/authApi';
+import { setUser } from '../../store/slices/authSlice';
 import push from '../../services/push';
-import NotificationTester from '../../components/admin/NotificationTester';
 import Btn from '../../components/common/Button';
 import GoogleButton from '../../components/common/GoogleButton';
+import ProtectedImage from '../../components/common/ProtectedImage';
 import { useTranslation } from 'react-i18next';
+import { Camera, User } from 'lucide-react';
+
 const ProfilePage = () => {
   const { user } = useAuth();
+  const dispatch = useDispatch();
   const [setPasswordMutation] = useSetPasswordMutation();
   const [linkGoogleMutation] = useLinkGoogleAccountMutation();
+  const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
-   const [pushStatus, setPushStatus] = useState('checking');
-   const [testResult, setTestResult] = useState(null);
-   const {t} = useTranslation()
+  const [pushStatus, setPushStatus] = useState('checking');
+  const [testResult, setTestResult] = useState(null);
+  const [avatarError, setAvatarError] = useState('');
+  const avatarInputRef = useRef(null);
+  const { t } = useTranslation();
 
-  
   const checkPushStatus = async () => {
     if (!push.isSupported) {
       setPushStatus('unsupported');
@@ -28,7 +35,6 @@ const ProfilePage = () => {
     if (permission === 'denied') {
       setPushStatus('blocked');
     } else if (permission === 'granted') {
-      // Check if subscribed
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       setPushStatus(subscription ? 'subscribed' : 'not_subscribed');
@@ -36,11 +42,10 @@ const ProfilePage = () => {
       setPushStatus('pending');
     }
   };
-  
 
   const handleSubscribe = async () => {
     setPushStatus('subscribing');
-    const result = await push.subscribeUser();
+    await push.subscribeUser();
     await checkPushStatus();
   };
 
@@ -58,12 +63,10 @@ const ProfilePage = () => {
 
   const handleSetPassword = async (e) => {
     e.preventDefault();
-    
     if (password !== confirmPassword) {
       setMessage('Passwords do not match');
       return;
     }
-    
     try {
       await setPasswordMutation({ password }).unwrap();
       setMessage('Password set successfully!');
@@ -75,55 +78,107 @@ const ProfilePage = () => {
   };
 
   const handleLinkGoogle = () => {
-    window.open(
-      `${import.meta.env.VITE_APP_API_URL}/auth/google?link=true`,
-      "_self"
-    );
+    window.open(`${import.meta.env.VITE_APP_API_URL}/auth/google?link=true`, '_self');
   };
 
-  
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setAvatarError('');
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+      const result = await uploadAvatar(formData).unwrap();
+      // Update Redux user state so the new avatar appears immediately
+      const updatedMetadata = { ...(user.metadata || {}), avatarPath: result.avatarPath };
+      dispatch(setUser({ ...user, metadata: updatedMetadata }));
+    } catch (err) {
+      setAvatarError(err?.data?.error || 'Failed to upload avatar');
+    }
+  };
 
   useEffect(() => {
-    const cps = async () => {
-      checkPushStatus();
-    }
-    cps()
+    checkPushStatus();
   }, []);
+
+  const avatarPath = user?.metadata?.avatarPath;
+  const googleAvatar = user?.avatarUrl;
 
   return (
     <div className="min-h-screen">
       <div className="max-w-full mx-auto">
-        {/* Header */}
         <h1 className="text-base md:text-xl font-semibold text-slate-600 mb-8 pb-2 inline-block">
           {t('profile_settings')}
         </h1>
 
-        {/* Profile Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* Personal Information Card */}
+          {/* Personal Information + Avatar Card */}
           <div className="bg-white max-w-full p-3 md:p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 md:col-span-2 lg:col-span-1">
             <h3 className="text-4base md:text-xl font-bold text-primary-600 mb-4 flex items-center">
               <span className="mr-2 text-base md:text-2xl">👤</span> {t('personal_information')}
             </h3>
-            
+
+            {/* Avatar */}
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="relative">
+                <div className="h-20 w-20 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-2 border-gray-200">
+                  {avatarPath ? (
+                    <ProtectedImage
+                      src={avatarPath}
+                      alt="Profile picture"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : googleAvatar ? (
+                    <img src={googleAvatar} alt="Profile picture" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="h-10 w-10 text-gray-400" />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
+                  className="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full shadow hover:bg-primary/90 disabled:opacity-50"
+                  title="Change profile picture"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800">{user?.name || t('not_set')}</p>
+                <p className="text-sm text-gray-500">{user?.role?.name}</p>
+                {isUploadingAvatar && <p className="text-xs text-blue-500 mt-1">Uploading...</p>}
+                {avatarError && <p className="text-xs text-red-500 mt-1">{avatarError}</p>}
+              </div>
+            </div>
+
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <strong className="text-gray-600 font-medium">{t('name')}:</strong> 
+              <strong className="text-gray-600 font-medium">{t('name')}:</strong>
               <span className="text-gray-800 font-semibold">{user?.name || t('not_set')}</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <strong className="text-gray-600 font-medium">{t('email')}:</strong> 
+              <strong className="text-gray-600 font-medium">{t('email')}:</strong>
               <span className="text-gray-800 font-semibold whitespace-pre-wrap break-all text-right">{user?.email}</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <strong className="text-gray-600 font-medium">{t('role')}:</strong> 
+              <strong className="text-gray-600 font-medium">{t('role')}:</strong>
               <span className="text-gray-800 font-semibold">{user?.role?.name}</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-3 last:border-b-0">
-              <strong className="text-gray-600 font-medium">{t('account_created')}:</strong> 
+              <strong className="text-gray-600 font-medium">{t('account_created')}:</strong>
               <span className="text-gray-800 font-semibold">{new Date(user?.createdAt || '').toLocaleDateString()}</span>
             </div>
           </div>
@@ -133,8 +188,7 @@ const ProfilePage = () => {
             <h3 className="text-base md:text-xl font-bold text-primary-600 mb-4 flex items-center">
               <span className="mr-2 text-base md:text-2xl">🔐</span> {t('security')}
             </h3>
-            
-            {/* Password Status */}
+
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <strong className="text-gray-600 font-medium">{t('password')}:</strong>
               {!user?.needsPasswordSetup ? (
@@ -147,8 +201,7 @@ const ProfilePage = () => {
                 </span>
               )}
             </div>
-            
-            {/* Google Account Status */}
+
             <div className="flex justify-between items-center py-3 last:border-b-0">
               <strong className="text-gray-600 font-medium">Google Account:</strong>
               {user?.googleId ? (
@@ -161,8 +214,7 @@ const ProfilePage = () => {
                 </span>
               )}
             </div>
-            
-            {/* Set Password Form (Conditional) */}
+
             {user?.needsPasswordSetup && (!user.passwordHash || !user.googleId) ? (
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <h4 className="text-lg font-semibold text-gray-700 mb-3">{t('set_password')}</h4>
@@ -183,26 +235,19 @@ const ProfilePage = () => {
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition duration-150"
                   />
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="w-full bg-primary-600 text-white py-2 rounded-lg font-semibold hover:bg-primary-700 transition duration-300 shadow-md"
                   >
                     {t('set_password')}
                   </button>
                 </form>
-              </div>)
-              : null
-            }
+              </div>
+            ) : null}
 
-
-            {
-              !user?.needsPasswordSetup &&
-              (<Btn href={'/change-password'}>
-                {t('change_password')}
-              </Btn>)
-            }
-            
-            
+            {!user?.needsPasswordSetup && (
+              <Btn href={'/change-password'}>{t('change_password')}</Btn>
+            )}
           </div>
 
           {/* Account Linking Card */}
@@ -211,13 +256,13 @@ const ProfilePage = () => {
               <span className="mr-2 text-base md:text-2xl">🔗</span> {t('account_linking')}
             </h3>
             <p className="text-gray-500 mb-6">{t('connect_external_services_for_fast_secure_login')}</p>
-            
+
             <div className="flex flex-col space-y-4">
               {!user?.googleId ? (
                 <GoogleButton onClick={handleLinkGoogle} />
               ) : (
-                <button 
-                  className="flex items-center justify-center w-full px-4 py-2 border border-green-400 rounded-lg font-semibold text-green-700 bg-green-50 transition duration-300 cursor-default" 
+                <button
+                  className="flex items-center justify-center w-full px-4 py-2 border border-green-400 rounded-lg font-semibold text-green-700 bg-green-50 transition duration-300 cursor-default"
                   disabled
                 >
                   ✅ {t('google_account_linked')}
@@ -227,9 +272,6 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
-
-      {/* <NotificationTester /> */}
-      
     </div>
   );
 };

@@ -1,12 +1,10 @@
-// src/hooks/usePushNotifications.js (updated)
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useAppSelector } from ".";
 import { toast } from "react-toastify";
-import axios from "axios";
+import { axiosInstance } from "../store/api/baseApi";
 
 const usePushNotifications = () => {
-    const { user } = useAppSelector(state => state.auth);
-    const token = localStorage.getItem('accessToken');
+    const { user, accessToken: token } = useAppSelector(state => state.auth);
     const [isSupported, setIsSupported] = useState(false);
     const [permission, setPermission] = useState('default');
     const [isSubscribed, setIsSubscribed] = useState(false);
@@ -15,9 +13,10 @@ const usePushNotifications = () => {
     
     // Use refs to prevent infinite loops and multiple attempts
     const initStartedRef = useRef(false);
-    const subscriptionAttemptRef = useRef(false); // Track if we've attempted subscription
+    const subscriptionAttemptRef = useRef(false);
     const permissionRef = useRef(permission);
     const isSubscribedRef = useRef(isSubscribed);
+    const abortControllerRef = useRef(null);
 
     const publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
@@ -166,16 +165,9 @@ const usePushNotifications = () => {
                 };
 
                 // Update the subscription on server
-                await axios.post(
-                    `${import.meta.env.VITE_APP_API_URL}/push/subscribe`,
-                    subscriptionData,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
+                await axiosInstance.post('/push/subscribe', subscriptionData, {
+                    signal: abortControllerRef.current?.signal,
+                });
 
                 toast.success('Push subscription updated.');
                 subscriptionAttemptRef.current = false;
@@ -202,16 +194,9 @@ const usePushNotifications = () => {
                 }
             };
 
-            const response = await axios.post(
-                `${import.meta.env.VITE_APP_API_URL}/push/subscribe`,
-                subscriptionData,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
+            const response = await axiosInstance.post('/push/subscribe', subscriptionData, {
+                signal: abortControllerRef.current?.signal,
+            });
 
             console.log('Subscription response:', response.data);
 
@@ -243,7 +228,7 @@ const usePushNotifications = () => {
             subscriptionAttemptRef.current = false;
             return false;
         }
-    }, [isSupported, publicKey, token]);
+    }, [isSupported, publicKey]);
 
     const unsubscribe = useCallback(async () => {
         if (!subscription) {
@@ -265,16 +250,9 @@ const usePushNotifications = () => {
         try {
             await subscription.unsubscribe();
             
-            await axios.post(
-                `${import.meta.env.VITE_APP_API_URL}/push/unsubscribe`,
-                { endpoint: subscription.endpoint },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
+            await axiosInstance.post('/push/unsubscribe', { endpoint: subscription.endpoint }, {
+                signal: abortControllerRef.current?.signal,
+            });
 
             setSubscription(null);
             setIsSubscribed(false);
@@ -298,7 +276,7 @@ const usePushNotifications = () => {
             toast.error('Failed to unsubscribe from notifications');
             return false;
         }
-    }, [subscription, token]);
+    }, [subscription]);
 
     const toggleSubscription = useCallback(async () => {
         if (isSubscribedRef.current) {
@@ -310,20 +288,16 @@ const usePushNotifications = () => {
 
     // Initialize only once when user logs in
     useEffect(() => {
-        if (user && token && isSupported && !isInitialized && !initStartedRef.current) {
+        if (user && isSupported && !isInitialized && !initStartedRef.current) {
             console.log('Initializing push notifications...');
             initStartedRef.current = true;
+            abortControllerRef.current = new AbortController();
 
             const init = async () => {
                 try {
-                    // First, register service worker
                     await registerServiceWorker();
-                    
-                    // Check if already subscribed
                     const existingSub = await checkExistingSubscription();
-                    
-                    // Only auto-subscribe if not already subscribed AND permission is granted
-                    // AND user hasn't manually toggled
+
                     if (!existingSub && permissionRef.current === 'granted') {
                         console.log('Auto-subscribing...');
                         await subscribe();
@@ -332,17 +306,23 @@ const usePushNotifications = () => {
                     } else {
                         console.log('Not auto-subscribing. Permission:', permissionRef.current);
                     }
-                    
+
                     setIsInitialized(true);
                 } catch (error) {
-                    console.error('Push notification initialization error:', error);
-                    initStartedRef.current = false; // Reset to allow retry
+                    if (error.name !== 'CanceledError' && error.name !== 'AbortError') {
+                        console.error('Push notification initialization error:', error);
+                        initStartedRef.current = false;
+                    }
                 }
             };
 
             init();
+
+            return () => {
+                abortControllerRef.current?.abort();
+            };
         }
-    }, [user, token, isSupported, isInitialized, registerServiceWorker, checkExistingSubscription, subscribe]);
+    }, [user, isSupported, isInitialized, registerServiceWorker, checkExistingSubscription, subscribe]);
 
     // Reset initialization when user logs out
     useEffect(() => {

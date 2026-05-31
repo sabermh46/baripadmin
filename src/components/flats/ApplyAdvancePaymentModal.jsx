@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, DollarSign, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { useApplyAdvancePaymentMutation } from '../../store/api/flatApi';
 import { toast } from 'react-toastify';
+import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 import { format } from 'date-fns';
 
 const ApplyAdvancePaymentModal = ({ 
@@ -73,7 +74,7 @@ const ApplyAdvancePaymentModal = ({
       onClose();
     } catch (error) {
       console.error('Failed to apply advance payment:', error);
-      toast.error(`Failed to apply advance payment: ${error?.data?.error || error.message}`);
+      toast.error(showMessageInLanguage(error?.data?.error) || `Failed to apply advance payment: ${error.message}`);
     }
   };
 

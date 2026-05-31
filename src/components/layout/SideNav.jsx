@@ -16,7 +16,7 @@ import { useAppDispatch, useAuth } from "../../hooks";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLogoutMutation } from "../../store/api/authApi";
 import { logout as logoutAction } from '../../store/slices/authSlice';
-import usePushNotifications from "../../hooks/usePushNotifications";
+import push from "../../services/push";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 
@@ -24,14 +24,12 @@ export const SideNav = ({ onClicked }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
 
-    const { unsubscribe } = usePushNotifications();
   const dispatch = useAppDispatch();
   const [logoutMutation] = useLogoutMutation();
   const navigate = useNavigate();
   const handleLogout = async () => {
     try {
-      await unsubscribe();
-      
+      await push.unsubscribeUser();
       await logoutMutation().unwrap();
       dispatch(logoutAction());
       navigate('/login');
@@ -195,6 +193,7 @@ export const SideNav = ({ onClicked }) => {
                 >
                   {t('logout')}
                 </button>
+                <p className="text-center text-xs text-gray-400 mt-2">v{__APP_VERSION__}</p>
               </div>
     </>
   );

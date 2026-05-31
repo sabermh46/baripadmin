@@ -88,7 +88,7 @@ const AdvancePaymentFormModal = ({
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err?.data?.error || 'Failed to create advance payment');
+      toast.error(showMessageInLanguage(err?.data?.error) || 'Failed to create advance payment');
     }
   };
 

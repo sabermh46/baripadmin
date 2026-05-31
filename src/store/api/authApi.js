@@ -143,6 +143,14 @@ export const authApi = baseApi.injectEndpoints({
       }),
       providesTags: ['ManagedUsers'],
     }),
+
+    uploadAvatar: builder.mutation({
+      query: (formData) => ({
+        url: '/auth/profile/avatar',
+        method: 'POST',
+        data: formData,
+      }),
+    }),
   }),
 });
 
@@ -164,4 +172,5 @@ export const {
   useGetPublicRegistrationStatusQuery,
   useCreateUserMutation,
   useGetManagedUsersQuery,
+  useUploadAvatarMutation,
 } = authApi;

@@ -281,7 +281,7 @@ const FlatDetails = () => {
       toast.success(t('receipt_resent') || 'Payment receipt resent successfully');
       refetchPaymentReceipts();
     } catch (error) {
-      toast.error(error?.data?.error || 'Failed to resend receipt');
+      toast.error(showMessageInLanguage(error?.data?.error) || 'Failed to resend receipt');
     } finally {
       setResendPreviewOpen(false);
       setResendPdfBase64(null);
@@ -303,7 +303,7 @@ const FlatDetails = () => {
       setSelectedPaymentForEdit(null);
       refetchDetails();
     } catch (err) {
-      toast.error(err?.data?.error || 'Failed to update payment');
+      toast.error(showMessageInLanguage(err?.data?.error) || 'Failed to update payment');
     }
   };
 
@@ -320,7 +320,7 @@ const FlatDetails = () => {
       setSelectedPaymentForDelete(null);
       refetchDetails();
     } catch (err) {
-      toast.error(err?.data?.error || 'Failed to delete payment');
+      toast.error(showMessageInLanguage(err?.data?.error) || 'Failed to delete payment');
     }
   };
 

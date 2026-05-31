@@ -11,7 +11,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import nProgress from 'nprogress';
 import RouteLoader, { LoaderMinimal } from './components/common/RouteLoader.jsx';
 import usePushNotifications from './hooks/usePushNotifications.js';
-import NotificationButton from './NotificationButton.jsx';
+import { useVersionCheck } from './hooks/useVersionCheck.js';
+// import NotificationButton from './NotificationButton.jsx';
 import { useTranslation } from 'react-i18next';
 
 nProgress.configure({
@@ -126,17 +127,13 @@ const AppContent = () => {
     const dispatch = useAppDispatch();
     const { updateAvailable, deferredPrompt: isPromptAvailable } = useAppSelector(state => state.ui);
     const { user } = useAppSelector(state => state.auth);
-    console.log(user);
+    // console.log(user);
     const { t } = useTranslation();
     
 
-    const { 
-        isSupported, 
-        permission, 
-        isSubscribed, 
-        toggleSubscription,
-        subscribe 
-    } = usePushNotifications();
+    // Single instance — handles auto-subscribe after login and state tracking
+    usePushNotifications();
+    useVersionCheck();
 
     // Network status
     useEffect(() => {
@@ -280,19 +277,21 @@ useEffect(() => {
                         console.log('No notification sound');
                     }
                     
+                    clearTimeout(refreshTimeout);
                     refreshTimeout = setTimeout(() => {
                         isRefreshing = false;
                     }, 1000);
                 }
             }
-            
+
             if (event.data && event.data.type === 'REFRESH_NOTIFICATIONS') {
                 console.log('Refresh requested from service worker');
-                
+
                 if (!isRefreshing) {
                     isRefreshing = true;
                     window.dispatchEvent(new CustomEvent('refreshNotifications'));
-                    
+
+                    clearTimeout(refreshTimeout);
                     refreshTimeout = setTimeout(() => {
                         isRefreshing = false;
                     }, 1000);
@@ -318,7 +317,8 @@ useEffect(() => {
                             detail: event.data
                         }));
                         window.dispatchEvent(new CustomEvent('refreshNotifications'));
-                        
+
+                        clearTimeout(refreshTimeout);
                         refreshTimeout = setTimeout(() => {
                             isRefreshing = false;
                         }, 1000);
@@ -342,8 +342,9 @@ useEffect(() => {
                     if (!isRefreshing) {
                         isRefreshing = true;
                         window.dispatchEvent(new CustomEvent('refreshNotifications'));
-                        
-                        setTimeout(() => {
+
+                        clearTimeout(refreshTimeout);
+                        refreshTimeout = setTimeout(() => {
                             isRefreshing = false;
                         }, 1000);
                     }
@@ -375,8 +376,9 @@ useEffect(() => {
                     if (!isRefreshing) {
                         isRefreshing = true;
                         window.dispatchEvent(new CustomEvent('refreshNotifications'));
-                        
-                        setTimeout(() => {
+
+                        clearTimeout(refreshTimeout);
+                        refreshTimeout = setTimeout(() => {
                             isRefreshing = false;
                         }, 1000);
                     }
@@ -446,16 +448,15 @@ useEffect(() => {
 
 
 
-    console.log(user, isSupported, permission, isSubscribed);
+    // console.log(user, isSupported, permission, isSubscribed);
     return (
         <>
 
             <RouteLoader />
             <AppRoutes />
 
-            {
-                user?.email && <NotificationButton />
-            }
+            {/* Push notifications disabled — cPanel outbound FCM blocked */}
+            {/* user?.email && <NotificationButton /> */}
 
             {/* 3. Render the integrated component, passing the Redux flag */}
             <PwaInstallPrompt isPromptAvailable={isPromptAvailable} />

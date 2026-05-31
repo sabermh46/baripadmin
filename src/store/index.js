@@ -1,5 +1,5 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import { 
+import {
   persistStore,
   persistReducer,
   FLUSH,
@@ -15,19 +15,25 @@ import uiReducer from './slices/uiSlice';
 import indexedDBStorage from './storage/indexedDBStorage';
 import { notificationApi } from './api/notificationApi';
 
-
-// Create IndexedDB storage
 const storage = indexedDBStorage;
+
+// Persist auth slice but never write the access token to storage —
+// it lives only in Redux memory and is re-acquired via refresh on page load.
+const authPersistConfig = {
+  key: 'auth',
+  storage,
+  blacklist: ['accessToken', 'isLoading', 'error'],
+};
 
 const persistConfig = {
   key: 'root',
   version: 1,
   storage,
-  whitelist: ['auth', 'ui'], // Only persist these slices
+  whitelist: ['ui'],
 };
 
 const rootReducer = combineReducers({
-  auth: authReducer,
+  auth: persistReducer(authPersistConfig, authReducer),
   ui: uiReducer,
   [authApi.reducerPath]: authApi.reducer,
   [notificationApi.reducerPath]: notificationApi.reducer,
