@@ -22,7 +22,8 @@ import LanguageSwitcher from "../common/LanguageSwitcher";
 
 export const SideNav = ({ onClicked }) => {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isBengali = i18n.language?.startsWith('bn');
 
   const dispatch = useAppDispatch();
   const [logoutMutation] = useLogoutMutation();
@@ -140,7 +141,7 @@ export const SideNav = ({ onClicked }) => {
   return (
     <>
 
-      <div className="max-h-[calc(100vh-3rem)] flex-1 overflow-y-auto pb-30 pt-12">
+      <div className="max-h-min overflow-y-auto">
         {filteredNavItems.map((item) => {
           let isActive = currentPath === item.path || (item.toMatch && item.toMatch.includes(currentPath));
           if(!isActive) {
@@ -153,7 +154,7 @@ export const SideNav = ({ onClicked }) => {
               key={item.path}
               to={item.path}
               onClick={()=>onClicked(false)}
-              className={`flex font-mooli group items-center gap-3 px-5 py-2 md:py-3 text-text hover:bg-primary hover:text-white duration-300 transition-colors aria-[current=page]:bg-primary aria-[current=page]:text-white ${
+              className={`flex ${isBengali ? 'font-hind-siliguri' : 'font-roboto'} group items-center gap-3 px-5 py-2 md:py-3 text-text hover:bg-primary hover:text-white duration-300 transition-colors aria-[current=page]:bg-primary aria-[current=page]:text-white ${
                 isActive ? "bg-slate-100" : ""
               }`}
             >
@@ -167,14 +168,14 @@ export const SideNav = ({ onClicked }) => {
               >
                 {item.icon}
               </span>
-              <span className={`group-hover:text-white ${isActive ? "font-bold text-primary font-poppins" : ""}`}
+              <span className={`group-hover:text-white ${isActive ? `font-bold text-primary ${isBengali ? 'font-hind-siliguri' : 'font-poppins'}` : ""}`}
               >{item.label}</span>
             </Link>
           );
         })}
       </div>
 
-      <div className="px-5 pt-5 border-t border-gray-200 absolute w-full max-w-full pb-5 bottom-0 bg-white overflow-x-clip">
+      <div className="px-5 pt-5 border-t shadow-[0_-5px_5px_rgba(0,0,0,0.1)] border-gray-200 w-full max-w-full pb-1 bg-white overflow-x-clip">
           <div className="pb-2 flex justify-end md:hidden">
             <LanguageSwitcher />
           </div>
@@ -193,7 +194,7 @@ export const SideNav = ({ onClicked }) => {
                 >
                   {t('logout')}
                 </button>
-                <p className="text-center text-xs text-gray-400 mt-2">v{__APP_VERSION__}</p>
+                <p className="text-center text-xs text-gray-400 mt-1">v{__APP_VERSION__}</p>
               </div>
     </>
   );

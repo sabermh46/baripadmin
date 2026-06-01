@@ -7,7 +7,10 @@ const initialState = {
   // The refreshToken is stored as an HttpOnly cookie by the server.
   accessToken: null,
   isAuthenticated: false,
-  isLoading: false,
+  // Starts true so ProtectedRoute shows a spinner until AuthInitializer completes
+  // the silent refresh check. It's blacklisted from persistence so it always
+  // resets to true on page load, blocking API calls until the token is restored.
+  isLoading: true,
   error: null,
 };
 

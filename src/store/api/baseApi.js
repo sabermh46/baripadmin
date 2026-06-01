@@ -5,6 +5,10 @@ import axios from 'axios';
 let store;
 export const injectStore = (_store) => { store = _store; };
 
+// Singleton refresh promise — prevents multiple simultaneous 401s from each
+// firing their own POST /auth/refresh. All queued requests share one refresh.
+let refreshPromise = null;
+
 // Create axios instance
 export const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_APP_API_URL,
@@ -49,25 +53,35 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        // Refresh token is in the HttpOnly cookie — no body needed.
-        const { data } = await axios({
+      // Reuse an in-flight refresh rather than firing a second one.
+      if (!refreshPromise) {
+        refreshPromise = axios({
           method: 'POST',
           url: `${import.meta.env.VITE_APP_API_URL}/auth/refresh`,
           withCredentials: true,
           headers: { 'Content-Type': 'application/json' },
-        });
+        })
+          .then(({ data }) => {
+            store?.dispatch({ type: 'auth/setCredentials', payload: {
+              user: store.getState().auth.user,
+              accessToken: data.accessToken,
+            }});
+            return data.accessToken;
+          })
+          .catch((err) => {
+            store?.dispatch({ type: 'auth/logout' });
+            return Promise.reject(err);
+          })
+          .finally(() => {
+            refreshPromise = null;
+          });
+      }
 
-        // Store new access token in Redux only
-        store?.dispatch({ type: 'auth/setCredentials', payload: {
-          user: store.getState().auth.user,
-          accessToken: data.accessToken,
-        }});
-
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+      try {
+        const newToken = await refreshPromise;
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        store?.dispatch({ type: 'auth/logout' });
         return Promise.reject({ ...refreshError, isAuthError: true });
       }
     }

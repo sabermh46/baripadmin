@@ -5,10 +5,11 @@ import { Link } from "react-router-dom";
 export default function StatsCardGrid({ stats = [] }) {
   const [isClicked, setIsClicked] = useState({});
   console.log(isClicked);
-  const {t} = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isBengali = i18n.language?.startsWith('bn');
   
   return (
-    <div className="grid grid-cols-4 gap-2 mt-3 font-mooli">
+    <div className={`grid grid-cols-4 gap-2 mt-3 ${isBengali ? 'font-hind-siliguri' : 'font-mooli'}`}>
       {stats.map(({ label, value, icon: Icon, hover }, idx) =>
         {
           return (
@@ -21,7 +22,7 @@ export default function StatsCardGrid({ stats = [] }) {
               <div className="w-12 h-12 mb-2 flex items-center justify-center">
                 <img className="w-10 h-10" src={Icon} />
               </div>
-              <p className="text-[0.7rem] sm:text-sm text-text/90 font-bold h-10 md:text-sm text-wrap font-roboto flex items-center justify-center">
+              <p className={`text-[0.7rem] sm:text-sm text-text/90 font-bold h-10 md:text-sm text-wrap ${isBengali ? 'font-hind-siliguri' : 'font-roboto'} flex items-center justify-center`}>
                 {label}
               </p>
               <p className="text-2xl font-bold text-black/70 mt-1 text-shadow-lg/7 font-poppins">
@@ -64,7 +65,7 @@ export default function StatsCardGrid({ stats = [] }) {
                                     <Link to={'/flats/' + flat.id} key={idx} className={`p-3 rounded-lg mb-2 hover:shadow-md transition-shadow relative block border border-gray-500 z-10`}>
                                       {
                                         isVacant && (
-                                          <span className="text-[0.6rem] w-full text-center font-poppins text-white px-1 rounded-lg rounded-b-none block absolute -z-10 top-0 bg-red-500 left-1/2 -translate-x-1/2">{t('vacant')}</span>
+                                          <span className={`text-[0.6rem] w-full text-center ${isBengali ? 'font-hind-siliguri' : 'font-poppins'} text-white px-1 rounded-lg rounded-b-none block absolute -z-10 top-0 bg-red-500 left-1/2 -translate-x-1/2`}>{t('vacant')}</span>
                                         )
                                       }
                                       <p className="font-medium text-text">{flat.name}</p>

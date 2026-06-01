@@ -13,7 +13,8 @@ import { addDays, format } from 'date-fns';
 const Layout = () => {
   const { user, isHouseOwner, isCaretaker } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isBengali = i18n.language?.startsWith('bn');
   const navigate = useNavigate();
   const { pendingPayment } = useAdminPendingAppFee();
 
@@ -29,8 +30,9 @@ const Layout = () => {
   return (
     <div className="flex min-h-screen max-w-full overflow-x-clip">
       {/* Sidebar */}
-      <div className="hidden md:flex md:sticky top-0 w-64 bg-surface border-r border-gray-200 flex-col py-5 max-h-screen">
-        <nav className="flex-1">
+      <div className="hidden md:flex md:sticky top-0 w-64 bg-surface border-r border-gray-200 flex-col h-screen!">
+        <nav className="flex-1 h-full grid grid-rows-[64px_1fr_auto]">
+          <div></div>
           <SideNav />
         </nav>
       </div>
@@ -42,7 +44,7 @@ const Layout = () => {
           
           
           <div className={`flex gap-2 items-center`}>
-            <Link to="/" className='flex items-center text-xl font-bold font-oswald gap-3 text-primary'>
+            <Link to="/" className={`flex items-center text-xl font-bold gap-3 text-primary ${isBengali ? 'font-hind-siliguri' : 'font-oswald'}`}>
               <img src={appLogo} className={`h-10`} alt="App Logo" />
               <p className=" leading-[100%]">{t('bari_porichalona')} <br /> 
               <span className='text-xs font-thin text-gray-500 font-mooli'>({user?.role?.name || 'User'})</span></p>
@@ -97,7 +99,7 @@ const Layout = () => {
       
         <div className={`fixed md:hidden inset-0 bg-black/25 z-30 duration-300 ${ isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none' }`}
         onClick={()=>setIsMobileMenuOpen(false)}>
-          <div onClick={(e)=>e.stopPropagation()} className={`md:hidden max-w-80 w-[80%] !min-w-[250px] bg-surface z-50 py-5 flex flex-col gap-2 shadow-2xl ${ isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full' }  fixed top-0 left-0 h-full w-full duration-300 transition-transform`}>
+          <div onClick={(e)=>e.stopPropagation()} className={`md:hidden max-w-80 w-[80%] !min-w-[250px] bg-surface z-50 pt-5 flex flex-col shadow-2xl ${ isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full' }  fixed top-0 left-0 h-full w-full duration-300 transition-transform`}>
             <SideNav isMobileMenuOpen={isMobileMenuOpen} onClicked={setIsMobileMenuOpen} />
           </div>
         </div>

@@ -10,6 +10,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import nProgress from 'nprogress';
 import RouteLoader, { LoaderMinimal } from './components/common/RouteLoader.jsx';
+import { AuthInitializer } from './components/common/AuthInitializer.jsx';
 import usePushNotifications from './hooks/usePushNotifications.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
 // import NotificationButton from './NotificationButton.jsx';
@@ -452,6 +453,7 @@ useEffect(() => {
     return (
         <>
 
+            <AuthInitializer />
             <RouteLoader />
             <AppRoutes />
 

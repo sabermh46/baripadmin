@@ -27,7 +27,8 @@ const HouseOwnerComponent = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  const {t} = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isBengali = i18n.language?.startsWith('bn');
   // Use RTK Query hooks
   const { 
     data: dashboardData, 
@@ -190,7 +191,7 @@ const HouseOwnerComponent = () => {
         <div className="">
           <h2 className="text-sm text-slate-700 font-semibold ">
             {t('welcome_back')}, {" "}
-            <span className="text-base font-mooli text-primary">{user?.name || 'User'}</span>
+            <span className={`text-base ${isBengali ? 'font-hind-siliguri' : 'font-mooli'} text-primary`}>{user?.name || 'User'}</span>
           </h2>
         </div>
         
