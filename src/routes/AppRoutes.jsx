@@ -1,41 +1,43 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks';
-import Layout from '../components/Layout';
-import LoginPage from '../pages/Login';
-import SignupPage from '../pages/Signup';
-import Dashboard from '../pages/Dashboard';
-import ProfilePage from '../pages/Profile';
-import AuthSuccess from '../pages/AuthSuccess';
-import PublicHome from '../pages/PublicHome'
-import NotificationPage from '../pages/Notification';
-import ComingSoonPage from '../pages/utility/ComingSoonPage';
-import AccessDeniedPage from '../pages/utility/AccessDeniedPage';
-import GenerateToken from '../pages/Admin/userBased/GenerateToken';
-import ViewAllStaff from '../pages/Admin/staff/ViewAllStaff';
-import StaffPage from '../pages/Admin/staff';
 import { LoaderMinimal } from '../components/common/RouteLoader';
-import { Loader } from 'lucide-react';
-import SystemSettings from '../pages/Admin/SystemSettings';
-import HouseOwnersPage from '../pages/Admin/HouseOwnersPage';
-import HouseOwnerDetailPage from '../pages/Admin/HouseOwnerDetail';
-import HousesPage from '../pages/House';
-import CreateHouseForm from '../components/admin/house/CreateHouseForm';
-import HouseDetails from '../components/admin/house/HouseDetails';
-import HouseEditForm from '../components/admin/house/HouseEditForm';
-import FlatList from '../components/flats/FlatList';
-import FlatDetails from '../components/flats/FlatDetails';
-import RenterList from '../components/renters/RenterList';
-import CareTakerPage from '../pages/Caretaker';
-import CaretakerDetails from '../components/caretaker/CaretakerDetails';
-import { ReportGenPage } from '../pages/report/ReportGenPage';
-import ForgotPassword from '../pages/auth/ForgotPassword';
-import ResetPassword from '../pages/auth/ResetPassword';
-import ChangePassword from '../pages/auth/ChangePassword';
-import HouseOwnerExpensesPage from '../pages/Expenses';
-import AppFeePage from '../pages/AppFee/AppFeePage';
-import LoansPage from '../pages/Loans';
-import LandingPageEditor from '../pages/Admin/LandingPageEditor';
+
+// Always loaded — part of the shell
+import Layout from '../components/Layout';
+
+// Lazy-loaded pages — each gets its own chunk, loaded only when visited
+const LoginPage            = lazy(() => import('../pages/Login'));
+const SignupPage           = lazy(() => import('../pages/Signup'));
+const Dashboard            = lazy(() => import('../pages/Dashboard'));
+const ProfilePage          = lazy(() => import('../pages/Profile'));
+const AuthSuccess          = lazy(() => import('../pages/AuthSuccess'));
+const PublicHome           = lazy(() => import('../pages/PublicHome'));
+const NotificationPage     = lazy(() => import('../pages/Notification'));
+const ComingSoonPage       = lazy(() => import('../pages/utility/ComingSoonPage'));
+const AccessDeniedPage     = lazy(() => import('../pages/utility/AccessDeniedPage'));
+const GenerateToken        = lazy(() => import('../pages/Admin/userBased/GenerateToken'));
+const ViewAllStaff         = lazy(() => import('../pages/Admin/staff/ViewAllStaff'));
+const SystemSettings       = lazy(() => import('../pages/Admin/SystemSettings'));
+const HouseOwnersPage      = lazy(() => import('../pages/Admin/HouseOwnersPage'));
+const HouseOwnerDetailPage = lazy(() => import('../pages/Admin/HouseOwnerDetail'));
+const HousesPage           = lazy(() => import('../pages/House'));
+const CreateHouseForm      = lazy(() => import('../components/admin/house/CreateHouseForm'));
+const HouseDetails         = lazy(() => import('../components/admin/house/HouseDetails'));
+const HouseEditForm        = lazy(() => import('../components/admin/house/HouseEditForm'));
+const FlatList             = lazy(() => import('../components/flats/FlatList'));
+const FlatDetails          = lazy(() => import('../components/flats/FlatDetails'));
+const RenterList           = lazy(() => import('../components/renters/RenterList'));
+const CareTakerPage        = lazy(() => import('../pages/Caretaker'));
+const CaretakerDetails     = lazy(() => import('../components/caretaker/CaretakerDetails'));
+const ReportGenPage        = lazy(() => import('../pages/report/ReportGenPage').then(m => ({ default: m.ReportGenPage })));
+const ForgotPassword       = lazy(() => import('../pages/auth/ForgotPassword'));
+const ResetPassword        = lazy(() => import('../pages/auth/ResetPassword'));
+const ChangePassword       = lazy(() => import('../pages/auth/ChangePassword'));
+const HouseOwnerExpensesPage = lazy(() => import('../pages/Expenses'));
+const AppFeePage           = lazy(() => import('../pages/AppFee/AppFeePage'));
+const LoansPage            = lazy(() => import('../pages/Loans'));
+const LandingPageEditor    = lazy(() => import('../pages/Admin/LandingPageEditor'));
 
 
 
@@ -176,9 +178,23 @@ const DynamicDashboard = () => {
   }
 };
 
+// Defined outside the component so the reference is stable across renders.
+const ALL_ROLES = ['web_owner', 'house_owner', 'staff', 'caretaker'];
+
+// Lightweight role check for routes that are already inside the Layout route.
+// Auth + isLoading are guaranteed by the parent ProtectedRoute — no need to
+// re-check them on every navigation and risk an Outlet flash.
+const RoleGuard = ({ children, roles = [] }) => {
+  const { user } = useAuth();
+  if (roles.length > 0 && user?.role?.slug && !roles.includes(user.role.slug)) {
+    return <Navigate to="/access-denied" replace />;
+  }
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
-  const allRoles = ['web_owner', 'house_owner', 'staff', 'caretaker'];
   return (
+    <Suspense fallback={<LoaderMinimal />}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<PublicHome />} /> {/* This Should be public, and should not redirect */}
@@ -255,126 +271,121 @@ const AppRoutes = () => {
           } /> */}
 
             <Route path="/houses" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <HousesPage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/houses/:id" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <HouseDetails />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/houses/:id/edit" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <HouseEditForm />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/houses/:houseId/flats" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <FlatList />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/renters" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <RenterList />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/flats/:id" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <FlatDetails />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/houses/create" element={
-              <ProtectedRoute roles={['web_owner', 'staff']}>
+              <RoleGuard roles={['web_owner', 'staff']}>
                 <CreateHouseForm />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
 
             <Route path="/caretakers" element={
-              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner']}>
+              <RoleGuard roles={['web_owner', 'staff', 'house_owner']}>
                 <CareTakerPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/renters" element={
-              <ProtectedRoute roles={allRoles}>
-                <RenterList />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/notices" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <ComingSoonPage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
 
             <Route path="/caretakers/:id/details" element={
-              <ProtectedRoute roles={['web_owner', 'staff', 'house_owner']}>
+              <RoleGuard roles={['web_owner', 'staff', 'house_owner']}>
                 <CaretakerDetails />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
 
             {/* ===== STAFF-SPECIFIC ROUTES ===== */}
             <Route path="staff/audit-logs" element={
-              <ProtectedRoute roles={['staff', 'web_owner']}>
+              <RoleGuard roles={['staff', 'web_owner']}>
                 <ComingSoonPage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="staff/user-approvals" element={
-              <ProtectedRoute roles={['staff', 'web_owner']}>
+              <RoleGuard roles={['staff', 'web_owner']}>
                 <ComingSoonPage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
 
             {/* ===== ADMIN-SPECIFIC ROUTES ===== */}
             <Route path="admin/settings" element={
-              <ProtectedRoute roles={['web_owner']}>
+              <RoleGuard roles={['web_owner']}>
                 <SystemSettings />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="admin/generate-token" element={
-              <ProtectedRoute roles={['web_owner', 'staff']}>
+              <RoleGuard roles={['web_owner', 'staff']}>
                 <GenerateToken />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
 
             <Route path="admin/staff" element={
-              <ProtectedRoute roles={['web_owner']}>
+              <RoleGuard roles={['web_owner']}>
                 <ViewAllStaff />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="admin/house-owners" element={
-              <ProtectedRoute roles={['web_owner']}>
+              <RoleGuard roles={['web_owner']}>
                 <HouseOwnersPage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="admin/house-owners/:ownerId" element={
-              <ProtectedRoute roles={['web_owner']}>
+              <RoleGuard roles={['web_owner']}>
                 <HouseOwnerDetailPage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/reports" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <ReportGenPage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/expenses" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <HouseOwnerExpensesPage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/app-fee" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <AppFeePage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="/loans" element={
-              <ProtectedRoute roles={allRoles}>
+              <RoleGuard roles={ALL_ROLES}>
                 <LoansPage />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
             <Route path="admin/landing-editor" element={
-              <ProtectedRoute roles={['web_owner', 'developer']}>
+              <RoleGuard roles={['web_owner', 'developer']}>
                 <LandingPageEditor />
-              </ProtectedRoute>
+              </RoleGuard>
             } />
         </Route>
         
@@ -391,7 +402,7 @@ const AppRoutes = () => {
           </div>
         } />
       </Routes>
-    
+    </Suspense>
   );
 };
 

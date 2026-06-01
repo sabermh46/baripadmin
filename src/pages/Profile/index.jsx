@@ -122,9 +122,9 @@ const ProfilePage = () => {
             </h3>
 
             {/* Avatar */}
-            <div className="flex items-center space-x-4 mb-6">
+            <div className="flex items-center gap-4 flex-wrap justify-center mb-6">
               <div className="relative">
-                <div className="h-20 w-20 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-2 border-gray-200">
+                <div className="h-20 w-20 md:h-32 md:w-32 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-2 border-gray-200">
                   {avatarPath ? (
                     <ProtectedImage
                       src={avatarPath}

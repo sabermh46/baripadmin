@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { axiosInstance } from '../../store/api/baseApi';
 
-/**
- * Fetches a protected upload URL via axiosInstance (adds Authorization header),
- * converts the response to a blob URL, and renders an <img>.
- * Cleans up the blob URL on unmount or src change.
- */
+// Module-level cache: src URL → Promise<blobUrl | null>
+// Deduplicates fetches when the same protected URL is rendered by multiple
+// component instances simultaneously (e.g. desktop + mobile SideNav).
+const _blobCache = new Map();
+
 const ProtectedImage = ({ src, alt = '', className = '', fallback = null }) => {
   const [blobUrl, setBlobUrl] = useState(null);
   const [status, setStatus] = useState('loading'); // 'loading' | 'ok' | 'error'
@@ -17,27 +17,25 @@ const ProtectedImage = ({ src, alt = '', className = '', fallback = null }) => {
     }
 
     let cancelled = false;
-    let created = null;
-
     setStatus('loading');
     setBlobUrl(null);
 
-    axiosInstance
-      .get(src, { responseType: 'blob' })
-      .then(({ data }) => {
-        if (cancelled) return;
-        created = URL.createObjectURL(data);
-        setBlobUrl(created);
-        setStatus('ok');
-      })
-      .catch(() => {
-        if (!cancelled) setStatus('error');
-      });
+    if (!_blobCache.has(src)) {
+      _blobCache.set(src,
+        axiosInstance
+          .get(src, { responseType: 'blob' })
+          .then(({ data }) => URL.createObjectURL(data))
+          .catch(() => null)
+      );
+    }
 
-    return () => {
-      cancelled = true;
-      if (created) URL.revokeObjectURL(created);
-    };
+    _blobCache.get(src).then(url => {
+      if (cancelled) return;
+      if (url) { setBlobUrl(url); setStatus('ok'); }
+      else setStatus('error');
+    });
+
+    return () => { cancelled = true; };
   }, [src]);
 
   if (status === 'loading') {

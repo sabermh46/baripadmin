@@ -69,6 +69,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MiB safety net
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
           {
@@ -129,9 +130,16 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          redux: ['@reduxjs/toolkit', 'react-redux', 'redux-persist']
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) return 'vendor';
+          if (id.includes('@reduxjs') || id.includes('react-redux') || id.includes('redux-persist')) return 'redux';
+          if (id.includes('date-fns')) return 'date-fns';
+          if (id.includes('i18next') || id.includes('react-i18next')) return 'i18n';
+          if (id.includes('lucide-react')) return 'icons';
+          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) return 'charts';
+          if (id.includes('html2canvas') || id.includes('jspdf') || id.includes('pdfmake')) return 'pdf';
+          return 'vendor-misc';
         }
       }
     }

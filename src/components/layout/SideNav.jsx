@@ -12,6 +12,7 @@ import {
   Users,
   UsersRound,
 } from "lucide-react";
+import { useState, memo } from "react";
 import { useAppDispatch, useAuth } from "../../hooks";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLogoutMutation } from "../../store/api/authApi";
@@ -19,10 +20,12 @@ import { logout as logoutAction } from '../../store/slices/authSlice';
 import push from "../../services/push";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
+import ProtectedImage from "../common/ProtectedImage";
 
 export const SideNav = ({ onClicked }) => {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
+  const [googleAvatarError, setGoogleAvatarError] = useState(false);
   const isBengali = i18n.language?.startsWith('bn');
 
   const dispatch = useAppDispatch();
@@ -140,7 +143,9 @@ export const SideNav = ({ onClicked }) => {
 
   return (
     <>
-
+      <div>
+        {/* for excaping the spacing of header */}
+      </div>
       <div className="max-h-min overflow-y-auto">
         {filteredNavItems.map((item) => {
           let isActive = currentPath === item.path || (item.toMatch && item.toMatch.includes(currentPath));
@@ -181,7 +186,23 @@ export const SideNav = ({ onClicked }) => {
           </div>
                 <div className="flex items-center gap-3 mb-4 max-w-full">
                   <div className="min-w-10 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold overflow-clip">
-                    <img src={user?.avatarUrl} alt={user?.name} className="w-full h-full object-cover" />
+                    {user?.metadata?.avatarPath ? (
+                      <ProtectedImage
+                        src={user.metadata.avatarPath}
+                        alt={user?.name}
+                        className="w-full h-full object-cover"
+                        fallback={<span className="text-sm">{user?.name?.charAt(0)?.toUpperCase() || '?'}</span>}
+                      />
+                    ) : user?.avatarUrl && !googleAvatarError ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user?.name}
+                        className="w-full h-full object-cover"
+                        onError={() => setGoogleAvatarError(true)}
+                      />
+                    ) : (
+                      <span className="text-sm">{user?.name?.charAt(0)?.toUpperCase() || '?'}</span>
+                    )}
                   </div>
                   <div className='w-min'>
                     <p className="line-clamp-1 text-ellipsis overflow-hidden font-medium" title={user?.name}>{user?.name || 'User'}</p>
@@ -200,4 +221,4 @@ export const SideNav = ({ onClicked }) => {
   );
 };
 
-export default SideNav;
+export default memo(SideNav);

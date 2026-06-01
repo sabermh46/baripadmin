@@ -12,7 +12,9 @@ import {
   useLazyGetNotificationsQuery,
 } from '../store/api/notificationApi';
 
-const useNotifications = (initialFilters = {}) => {
+const useNotifications = (options = {}) => {
+  const { skip = false, ...initialFilters } = options;
+
   const [filters, setFilters] = useState({
     page: 1,
     limit: 20,
@@ -32,7 +34,7 @@ const useNotifications = (initialFilters = {}) => {
     isLoading: isLoadingNotifications,
     error: notificationsError,
     refetch: refetchNotifications,
-  } = useGetNotificationsQuery(filters);
+  } = useGetNotificationsQuery(filters, { skip });
 
   const { 
     data: unreadCount = 0, 
@@ -95,19 +97,6 @@ const useNotifications = (initialFilters = {}) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [refresh]);
-
-  // Separate effect for the polling interval — only restarts when unreadCount changes
-  useEffect(() => {
-    if (unreadCount <= 0 || document.hidden) return;
-
-    const pollInterval = setInterval(() => refresh(), 60000);
-
-    const handleVisibilityChange = () => {
-      // interval is managed by this effect's lifecycle; tab-hide/show handled by effect above
-    };
-
-    return () => clearInterval(pollInterval);
-  }, [refresh, unreadCount]);
 
   // Handle mark as read
   const handleMarkAsRead = useCallback(async (notificationId) => {

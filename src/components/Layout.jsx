@@ -32,7 +32,6 @@ const Layout = () => {
       {/* Sidebar */}
       <div className="hidden md:flex md:sticky top-0 w-64 bg-surface border-r border-gray-200 flex-col h-screen!">
         <nav className="flex-1 h-full grid grid-rows-[64px_1fr_auto]">
-          <div></div>
           <SideNav />
         </nav>
       </div>
@@ -99,7 +98,7 @@ const Layout = () => {
       
         <div className={`fixed md:hidden inset-0 bg-black/25 z-30 duration-300 ${ isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none' }`}
         onClick={()=>setIsMobileMenuOpen(false)}>
-          <div onClick={(e)=>e.stopPropagation()} className={`md:hidden max-w-80 w-[80%] !min-w-[250px] bg-surface z-50 pt-5 flex flex-col shadow-2xl ${ isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full' }  fixed top-0 left-0 h-full w-full duration-300 transition-transform`}>
+          <div onClick={(e)=>e.stopPropagation()} className={`md:hidden max-w-80 w-[80%] !min-w-[250px] bg-surface z-50 ${ isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full' }  fixed top-0 left-0 w-full duration-300 transition-transform flex-1 h-full grid grid-rows-[64px_1fr_auto]`}>
             <SideNav isMobileMenuOpen={isMobileMenuOpen} onClicked={setIsMobileMenuOpen} />
           </div>
         </div>

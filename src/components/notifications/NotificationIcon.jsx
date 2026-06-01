@@ -11,6 +11,7 @@ const NotificationIcon = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
+    const [hasOpened, setHasOpened] = useState(false);
     const dropdownRef = useRef(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -22,7 +23,7 @@ const NotificationIcon = () => {
         markAsRead,
         deleteNotification,
         toggleRead
-    } = useNotifications();
+    } = useNotifications({ skip: !hasOpened });
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -51,9 +52,9 @@ const NotificationIcon = () => {
     const handleOpen = async () => {
         const newState = !isOpen;
         setIsOpen(newState);
-        
+
         if (newState) {
-            // Refresh notifications when dropdown opens
+            setHasOpened(true);
             await handleRefresh();
         }
     };
