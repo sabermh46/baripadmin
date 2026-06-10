@@ -16,7 +16,7 @@ import RecordExpenseForm from '../../../pages/Expenses/RecordExpense';
 const HouseDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isWebOwner } = useAuth();
 
   const [showForm, setShowForm] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -70,7 +70,7 @@ const HouseDetails = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/houses')}
@@ -85,6 +85,8 @@ const HouseDetails = () => {
               Property Details
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setShowForm(true)}
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
@@ -92,8 +94,6 @@ const HouseDetails = () => {
             <DollarSign className="w-4 h-4" />
             Record Expense
           </button>
-        </div>
-        <div className="flex items-center gap-2">
           <button
             onClick={() => navigate(`/houses/${id}/edit`)}
             className="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors flex items-center gap-2"
@@ -101,7 +101,7 @@ const HouseDetails = () => {
             <Edit className="w-4 h-4" />
             Edit
           </button>
-          {user?.isWebOwner && (
+          {isWebOwner && (
             <button
               onClick={handleDelete}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"

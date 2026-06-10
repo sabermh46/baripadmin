@@ -22,6 +22,8 @@ import ConfirmationModal from '../common/ConfirmationModal';
 import { useLocation, useParams } from 'react-router-dom';
 import RenterForm from './RenterForm';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
+import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 
 const RenterList = () => {
   const [page, setPage] = useState(1);
@@ -57,12 +59,17 @@ const view = queryParams.get('view');
     }, 500);
   }, [view]);
   // API hooks
-  const { data, isLoading, refetch } = useGetRentersQuery({
+  const { data, isLoading, refetch, error } = useGetRentersQuery({
     page,
     limit: 10,
     search,
     status: statusFilter || undefined
   });
+
+  if (error) {
+    console.error('Failed to fetch renters:', error);
+    toast.error(showMessageInLanguage(error?.data?.error || 'Failed to fetch renters'));  
+  }
   
   const [deleteRenter, { isLoading: isDeleting }] = useDeleteRenterMutation();
 

@@ -26,6 +26,7 @@ import Btn from '../common/Button';
 import ConfirmationModal from '../common/ConfirmationModal';
 import Table from '../common/Table';
 import { useTranslation } from 'react-i18next';
+import AddCaretakerModal from './AddCaretakerModal';
 
 const CaretakerList = () => {
   const [filters, setFilters] = useState({
@@ -38,6 +39,7 @@ const CaretakerList = () => {
   const { t } = useTranslation();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedCaretaker, setSelectedCaretaker] = useState(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   
   const { data, isLoading, error, refetch } = useGetCaretakersQuery(filters);
   const [deleteCaretaker, { isLoading: isDeleting }] = useDeleteCaretakerMutation();
@@ -221,16 +223,12 @@ const CaretakerList = () => {
           </p>
         </div>
         
-        {(user.role.slug === 'web_owner' || 
+        {(user.role.slug === 'web_owner' ||
           (user.role.slug === 'staff' && user.permissions?.includes('caretakers.create'))) && (
-          <Link to="/caretakers/new">
-            <Btn>
-              <Plus className="h-4 w-4 mr-2" />
-              {
-                t('add_caretaker')
-              }
-            </Btn>
-          </Link>
+          <Btn onClick={() => setAddModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('add_caretaker')}
+          </Btn>
         )}
       </div>
 
@@ -293,6 +291,13 @@ const CaretakerList = () => {
           onPageChange={handlePageChange}
         />
       </div>
+
+      {/* Add Caretaker Modal */}
+      <AddCaretakerModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSuccess={refetch}
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

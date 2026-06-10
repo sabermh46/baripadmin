@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks";
 import StatsCardGrid from "./StatsCardGrid";
 import RentCollectionProgress from "./RentCollectionProgress";
 import UpcomingPayments from "./UpcomingPayment.jsx";
+import OverduePayments from "./OverduePayments.jsx";
 import MonthlyChart from "./charts/MonthlyChart";
 import OccupancyChart from "./charts/OccupancyChart";
 import ExpenseChart from "./charts/ExpenseChart";
@@ -104,10 +105,11 @@ const HouseOwnerComponent = () => {
   }
 
   // Safe destructuring with default values to prevent "cannot destructure property of undefined"
-  const { 
-    summary = {}, 
-    upcomingPayments = [], 
-    charts = {}, 
+  const {
+    summary = {},
+    upcomingPayments = [],
+    overduePayments = [],
+    charts = {},
     houses = [],
     renters = [],
     caretakers = []
@@ -239,6 +241,7 @@ const HouseOwnerComponent = () => {
 
 
       <UpcomingPayments payments={upcomingPayments} />
+      <OverduePayments payments={overduePayments} />
       
       {/* Recent Houses */}
       <div className="bg-white rounded-xl p-4 border border-gray-200 mt-4">

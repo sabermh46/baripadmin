@@ -10,6 +10,8 @@ import {
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks';
 import { useGetManagedOwnersQuery } from '../../store/api/houseApi';
+import { useTranslation } from 'react-i18next';
+import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 
 const renterSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -37,6 +39,8 @@ const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
     { search: ownerSearch }, 
     { skip: isHouseOwner }
   );
+
+  const { t } = useTranslation();
     
 
   const {
@@ -146,26 +150,41 @@ const removeFile = (setImage, setPreview, inputName) => {
       
 
       if (isEdit) {
-        await updateRenter({ id: renter.id, formData }).unwrap();
-        toast.success('Renter updated successfully');
+        try {
+          await updateRenter({ id: renter.id, formData }).unwrap();
+          toast.success(showMessageInLanguage('Renter updated successfully || ভাড়াটিয়া সফলভাবে আপডেট হয়েছে'));
+          onClose();
+          reset();
+          setNidFrontImage(null);
+          setNidBackImage(null);
+          setNidFrontPreview(null);
+          setNidBackPreview(null);
+        } catch (error) {
+          toast.error(showMessageInLanguage(`Failed to update renter: ${error?.data?.error || error?.message}`));
+          console.error('Failed to update renter:', error);
+        }
       } else {
-        await createRenter(formData).unwrap();
-        toast.success('Renter created successfully');
+        try {
+          await createRenter(formData).unwrap();
+          toast.success(showMessageInLanguage('Renter created successfully || ভাড়াটিয়া সফলভাবে তৈরি হয়েছে'));
+          onClose();
+          reset();
+          setNidFrontImage(null);
+          setNidBackImage(null);
+          setNidFrontPreview(null);
+          setNidBackPreview(null);
+        } catch (error) {
+          toast.error(showMessageInLanguage(error?.data?.error || error?.message));
+          console.error('Failed to create renter:', error);
+        }
       }
-      
-      onClose();
-      reset();
-      setNidFrontImage(null);
-      setNidBackImage(null);
-      setNidFrontPreview(null);
-      setNidBackPreview(null);
     } catch (error) {
-      toast.error(`Failed to save renter: ${error?.data?.error || error.message}`);
+      toast.error(showMessageInLanguage(`Failed to save renter: ${error?.data?.error || error?.message}`));
       console.error('Failed to save renter:', error);
     }
   };
 
-  console.log("Form Errors:", errors);
+  // console.log("Form Errors:", errors);
 
   if (!open) return null;
 
@@ -177,7 +196,7 @@ const removeFile = (setImage, setPreview, inputName) => {
         <div className="sticky top-0 bg-surface border-b border-subdued/20 p-6 z-50">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-text">
-              {isEdit ? 'Edit Renter' : 'Add New Renter'}
+              {isEdit ? 'Edit Renter' : `${t('add_new_renter')}`}
             </h2>
             <button
               onClick={onClose}
@@ -425,6 +444,7 @@ const removeFile = (setImage, setPreview, inputName) => {
             <button
               type="submit"
               disabled={isSubmitting}
+              onClick={handleSubmit}
               className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? (

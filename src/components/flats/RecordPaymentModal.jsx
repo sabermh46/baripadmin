@@ -9,7 +9,7 @@ import { toast } from 'react-toastify';
 import TkSymbol from '../common/TkSymbol';
 import InvoicePreviewModal from '../common/InvoicePreviewModal';
 import { generateRentReceiptPdf } from '../../utils/invoiceGenerator';
-
+import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 const paymentSchema = z.object({
   paid_amount: z.coerce.number().positive('Amount must be positive'),
   payment_method: z.string().min(1, 'Payment method is required'),
@@ -252,7 +252,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
       }
     } catch (error) {
       console.error('Failed to record payment:', error);
-      toast.error(`Failed to record payment: ${error?.data?.error || error.message}`);
+      toast.error(showMessageInLanguage(error?.data?.error || error.message));
     }
   };
 

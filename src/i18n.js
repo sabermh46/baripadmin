@@ -187,6 +187,7 @@ const resources = {
 
        "staff_management": "Staff Management",
        "view_and_manage_all_staff_members_and_their_permissions": "View and manage all staff members and their permissions",
+       "create_staff": "Create Staff",
        "avg_permissions": "Avg. Permissions",
        "staff_members": "Staff Members",
        "role": "Role",
@@ -750,6 +751,7 @@ const resources = {
 
       "staff_management": "স্টাফ ব্যবস্থাপনা",
       "view_and_manage_all_staff_members_and_their_permissions": "সমস্ত স্টাফ সদস্য এবং তাদের অনুমতিগুলি দেখুন এবং পরিচালনা করুন",
+      "create_staff": "স্টাফ তৈরি করুন",
       "avg_permissions": "গড় অনুমতি",
       "staff_members": "স্টাফ সদস্য",
       "role": "ভূমিকা",

@@ -9,6 +9,7 @@ import {
   useUpdateFlatMutation
 } from '../../store/api/flatApi';
 import { toast } from 'react-toastify';
+import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 
 const flatSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -60,7 +61,7 @@ useEffect(() => {
         number: '',
         rent_amount: '',
         should_pay_rent_day: 10,
-        late_fee_percentage: 5,
+        late_fee_percentage: 0,
         metadata: '',
       });
     }
@@ -77,7 +78,7 @@ useEffect(() => {
       onClose();
       reset();
     } catch (error) {
-      toast.error(`Failded to save flat: ${error?.data?.error || error.message}`);
+      toast.error(showMessageInLanguage(error.data?.error));
       console.error('Failed to save flat:', error);
     }
   };

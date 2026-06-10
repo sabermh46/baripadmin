@@ -39,7 +39,7 @@ const UpcomingPayments = ({ payments = [] }) => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-bold text-gray-800">{t('upcoming_payments')}</h3>
-            <p className="text-sm text-gray-500">{t('due_in_next_30_days')}</p>
+            <p className="text-sm text-gray-500">{t('due_this_month')}</p>
           </div>
           <div className="px-3 py-1 bg-gray-50 rounded-full">
             <span className="text-sm font-medium text-gray-700">

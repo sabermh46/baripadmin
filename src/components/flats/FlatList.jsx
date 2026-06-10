@@ -25,6 +25,9 @@ import AssignRenterModal from './AssignRenterModal';
 import RenterForm from '../renters/RenterForm';
 import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
 import Btn from '../common/Button';
+import { toast } from 'react-toastify';
+import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
+import { useTranslation } from 'react-i18next';
 
 const FlatList = () => {
   const { houseId } = useParams();
@@ -39,7 +42,7 @@ const FlatList = () => {
   const [showRenterForm, setShowRenterForm] = useState(false);
   const {data, isLoading: isHouseLoading, error } = useGetHouseDetailsQuery(houseId)
   
-
+    const { t } = useTranslation();
   const { data: houseData, isLoading: isHouseDataLoading } = useGetHouseDetailsQuery(houseId);
   
   const { data: flatsData, isLoading } = useGetFlatsQuery({
@@ -82,8 +85,10 @@ const FlatList = () => {
         await deleteFlat(selectedFlat.id).unwrap();
         setDeleteConfirm(false);
         setSelectedFlat(null);
+        toast.success('Flat deleted successfully');
       } catch (error) {
         console.error('Failed to delete flat:', error);
+        toast.error(showMessageInLanguage(error?.data?.error || error.message));
       }
     }
   };
@@ -117,7 +122,7 @@ const FlatList = () => {
             className="flex items-center gap-2 px-4 py-2"
           >
             <Users size={20} />
-            Add New Renter
+            {t("add_new_renter")}
           </Btn>
         <Btn
         type='primary'

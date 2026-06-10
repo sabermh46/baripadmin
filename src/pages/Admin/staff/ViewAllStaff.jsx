@@ -19,11 +19,13 @@ import {
   History,
   ShieldEllipsis,
   Copy,
+  UserPlus,
 } from "lucide-react";
 import StaffActivity from "../../../components/admin/Staff/StaffActivity";
 import PermissionHistory from "../../../components/admin/Staff/PermissionHistory";
 import BulkPermissionManager from "../../../components/admin/Staff/BulkPermissionManager";
 import CopyPermissions from "../../../components/admin/Staff/CopyPermissions";
+import CreateStaffModal from "../../../components/admin/Staff/CreateStaffModal";
 import { toast } from "react-toastify";
 import Table from "../../../components/common/Table";
 import { useTranslation } from "react-i18next";
@@ -37,6 +39,7 @@ const ViewAllStaff = () => {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [bulkManagerOpen, setBulkManagerOpen] = useState(false);
   const [copyPermissionsOpen, setCopyPermissionsOpen] = useState(false);
+  const [createStaffOpen, setCreateStaffOpen] = useState(false);
 
   const {t } = useTranslation();
   const limit = 10;
@@ -298,17 +301,27 @@ const ViewAllStaff = () => {
           </p>
         </div>
 
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder={t('search_by_name_or_email')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full md:w-80 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+            />
           </div>
-          <input
-            type="text"
-            placeholder={t('search_by_name_or_email')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full md:w-80 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-          />
+          <button
+            type="button"
+            onClick={() => setCreateStaffOpen(true)}
+            className="flex items-center justify-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors whitespace-nowrap"
+          >
+            <UserPlus size={18} />
+            {t('create_staff')}
+          </button>
         </div>
       </div>
 
@@ -443,6 +456,15 @@ const ViewAllStaff = () => {
         </div>
       </div>
 
+
+      <CreateStaffModal
+        isOpen={createStaffOpen}
+        onClose={() => setCreateStaffOpen(false)}
+        onSuccess={() => {
+          setCreateStaffOpen(false);
+          refetch();
+        }}
+      />
 
       {selectedStaff && (
         <>
