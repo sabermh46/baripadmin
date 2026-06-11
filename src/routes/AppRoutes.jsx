@@ -18,6 +18,7 @@ const ComingSoonPage       = lazy(() => import('../pages/utility/ComingSoonPage'
 const AccessDeniedPage     = lazy(() => import('../pages/utility/AccessDeniedPage'));
 const GenerateToken        = lazy(() => import('../pages/Admin/userBased/GenerateToken'));
 const ViewAllStaff         = lazy(() => import('../pages/Admin/staff/ViewAllStaff'));
+const AuditLogs            = lazy(() => import('../pages/Admin/audit/AuditLogs'));
 const SystemSettings       = lazy(() => import('../pages/Admin/SystemSettings'));
 const HouseOwnersPage      = lazy(() => import('../pages/Admin/HouseOwnersPage'));
 const HouseOwnerDetailPage = lazy(() => import('../pages/Admin/HouseOwnerDetail'));
@@ -325,8 +326,8 @@ const AppRoutes = () => {
 
             {/* ===== STAFF-SPECIFIC ROUTES ===== */}
             <Route path="staff/audit-logs" element={
-              <RoleGuard roles={['staff', 'web_owner']}>
-                <ComingSoonPage />
+              <RoleGuard roles={['web_owner']}>
+                <AuditLogs />
               </RoleGuard>
             } />
             <Route path="staff/user-approvals" element={

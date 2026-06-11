@@ -3,6 +3,7 @@ import {
   BookUser,
   CircleUser,
   DollarSign,
+  FileClock,
   FileText,
   House,
   Landmark,
@@ -74,6 +75,12 @@ export const SideNav = ({ onClicked }) => {
       path: "/admin/staff",
       label: t("staffs"),
       icon: <Users />,
+      roles: ["developer", "web_owner"],
+    },
+    {
+      path: "/staff/audit-logs",
+      label: t("audit_logs"),
+      icon: <FileClock />,
       roles: ["developer", "web_owner"],
     },
     {
