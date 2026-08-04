@@ -298,7 +298,11 @@ const usePushNotifications = () => {
                     await registerServiceWorker();
                     const existingSub = await checkExistingSubscription();
 
-                    if (!existingSub && permissionRef.current === 'granted') {
+                    // Subscribe automatically on login. subscribe() itself calls
+                    // Notification.requestPermission() when permission is still 'default',
+                    // so this is what actually shows the browser's permission prompt — only
+                    // 'denied' (an explicit prior refusal) skips it, so we don't nag repeatedly.
+                    if (!existingSub && permissionRef.current !== 'denied') {
                         console.log('Auto-subscribing...');
                         await subscribe();
                     } else if (existingSub) {

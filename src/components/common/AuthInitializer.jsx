@@ -47,7 +47,16 @@ export function AuthInitializer() {
       .finally(() => {
         dispatch(setLoading(false));
       });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // `user`/`accessToken` deliberately included: the `auth` slice rehydrates from
+    // IndexedDB independently of (and sometimes slower than, since it's a nested
+    // persistReducer under a root persistor that only whitelists `ui`) the PersistGate
+    // this component mounts under. An empty dep array would run this exactly once,
+    // possibly before `user` has been restored yet, permanently skip the refresh, and
+    // leave the session logged out until the next real navigation — an intermittent
+    // failure that looked like "refresh token sometimes fails on browser reload." The
+    // two early-return guards above make re-runs safe: once a token exists this becomes
+    // a no-op, so it can't loop or double-fire.
+  }, [user, accessToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return null;
 }

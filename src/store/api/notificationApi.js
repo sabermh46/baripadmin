@@ -107,14 +107,14 @@ export const notificationApi = baseApi.injectEndpoints({
       providesTags: [{ type: 'Notification', id: 'STATS' }],
     }),
 
-    // Get unread count
+    // Get unread count — a dedicated cheap endpoint (two indexed COUNT queries), not the
+    // full paginated list query filtered down to one row.
     getUnreadCount: builder.query({
       query: () => ({
-        url: '/api/notifications',
+        url: '/api/notifications/unread-count',
         method: 'GET',
-        params: { limit: 1, unread: true }
       }),
-      transformResponse: (response) => response.counts?.unread || 0,
+      transformResponse: (response) => response.unread || 0,
       providesTags: [{ type: 'Notification', id: 'UNREAD_COUNT' }],
     }),
 

@@ -20,7 +20,6 @@ import {
   useDeleteRentPaymentMutation,
 } from '../../store/api/flatApi';
 import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
-import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
 import FlatForm from './FlatForm';
 import RecordPaymentModal from './RecordPaymentModal';
 import AdvancePaymentFormModal from './AdvancePaymentFormModal';
@@ -76,10 +75,6 @@ const FlatDetails = () => {
     useGetPaymentReceiptsQuery({ flatId: id }, { skip: !id });
   const { data: flatData, isLoading, refetch: refetchDetails } =
     useGetFlatDetailsQuery(id);
-  const { data: houseData } = useGetHouseDetailsQuery(
-    flatData?.data?.flat?.house_id,
-    { skip: !flatData?.data?.flat?.house_id }
-  );
   const { data: advancePaymentsData, refetch: refetchAdvancePayments } =
     useGetFlatAdvancePaymentsQuery({ flatId: id }, { skip: !id });
   const { data: rentersResponse } = useGetAvailableRentersQuery(
@@ -572,7 +567,7 @@ const FlatDetails = () => {
         open={openAssignModal}
         onClose={() => setOpenAssignModal(false)}
         flat={flatData?.data?.flat || null}
-        houseinfo={houseData?.data || null}
+        houseinfo={flatData?.data?.house || null}
         onSuccess={() => { refetchDetails(); refetchAdvancePayments(); }}
       />
 

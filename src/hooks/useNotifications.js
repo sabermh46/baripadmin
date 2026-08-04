@@ -57,17 +57,16 @@ const useNotifications = (options = {}) => {
   const pagination = notificationsData?.pagination || {};
   const counts = notificationsData?.counts || { total: 0, unread: 0 };
 
-  // Enhanced refresh function
+  // Enhanced refresh function. Only refetches the list when it's actually mounted
+  // (skip === false) — refetching a skipped query is a wasted round trip.
   const refresh = useCallback((force = false) => {
-    console.log('Refreshing notifications', { force, lastUpdateTime });
-    
-    refetchNotifications();
+    if (!skip) refetchNotifications();
     refetchUnreadCount();
-    
+
     if (force) {
       setLastUpdateTime(Date.now());
     }
-  }, [refetchNotifications, refetchUnreadCount]);
+  }, [refetchNotifications, refetchUnreadCount, skip]);
 
   // Update filters
   const updateFilters = useCallback((newFilters) => {

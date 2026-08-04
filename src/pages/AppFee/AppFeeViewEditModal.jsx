@@ -171,10 +171,6 @@ const AppFeeViewEditModal = ({
           </div>
         }
       >
-
-        {
-          console.log(payment, isLoading)
-        }
         {isLoading || !payment ? (
           <div className="py-8 text-center text-gray-500">Loading...</div>
         ) : (

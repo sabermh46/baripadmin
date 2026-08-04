@@ -3,7 +3,7 @@ import {
   Home, TrendingUp, TrendingDown, Users, Layers,
   Building, Calendar, MapPin, DollarSign
 } from 'lucide-react';
-import { useGetHouseStatsQuery } from '../../../store/api/houseApi';
+import { useGetHousesQuery } from '../../../store/api/houseApi';
 import HouseList from './HouseList';
 import { toast } from 'react-toastify';
 import AccessDeniedPage from '../../../pages/utility/AccessDeniedPage';
@@ -12,7 +12,10 @@ import { useAuth } from '../../../hooks';
 import { useTranslation } from 'react-i18next';
 
 const HouseStats = () => {
-  const { data, isLoading, error } = useGetHouseStatsQuery();
+  // Same query (and same default args) as HouseList's own initial fetch below — RTK Query
+  // dedupes them into a single request instead of this page firing two separate ones
+  // (list + /houses/stats) for data the list response already carries in `stats`.
+  const { data, isLoading, error } = useGetHousesQuery({ page: 1, limit: 10, search: '' });
   const { isWebOwner, isDeveloper, isStaff, isHouseOwner } = useAuth();
   const { t } = useTranslation();
 
@@ -25,7 +28,7 @@ const HouseStats = () => {
     }
   }
 
-  const stats = data?.data || {
+  const stats = data?.stats || {
     totalHouses: 0,
     totalFlats: 0,
     totalCaretakers: 0,

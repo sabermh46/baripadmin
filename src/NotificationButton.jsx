@@ -1,5 +1,6 @@
-// Push notifications disabled — doesn't work on cPanel (outbound FCM connections blocked)
-// Uncomment to re-enable when running on a server with unrestricted outbound connections.
+// Not rendered anywhere — subscription now happens automatically on login via
+// usePushNotifications() itself (called directly in App.jsx), not through a manual button.
+// This is kept only as a placeholder if a manual enable/disable toggle is wanted later.
 
 // import React, { useEffect } from 'react';
 // import usePushNotifications from './hooks/usePushNotifications';

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  useGetStaffDetailsQuery,
   useGetStaffListQuery,
 } from "../../../store/api/staffApi";
 import MobileResponsiveTable from "../../../components/common/MobileResponsiveTable";
@@ -60,12 +59,6 @@ const ViewAllStaff = () => {
     page,
     limit,
   });
-
-  // Staff details (on click)
-  const { data: staffDetails, isLoading: isStaffDetailsLoading } =
-    useGetStaffDetailsQuery(selectedStaff?.id, {
-      skip: !selectedStaff?.id,
-    });
 
   const staffList = data?.data || [];
   const pagination = data?.pagination;
@@ -134,10 +127,6 @@ const ViewAllStaff = () => {
       </div>
     );
   };
-
-  useEffect(() => {
-    console.log(staffDetails);
-  }, [staffDetails]);
 
   const actionButtons = [
     {

@@ -49,13 +49,14 @@ const NotificationIcon = () => {
         return () => document.removeEventListener('keydown', handleEscape);
     }, []);
 
-    const handleOpen = async () => {
+    const handleOpen = () => {
         const newState = !isOpen;
         setIsOpen(newState);
 
+        // Un-skipping the list query below (via hasOpened) already triggers its own
+        // fetch — an explicit handleRefresh() here would just duplicate that request.
         if (newState) {
             setHasOpened(true);
-            await handleRefresh();
         }
     };
 

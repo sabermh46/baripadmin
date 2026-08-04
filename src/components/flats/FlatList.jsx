@@ -40,11 +40,11 @@ const FlatList = () => {
   const [selectedFlat, setSelectedFlat] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [showRenterForm, setShowRenterForm] = useState(false);
-  const {data, isLoading: isHouseLoading, error } = useGetHouseDetailsQuery(houseId)
-  
-    const { t } = useTranslation();
-  const { data: houseData, isLoading: isHouseDataLoading } = useGetHouseDetailsQuery(houseId);
-  
+  // Single house-details fetch — this used to be called twice with identical args.
+  const { data } = useGetHouseDetailsQuery(houseId);
+
+  const { t } = useTranslation();
+
   const { data: flatsData, isLoading } = useGetFlatsQuery({
     houseId,
     page,
@@ -425,7 +425,7 @@ const FlatList = () => {
           setSelectedFlat(null);
         }}
         flat={selectedFlat}
-        houseinfo={houseData?.data || null}
+        houseinfo={data?.data || null}
       />
 
       {/* Delete Confirmation Modal */}

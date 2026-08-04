@@ -45,19 +45,20 @@ const HouseSelector = ({ value, onChange, label, className = '', placeholder }) 
   );
   const owners = useMemo(() => ownersData?.data || [], [ownersData?.data]);
 
-  // —— Admin: houses with filters
-  const { data: adminHousesData, isLoading: adminHousesLoading } = useGetHousesQuery(
-    {
-      page: 1,
-      limit: 50,
-      search: debouncedSearch || undefined,
-      ownerId: adminOwnerId || undefined,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
-    },
-    { skip: isHouseOwner }
-  );
-  const adminHouses = useMemo(() => adminHousesData?.data || [], [adminHousesData?.data]);
+  // —— Admin: houses derived from the owners just fetched above, instead of a second GET
+  // /houses call — GET /houses/owners/managed already embeds each owner's `houses` array.
+  const adminHousesLoading = ownersLoading;
+  const adminHouses = useMemo(() => {
+    const pool = adminOwnerId
+      ? owners.find((o) => String(o.id) === adminOwnerId)?.houses ?? []
+      : owners.flatMap((o) => o.houses ?? []);
+
+    if (!debouncedSearch) return pool;
+    const q = debouncedSearch.toLowerCase();
+    return pool.filter(
+      (h) => (h.name || '').toLowerCase().includes(q) || (h.address || '').toLowerCase().includes(q)
+    );
+  }, [owners, adminOwnerId, debouncedSearch]);
 
   const selectedHouseId = value === undefined || value === null ? '' : String(value);
 
