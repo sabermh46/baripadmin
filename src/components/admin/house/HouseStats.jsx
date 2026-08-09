@@ -1,13 +1,13 @@
 // src/components/house/HouseStats.jsx
 import {
   Home, TrendingUp, TrendingDown, Users, Layers,
-  Building, Calendar, MapPin, DollarSign
+  Building, Calendar, MapPin, Banknote
 } from 'lucide-react';
 import { useGetHousesQuery } from '../../../store/api/houseApi';
 import HouseList from './HouseList';
 import { toast } from 'react-toastify';
 import AccessDeniedPage from '../../../pages/utility/AccessDeniedPage';
-import { LoaderMinimal } from '../../common/RouteLoader';
+import { ContentLoader, LoaderMinimal } from '../../common/RouteLoader';
 import { useAuth } from '../../../hooks';
 import { useTranslation } from 'react-i18next';
 
@@ -57,7 +57,7 @@ const HouseStats = () => {
 
   if (isLoading) {
     return (
-      <LoaderMinimal />
+      <ContentLoader />
     );
   }
 

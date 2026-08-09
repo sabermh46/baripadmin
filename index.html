@@ -4,36 +4,50 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bari Porichalona - House Rent Management</title>
-    
+
     <meta name="theme-color" content="#f9873c" />
     <meta name="description" content="Complete house rent management system" />
-    <link rel="manifest" href="/manifest.json" />
+
+    <!-- The web app manifest is emitted and linked by vite-plugin-pwa (see vite.config.js).
+         A hand-maintained /manifest.json used to be linked here as well, so the page
+         advertised two different manifests with two different icon sets. -->
+
+    <!-- iOS ignores the web app manifest's display/theme settings, so "Add to Home Screen"
+         on iPhone needs these to launch chrome-less instead of inside Safari. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Bari Porichalona" />
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
 
-    <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
+    <!-- Fonts moved out of index.css. As an `@import` at the top of the bundled stylesheet
+         the browser could not discover them until the CSS had downloaded and parsed, which
+         serialised two round trips before any text could paint. As <link>s here they are
+         discovered in the initial HTML scan, and preconnect opens the TLS connection to the
+         font CDN in parallel with the CSS request. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Genos:ital,wght@0,100..900;1,100..900&family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&family=Hind+Siliguri:wght@300;400;500;600;700&family=Mooli&family=Oswald:wght@200..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+    />
 
-    <link rel="icon" type="image/ico" sizes="192x192" href="/favicon.ico" />
-    
-    <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
-
-    <link href="/src/index.css" rel="stylesheet">
+    <!-- No <link rel="stylesheet" href="/src/index.css"> here on purpose: main.jsx imports
+         index.css, so Vite hashes it and injects the <link> itself at build time. Hard-coding
+         the source path made the raw, unprocessed stylesheet a render-blocking request on
+         every load (Lighthouse: "Render-blocking requests — est. savings of 300 ms"), and in
+         production the same CSS was then delivered a second time via the bundled link. -->
   </head>
   <body>
     <div id="root" class="max-w-full overflow-x-clip"></div>
     <script type="module" src="/src/main.jsx"></script>
 
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          // Note: The service worker file is typically named 'sw.js' or 'service-worker.js'
-          navigator.serviceWorker.register('/sw.js'); 
-        });
-      }
-    </script>
+    <!-- Service worker registration is injected by vite-plugin-pwa (injectRegister: 'auto').
+         An inline navigator.serviceWorker.register('/sw.js') used to live here, and App.jsx
+         registered the same worker a third time in a useEffect. -->
   </body>
 </html>

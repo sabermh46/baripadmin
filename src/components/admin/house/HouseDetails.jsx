@@ -3,7 +3,7 @@ import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import {
   Home, Users, MapPin, Calendar, Edit, Trash2, ArrowLeft,
   Layers, Building, Phone, Mail, AlertCircle, CheckCircle,
-  ChevronRight, DollarSign, Square, Bed, Bath
+  ChevronRight, Banknote, Square, Bed, Bath
 } from 'lucide-react';
 import { useGetHouseDetailsQuery, useDeleteHouseMutation } from '../../../store/api/houseApi';
 import Btn from '../../common/Button';
@@ -12,6 +12,7 @@ import { toast } from 'react-toastify';
 import { useState } from 'react';
 import Modal from '../../common/Modal';
 import RecordExpenseForm from '../../../pages/Expenses/RecordExpense';
+import { ContentLoader } from '../../common/RouteLoader';
 
 const HouseDetails = () => {
   const { id } = useParams();
@@ -49,13 +50,8 @@ const HouseDetails = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-subdued">Loading property details...</p>
-        </div>
-      </div>
-    );
+      <ContentLoader />
+    )
   }
 
   if (error || !house) {
@@ -91,7 +87,7 @@ const HouseDetails = () => {
             onClick={() => setShowForm(true)}
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
           >
-            <DollarSign className="w-4 h-4" />
+            <Banknote className="w-4 h-4" />
             Record Expense
           </button>
           <button

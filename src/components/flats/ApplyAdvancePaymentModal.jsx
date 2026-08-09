@@ -1,6 +1,6 @@
 // components/flats/ApplyAdvancePaymentModal.jsx
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, Banknote, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { useApplyAdvancePaymentMutation } from '../../store/api/flatApi';
 import { toast } from 'react-toastify';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';

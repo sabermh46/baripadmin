@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   TrendingUp,
   AlertCircle,
-  DollarSign,
+  Banknote,
   Calendar,
   Shield,
   User,
@@ -100,7 +100,7 @@ const OverviewTab = ({
         <div className="bg-surface rounded-lg p-4 border border-subdued/20">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <DollarSign className="text-blue-600" size={24} />
+              <Banknote className="text-blue-600" size={24} />
             </div>
             <div>
               <p className="text-sm text-subdued">{t('monthly_rent')}</p>

@@ -6,7 +6,7 @@ import {
   Info,
   Loader2,
   Save,
-  DollarSign,
+  Coins,
 } from 'lucide-react';
 import { useCreateHouseMutation } from '../../../store/api/houseApi';
 import { toast } from 'react-toastify';
@@ -199,7 +199,7 @@ const CreateHouseFormContent = ({ ownerId, ownerName, onSuccess, onClose }) => {
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="block text-sm font-medium text-gray-700">
-            <DollarSign className="inline w-4 h-4 mr-1" /> Amenities / Service Charges
+            <Coins className="inline w-4 h-4 mr-1" /> Amenities / Service Charges
           </label>
           {totalAmenitiesCharge > 0 && (
             <span className="text-sm text-primary-600 font-medium">

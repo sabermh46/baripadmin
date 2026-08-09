@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { DollarSign } from 'lucide-react';
+import { Banknote } from 'lucide-react';
 
 const formatDate = (d) => {
   if (!d) return '–';
@@ -18,7 +18,7 @@ const AppFeePaymentsSection = ({ appFeePayments = [], onSuccess }) => {
   return (
     <section className="bg-surface rounded-xl border border-subdued/20 p-4">
       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-3">
-        <DollarSign className="h-4 w-4" />
+        <Banknote className="h-4 w-4" />
         App Fee Payments ({appFeePayments?.length ?? 0})
       </h3>
       <div className="space-y-2">

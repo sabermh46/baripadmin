@@ -60,30 +60,23 @@ const usePushNotifications = () => {
         return outputArray;
     };
 
-    const registerServiceWorker = useCallback(async () => {
-        try {
-            // Check if already registered
-            const existingRegistrations = await navigator.serviceWorker.getRegistrations();
-            const existingRegistration = existingRegistrations.find(reg => 
-                reg.active && reg.active.scriptURL.includes('/sw.js')
-            );
+    /**
+     * Waits for the service worker vite-plugin-pwa registered — it does NOT register one.
+     *
+     * This used to call navigator.serviceWorker.register('/sw.js') itself, which was the
+     * third place in the app doing so (index.html and App.jsx were the others). In dev
+     * that call actively broke push: vite-plugin-pwa serves its dev worker under a
+     * different name, so '/sw.js' hit the dev server's SPA fallback and returned
+     * index.html — registration then failed with "unsupported MIME type ('text/html')",
+     * the error propagated out of init(), and push never initialised.
+     *
+     * `navigator.serviceWorker.ready` resolves once *an* active registration exists,
+     * which is correct in both dev and production regardless of the worker's filename.
+     */
+    const waitForServiceWorker = useCallback(async () => {
+        if (!('serviceWorker' in navigator)) throw new Error('Service workers unsupported');
 
-            if (existingRegistration) {
-                console.log('Service worker already registered');
-                return existingRegistration;
-            }
-
-            const registration = await navigator.serviceWorker.register('/sw.js', {
-                scope: '/'
-            });
-
-            console.log('Service worker registered: ', registration);
-            return registration;
-        } catch (error) {
-            console.error('Service Worker registration failed:', error);
-            toast.error('Failed to register service worker');
-            throw error;
-        }
+        return navigator.serviceWorker.ready;
     }, []);
 
     // Check existing subscription
@@ -295,7 +288,7 @@ const usePushNotifications = () => {
 
             const init = async () => {
                 try {
-                    await registerServiceWorker();
+                    await waitForServiceWorker();
                     const existingSub = await checkExistingSubscription();
 
                     // Subscribe automatically on login. subscribe() itself calls
@@ -326,7 +319,7 @@ const usePushNotifications = () => {
                 abortControllerRef.current?.abort();
             };
         }
-    }, [user, isSupported, isInitialized, registerServiceWorker, checkExistingSubscription, subscribe]);
+    }, [user, isSupported, isInitialized, waitForServiceWorker, checkExistingSubscription, subscribe]);
 
     // Reset initialization when user logs out
     useEffect(() => {

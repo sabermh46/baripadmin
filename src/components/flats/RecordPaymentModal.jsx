@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, AlertCircle, DollarSign, Calendar, Plus, Trash2, CreditCard, Shield } from 'lucide-react';
+import { X, AlertCircle, Coins, Calendar, Plus, Trash2, CreditCard, Shield } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -468,7 +468,7 @@ const RecordPaymentModal = ({ open, onClose, flat, renter, advancePayments = [] 
             <div className="border border-subdued/20 rounded-lg p-4">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-medium text-text flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" /> Service Charges & Amenities
+                  <Coins className="w-4 h-4" /> Service Charges & Amenities
                 </h4>
                 <div className="flex items-center gap-2">
                   <button

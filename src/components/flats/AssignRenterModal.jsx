@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, User, DollarSign, Plus, Trash2, Calendar, CreditCard, FileText, RefreshCcw, Phone, Mail, Check } from 'lucide-react';
+import TkSymbol from '../common/TkSymbol';
+import { Search, X, User, Coins, Plus, Trash2, Calendar, CreditCard, FileText, RefreshCcw, Phone, Mail, Check } from 'lucide-react';
 import { useAssignRenterMutation } from '../../store/api/flatApi';
 import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import { format } from 'date-fns';
@@ -375,7 +376,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
                           Amount *
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued">$</span>
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued"><TkSymbol /></span>
                           <input
                             type="number"
                             value={currentAdvancePayment.amount}
@@ -393,7 +394,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
                           Paid Amount *
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued">$</span>
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued"><TkSymbol /></span>
                           <input
                             type="number"
                             value={currentAdvancePayment.paid_amount || currentAdvancePayment.amount}
@@ -524,7 +525,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
                         <div className="flex-1">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                              <DollarSign className="text-green-600" size={16} />
+                              <Coins className="text-green-600" size={16} />
                             </div>
                             <div>
                               <p className="font-medium">
@@ -697,7 +698,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
             <div className="border rounded-lg p-4 animate-in fade-in">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-medium text-text flex flex-wrap items-center gap-2">
-                  <DollarSign className="w-4 h-4" /> Service Charges & Amenities
+                  <Coins className="w-4 h-4" /> Service Charges & Amenities
                 </h4>
                 <Btn
                   onClick={handleAddAmenity}
@@ -722,7 +723,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
                     <div className='flex gap-2'>
                       <div className="flex-1 min-w-32">
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued">$</span>
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued"><TkSymbol /></span>
                         <input
                           type="number"
                           value={amenity.charge}

@@ -1,6 +1,7 @@
 // components/common/AmenitiesInput.jsx
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, DollarSign } from 'lucide-react';
+import { Plus, Trash2, Coins } from 'lucide-react';
+import TkSymbol from './TkSymbol';
 
 const AmenitiesInput = ({ value = [], onChange }) => {
   const [amenities, setAmenities] = useState(value);
@@ -86,7 +87,7 @@ const AmenitiesInput = ({ value = [], onChange }) => {
           </div>
           <div className="w-32">
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"><TkSymbol /></span>
               <input
                 type="number"
                 value={amenity.charge}
@@ -124,7 +125,7 @@ const AmenitiesInput = ({ value = [], onChange }) => {
         </div>
         <div className="w-32">
           <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"><TkSymbol /></span>
             <input
               type="number"
               value={newAmenity.charge}

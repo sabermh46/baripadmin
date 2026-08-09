@@ -31,12 +31,12 @@ class PushService {
   try {
     console.log('🔑 VAPID Public Key (first 20 chars):', this.publicKey?.substring(0, 20) + '...');
     
-    // 1. Check service worker
-    if (!navigator.serviceWorker.controller) {
-      console.error('Service worker not controlling page. Hard refresh required.');
-      return null;
-    }
-
+    // Wait for an active registration. Deliberately NOT gated on
+    // `navigator.serviceWorker.controller`: on the very first load after install the
+    // worker is active but has not claimed the page yet, so controller is still null —
+    // the old check bailed out with "hard refresh required" and the user was never
+    // subscribed until they happened to reload. pushManager only needs an active
+    // registration, which is exactly what `ready` resolves to.
     const registration = await navigator.serviceWorker.ready;
     console.log('✅ Service worker ready');
     
@@ -117,7 +117,9 @@ class PushService {
   async sendTest() {
     try {
       const { axiosInstance } = await import('../store/api/baseApi.js');
-      const { data } = await axiosInstance.post('/notifications/test');
+      // Was '/notifications/test', which is not a route — it 404'd every time. The real
+      // endpoint is PushController@sendTest, which pushes to the caller's own subscriptions.
+      const { data } = await axiosInstance.post('/push/test');
       return data;
     } catch (error) {
       console.error('Test notification failed:', error);

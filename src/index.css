@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Genos:ital,wght@0,100..900;1,100..900&family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&family=Hind+Siliguri:wght@300;400;500;600;700&family=Mooli&family=Oswald:wght@200..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+/* The Google Fonts @import that used to be on this line now lives as a <link> in
+   index.html, alongside preconnect hints. An @import here was undiscoverable until this
+   stylesheet had itself downloaded and parsed, serialising two round trips before text
+   could paint; a <link> in the HTML is found by the browser's initial preload scanner. */
 @import "tailwindcss";
 
 
@@ -93,48 +96,10 @@ html:lang(bn) body {
 }
 
 
-/* Custom NProgress styles */
-#nprogress {
-  pointer-events: none;
-}
-
-#nprogress .bar {
-  background: linear-gradient(90deg, #f9873c, #ff6b6b) !important; /* Change to your color */
-  height: 4px !important; /* Make it thicker */
-  box-shadow: 0 0 10px rgba(249, 135, 60, 0.5) !important;
-}
-
-#nprogress .peg {
-  display: block !important;
-  position: absolute !important;
-  right: 0px !important;
-  width: 100px !important;
-  height: 100% !important;
-  box-shadow: 0 0 10px #f9873c, 0 0 5px #f9873c !important;
-  opacity: 1.0 !important;
-  transform: rotate(3deg) translate(0px, -4px) !important;
-}
-
-#nprogress .spinner {
-  display: none !important;
-}
-
-/* Optional: Add glow effect */
-.nprogress-custom::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, transparent, rgba(249, 135, 60, 0.3), transparent);
-  animation: glow 2s linear infinite;
-}
-
-@keyframes glow {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
+/* The NProgress overrides (#nprogress .bar/.peg/.spinner, .nprogress-custom and its
+   @keyframes glow) that used to sit here are gone along with the nprogress package —
+   the top progress bar was driven by fixed 200 ms/600 ms timers unrelated to actual
+   route loading. See components/common/RouteLoader.jsx. */
 
 @keyframes float {
   0%, 100% { transform: translateY(0px); }

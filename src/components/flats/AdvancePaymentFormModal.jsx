@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Eye, Edit, Trash2, DollarSign } from 'lucide-react';
+import { X, Eye, Edit, Trash2, Banknote } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   useCreateAdvancePaymentMutation,
@@ -144,7 +144,7 @@ const AdvancePaymentFormModal = ({
         <div className="bg-surface rounded-lg w-full max-w-md shadow-xl">
           <div className="flex justify-between items-center p-4 border-b border-subdued/20">
             <h3 className="text-lg font-bold flex items-center gap-2">
-              <DollarSign size={20} className="text-green-600" />
+              <Banknote size={20} className="text-green-600" />
               {isCreate && 'Add Advance Payment'}
               {isView && 'Advance Payment Details'}
               {isUpdate && 'Edit Advance Payment'}

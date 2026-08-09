@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks';
-import { LoaderMinimal } from '../components/common/RouteLoader';
+import { ContentLoader } from '../components/common/RouteLoader';
 
 // Always loaded — part of the shell
 import Layout from '../components/Layout';
@@ -42,83 +42,13 @@ const LandingPageEditor    = lazy(() => import('../pages/Admin/LandingPageEditor
 
 
 
-// ============ PROTECTED ROUTES IMPORTS ============
-// House Management
-// import HousesPage from '../pages/houses/HousesPage';
-// import HouseDetailPage from '../pages/houses/HouseDetailPage';
-// import CreateHousePage from '../pages/houses/CreateHousePage';
-
-// // Flat Management (for house owners)
-// import FlatsPage from '../pages/flats/FlatsPage';
-// import FlatDetailPage from '../pages/flats/FlatDetailPage';
-
-// // Renter Management
-// import RentersPage from '../pages/renters/RentersPage';
-// import RenterDetailPage from '../pages/renters/RenterDetailPage';
-// import CreateRenterPage from '../pages/renters/CreateRenterPage';
-
-// // User Management & Administration
-// import UsersPage from '../pages/admin/UsersPage';
-// import CreateUserPage from '../pages/admin/CreateUserPage';
-// import UserDetailPage from '../pages/admin/UserDetailPage';
-// import TokensPage from '../pages/admin/TokensPage';
-// import GenerateTokenPage from '../pages/admin/GenerateTokenPage';
-
-// // System Settings
-// import SystemSettingsPage from '../pages/admin/SystemSettingsPage';
-// import RoleLimitsPage from '../pages/admin/RoleLimitsPage';
-
-// // Notices & Communications
-// import NoticesPage from '../pages/notices/NoticesPage';
-// import CreateNoticePage from '../pages/notices/CreateNoticePage';
-// import NoticeDetailPage from '../pages/notices/NoticeDetailPage';
-
-// // Maintenance & Issues
-// import MaintenancePage from '../pages/maintenance/MaintenancePage';
-// import CreateMaintenancePage from '../pages/maintenance/CreateMaintenancePage';
-// import MaintenanceDetailPage from '../pages/maintenance/MaintenanceDetailPage';
-
-// // Payments & Billing
-// import PaymentsPage from '../pages/payments/PaymentsPage';
-// import PaymentDetailPage from '../pages/payments/PaymentDetailPage';
-// import CreatePaymentPage from '../pages/payments/CreatePaymentPage';
-// import InvoicesPage from '../pages/payments/InvoicesPage';
-
-// // Reports & Analytics
-// import ReportsPage from '../pages/reports/ReportsPage';
-// import HouseReportsPage from '../pages/reports/HouseReportsPage';
-// import FinancialReportsPage from '../pages/reports/FinancialReportsPage';
-
-// // Profile & Account
-// import MyAccountPage from '../pages/profile/MyAccountPage';
-// import SecurityPage from '../pages/profile/SecurityPage';
-// import ActivityLogPage from '../pages/profile/ActivityLogPage';
-
-// // Special Pages
-// import LoginAsPage from '../pages/special/LoginAsPage';
-// import SwitchAccountPage from '../pages/special/SwitchAccountPage';
-// import ImpersonationLogsPage from '../pages/special/ImpersonationLogsPage';
-
-// // Dashboard Variations
-// import HouseOwnerDashboard from '../pages/dashboard/HouseOwnerDashboard';
-// import CaretakerDashboard from '../pages/dashboard/CaretakerDashboard';
-// import StaffDashboard from '../pages/dashboard/StaffDashboard';
-// import WebOwnerDashboard from '../pages/dashboard/WebOwnerDashboard';
-// import FlatRenterDashboard from '../pages/dashboard/FlatRenterDashboard';
-
-// // Utility Pages
-// import AccessDeniedPage from '../pages/utility/AccessDeniedPage';
-// import ComingSoonPage from '../pages/utility/ComingSoonPage';
-// import UnderMaintenancePage from '../pages/utility/UnderMaintenancePage';
-
-
 // Protected route wrapper
 const ProtectedRoute = ({ children, roles = [], permissions = [] }) => {
   const { isAuthenticated, user, isLoading, hasPermission } = useAuth();
   
   if (isLoading) {
     return (
-      <LoaderMinimal />
+      <ContentLoader />
     );
   }
   
@@ -149,7 +79,7 @@ const PublicRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
-    return <LoaderMinimal />;
+    return <ContentLoader />;
   }
   
   if (isAuthenticated) {
@@ -160,24 +90,12 @@ const PublicRoute = ({ children }) => {
 };
 
 
-const DynamicDashboard = () => {
-  const { user } = useAuth();
-  
-  switch (user?.role?.slug) {
-    case 'web_owner':
-      return <WebOwnerDashboard />;
-    case 'staff':
-      return <StaffDashboard />;
-    case 'house_owner':
-      return <HouseOwnerDashboard />;
-    case 'caretaker':
-      return <CaretakerDashboard />;
-    case 'flat_renter':
-      return <FlatRenterDashboard />;
-    default:
-      return <Dashboard />;
-  }
-};
+// A `DynamicDashboard` used to sit here that switched on the user's role and returned
+// WebOwnerDashboard / StaffDashboard / HouseOwnerDashboard / CaretakerDashboard /
+// FlatRenterDashboard — none of which are imported (their imports are long commented out)
+// and none of which exist as files. It was never referenced by any <Route>, so it only
+// ever would have thrown "X is not defined" had anything rendered it. Removed.
+// Role-specific dashboards are selected inside <Dashboard/> itself.
 
 // Defined outside the component so the reference is stable across renders.
 const ALL_ROLES = ['web_owner', 'house_owner', 'staff', 'caretaker'];
@@ -195,7 +113,7 @@ const RoleGuard = ({ children, roles = [] }) => {
 
 const AppRoutes = () => {
   return (
-    <Suspense fallback={<LoaderMinimal />}>
+    <Suspense fallback={<ContentLoader />}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<PublicHome />} /> {/* This Should be public, and should not redirect */}
@@ -209,12 +127,6 @@ const AppRoutes = () => {
             <SignupPage />
           </PublicRoute>
         } />
-        <Route path='/test' element={
-          <PublicRoute>
-            <testComp/>
-          </PublicRoute>
-        } />
-
         <Route path="/forgot-password" element={
           <PublicRoute>
             <ForgotPassword />
@@ -231,11 +143,10 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        <Route path='/test2' element={
-          <PublicRoute>
-            <testComp2/>
-          </PublicRoute>
-        } />
+        {/* /test and /test2 routes removed: they rendered <testComp/> and <testComp2/>,
+            neither of which was imported or defined anywhere. Lowercase JSX names are
+            treated as literal HTML tags, so they silently rendered empty unknown elements
+            rather than erroring. */}
         <Route path="/auth/success" element={<AuthSuccess />} />
 
 

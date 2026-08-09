@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Home, Save, X, Building, MapPin, Layers,
-  AlertCircle, CheckCircle, Loader2, ArrowLeft, DollarSign
+  AlertCircle, CheckCircle, Loader2, ArrowLeft, Coins
 } from 'lucide-react';
 import { useGetHouseDetailsQuery, useUpdateHouseMutation } from '../../../store/api/houseApi';
 import { useAuth } from '../../../hooks';
@@ -347,7 +347,7 @@ const HouseEditForm = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <label className="text-sm font-semibold text-text flex items-center gap-2">
-              <DollarSign className="w-4 h-4" /> Amenities / Service Charges
+              <Coins className="w-4 h-4" /> Amenities / Service Charges
             </label>
             {totalAmenitiesCharge > 0 && (
               <div className="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">

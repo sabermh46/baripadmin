@@ -7,8 +7,8 @@ import {
   AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import { useGetDashboardDataQuery } from '../../store/api/analyticsApi';
-import { Users, Home, Building, Users as Staff, Shield, Activity, DollarSign, TrendingUp } from 'lucide-react';
-import { LoaderMinimal } from '../common/RouteLoader';
+import { Users, Home, Building, Users as Staff, Shield, Activity, Banknote, TrendingUp } from 'lucide-react';
+import { ContentLoader, LoaderMinimal } from '../common/RouteLoader';
 import Btn from '../common/Button';
 import { useAuth } from '../../hooks';
 import { useTranslation } from 'react-i18next';
@@ -380,7 +380,7 @@ const SystemDashboard = () => {
 
   if (isLoading) {
     return (
-      <LoaderMinimal />
+      <ContentLoader />
     );
   }
 

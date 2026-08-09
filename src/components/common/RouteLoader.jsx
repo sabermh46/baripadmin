@@ -1,88 +1,57 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import NProgress from 'nprogress';
-import 'nprogress/nprogress.css';
+import React from 'react';
 
-// Single CSS border-spin — GPU-composited via `transform` only (no SMIL, no filters),
-// and memoized since it never takes props that change across mounts.
+/**
+ * The app's only page-level loading primitives.
+ *
+ * A `RouteLoader` component used to live here too: on every pathname change it started an
+ * NProgress bar, showed a full-viewport `fixed inset-0` spinner on a 200 ms timer, and
+ * cleared both on a 600 ms timer. Those timers were fixed delays with no relationship to
+ * whether the route had actually finished loading — a cached, instant navigation still
+ * mounted and unmounted a viewport-sized overlay and ran a progress-bar animation for
+ * 600 ms. That is invented latency plus two extra renders and two forced layouts per
+ * navigation (it is the `nprogress.js` entry in the Lighthouse forced-reflow table).
+ *
+ * Suspense already knows exactly when a lazy chunk resolves, so the boundary inside
+ * `Layout` around `<Outlet/>` does this job correctly and for free.
+ */
+
+// Single CSS border-spin, composited via `transform` only — no SMIL, no filters, no
+// backdrop-blur. Memoized because its only prop is a constant at each call site.
 const Spinner = React.memo(function Spinner({ size = 40 }) {
-    return (
-        <div
-            className="rounded-full border-4 border-primary/20 border-t-primary animate-spin"
-            style={{ width: size, height: size }}
-        />
-    );
+  return (
+    <div
+      className="rounded-full border-4 border-primary/20 border-t-primary animate-spin"
+      style={{ width: size, height: size }}
+      role="status"
+      aria-label="Loading"
+    />
+  );
 });
 
 /**
- * Full-screen blocking overlay loader.
- * Use for: auth gates, ProtectedRoute, PersistGate, component-level data loading.
- * The overlay prevents interaction while content is unavailable.
+ * Full-screen blocking overlay.
+ * Use only where interaction genuinely must be blocked: the auth gate and PersistGate,
+ * before the shell exists. Anything rendered inside the Layout should use ContentLoader.
  */
 export function LoaderMinimal() {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90">
-            <Spinner />
-        </div>
-    );
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90">
+      <Spinner />
+    </div>
+  );
 }
 
 /**
- * Non-blocking center indicator for route transitions.
- * No background overlay — content stays visible underneath.
- * pointer-events-none so it never blocks clicks.
+ * Fills only the container it is placed in, leaving the sidebar and header visible.
+ * This is the Suspense fallback around Layout's <Outlet/> and the in-page loading state
+ * for data-fetching views.
  */
-function RouteLoaderSpinner() {
-    return (
-        <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
-            <Spinner size={32} />
-        </div>
-    );
+export function ContentLoader() {
+  return (
+    <div className="flex items-center justify-center w-full min-h-[60vh]">
+      <Spinner />
+    </div>
+  );
 }
 
-/**
- * Mounts once inside <Router>. Responds to pathname changes:
- *   - Starts the NProgress top bar immediately.
- *   - Shows the center spinner only after 200ms (avoids flash on instant/cached navigations).
- *   - Completes both after 600ms.
- *
- * Only [location.pathname] in the dep array — no state variables that would
- * cause the effect to re-trigger mid-navigation.
- */
-const RouteLoader = () => {
-    const location = useLocation();
-    const [show, setShow] = useState(false);
-    const showTimerRef = useRef(null);
-    const doneTimerRef = useRef(null);
-
-    useEffect(() => {
-        // Cancel any timers from a previous navigation that hasn't completed yet.
-        clearTimeout(showTimerRef.current);
-        clearTimeout(doneTimerRef.current);
-
-        // Top bar starts immediately on every navigation.
-        NProgress.start();
-
-        // Delay the center spinner so fast/cached routes don't flash it at all.
-        showTimerRef.current = setTimeout(() => setShow(true), 200);
-
-        // Finish both after a period that covers typical lazy-chunk load times.
-        doneTimerRef.current = setTimeout(() => {
-            NProgress.done();
-            setShow(false);
-        }, 600);
-
-        return () => {
-            clearTimeout(showTimerRef.current);
-            clearTimeout(doneTimerRef.current);
-            // Hide the spinner immediately on rapid back-to-back navigations.
-            // Do NOT call NProgress.done() here — let the new effect's start() continue
-            // the bar smoothly rather than flashing complete → restart.
-            setShow(false);
-        };
-    }, [location.pathname]);
-
-    return show ? <RouteLoaderSpinner /> : null;
-};
-
-export default RouteLoader;
+export { Spinner };

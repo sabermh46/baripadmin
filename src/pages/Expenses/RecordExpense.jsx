@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import { 
   Building, 
   Calendar, 
-  DollarSign, 
+  Banknote, 
   FileText, 
   CreditCard, 
   Tag,
@@ -204,7 +204,7 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
-              <DollarSign className="inline-block w-4 h-4 mr-2" />
+              <Banknote className="inline-block w-4 h-4 mr-2" />
               Amount
             </label>
             <div className="relative">

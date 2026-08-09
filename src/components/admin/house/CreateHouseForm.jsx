@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Plus, X, Save, User, Info, Loader2, Building, MapPin, Layers, CheckCircle, DollarSign } from 'lucide-react';
+import { Home, Plus, X, Save, User, Info, Loader2, Building, MapPin, Layers, CheckCircle, Coins } from 'lucide-react';
 import { useCreateHouseMutation, useGetManagedOwnersQuery } from '../../../store/api/houseApi';
 import { useAuth } from '../../../hooks';
 import Btn from '../../common/Button';
@@ -385,7 +385,7 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-              <DollarSign size={16} /> Amenities / Service Charges
+              <Coins size={16} /> Amenities / Service Charges
             </label>
             {totalAmenitiesCharge > 0 && (
               <div className="text-sm bg-primary-50 text-primary-700 px-3 py-1 rounded-full font-medium">

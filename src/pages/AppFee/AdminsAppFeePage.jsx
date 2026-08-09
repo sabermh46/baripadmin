@@ -3,26 +3,35 @@ import { Plus, Search, Eye, Pencil, Trash2 } from 'lucide-react';
 import Table from '../../components/common/Table';
 import Btn from '../../components/common/Button';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
-import { useGetAppFeePaymentsQuery, useDeleteAppFeePaymentMutation, useUpdateAppFeePaymentMutation } from '../../store/api/appFeeApi';
+import {
+  useGetAppFeePaymentsQuery,
+  useDeleteAppFeePaymentMutation,
+  useUpdateAppFeePaymentMutation,
+  useGetAppFeeStatsQuery,
+} from '../../store/api/appFeeApi';
 import { useGetManagedOwnersQuery } from '../../store/api/houseApi';
 import AppFeeCreateModal from './AppFeeCreateModal';
 import AppFeeViewEditModal from './AppFeeViewEditModal';
+import AppFeeOverview from './AppFeeOverview';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
-const STATUS_OPTIONS = [
-  { value: '', label: 'All statuses' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'cancelled', label: 'Cancelled' },
+// Built from `t` inside the component rather than at module scope, so switching language
+// re-labels the dropdowns instead of leaving them in the language loaded at import time.
+const buildStatusOptions = (t) => [
+  { value: '', label: t('all_statuses') },
+  { value: 'pending', label: t('pending') },
+  { value: 'paid', label: t('paid') },
+  { value: 'overdue', label: t('overdue') },
+  { value: 'cancelled', label: t('cancelled') },
 ];
 
-const PAYMENT_METHOD_OPTIONS = [
-  { value: '', label: 'All methods' },
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'mobile_money', label: 'Mobile Money' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'other', label: 'Other' },
+const buildPaymentMethodOptions = (t) => [
+  { value: '', label: t('all_methods') },
+  { value: 'bank_transfer', label: t('bank_transfer') },
+  { value: 'mobile_money', label: t('mobile_money') },
+  { value: 'cash', label: t('cash') },
+  { value: 'other', label: t('other') },
 ];
 
 const formatDate = (d) => {
@@ -35,6 +44,9 @@ const formatDate = (d) => {
 };
 
 const AdminsAppFeePage = () => {
+  const { t } = useTranslation();
+  const STATUS_OPTIONS = buildStatusOptions(t);
+  const PAYMENT_METHOD_OPTIONS = buildPaymentMethodOptions(t);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({
     search: '',
@@ -47,6 +59,10 @@ const AdminsAppFeePage = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [viewEditId, setViewEditId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  // Set by clicking the "Awaiting your verification" tile. Kept separate from `filters`
+  // because it is not a plain column filter — it narrows to pending invoices the owner has
+  // already claimed to have paid, which is a metadata flag rather than a status.
+  const [quickFilter, setQuickFilter] = useState(null);
   const [deletePayment, { isLoading: isDeleting }] = useDeleteAppFeePaymentMutation();
   const [updatePayment, { isLoading: isUpdating }] = useUpdateAppFeePaymentMutation();
 
@@ -59,7 +75,7 @@ const AdminsAppFeePage = () => {
     if (!deleteConfirmId) return;
     try {
       await deletePayment(deleteConfirmId).unwrap();
-      toast.success('Payment deleted successfully.');
+      toast.success(t('payment_deleted_successfully'));
       setDeleteConfirmId(null);
     } catch {
       // Error toast from mutation
@@ -75,13 +91,17 @@ const AdminsAppFeePage = () => {
     house_owner_id: filters.house_owner_id ? Number(filters.house_owner_id) : undefined,
     start_date: filters.start_date || undefined,
     end_date: filters.end_date || undefined,
+    awaiting_verification: quickFilter === 'awaiting_verification' ? 1 : undefined,
   };
 
   const { data: listResponse, isLoading } = useGetAppFeePaymentsQuery(listParams);
+  const { data: statsResponse, isLoading: statsLoading } = useGetAppFeeStatsQuery();
   const { data: ownersResponse } = useGetManagedOwnersQuery(
     { search: '', page: 1, limit: 100 }
   );
 
+  // Filtering happens server-side (`awaiting_verification`) so the pagination totals stay
+  // honest — narrowing the fetched page client-side would report the unfiltered count.
   const payments = listResponse?.data ?? [];
   const meta = listResponse?.meta ?? {};
   const total = meta.total ?? 0;
@@ -94,20 +114,20 @@ const AdminsAppFeePage = () => {
   const handleQuickClose = async (id) => {
     try {
       await updatePayment({ id, body: { status: 'paid' } }).unwrap();
-      toast.success('Payment marked as paid.');
+      toast.success(t('payment_marked_as_paid'));
     } catch (err) {
       const msg =
-        err?.data?.error || err?.data?.message || err?.message || 'Failed to update payment';
+        err?.data?.error || err?.data?.message || err?.message || t('failed_to_update_payment');
       toast.error(msg);
     }
   };
 
   const columns = [
-    { key: 'id', title: 'ID', dataIndex: 'id', cellClassName: 'font-mono text-gray-600' },
-    { key: 'house_owner_name', title: 'House Owner', dataIndex: 'house_owner_name' },
+    { key: 'id', title: t('id'), dataIndex: 'id', cellClassName: 'font-mono text-gray-600' },
+    { key: 'house_owner_name', title: t('house_owner'), dataIndex: 'house_owner_name' },
     {
       key: 'amount',
-      title: 'Amount',
+      title: t('amount'),
       dataIndex: 'amount',
       render: (row) => (
         <span className="font-medium">
@@ -115,23 +135,23 @@ const AdminsAppFeePage = () => {
         </span>
       ),
     },
-    { key: 'fee_type', title: 'Fee Type', dataIndex: 'fee_type' },
+    { key: 'fee_type', title: t('fee_type'), dataIndex: 'fee_type' },
     {
       key: 'start_date',
-      title: 'Start Date',
+      title: t('start_date'),
       dataIndex: 'start_date',
       render: (row) => formatDate(row.start_date),
     },
     {
       key: 'paid_date',
-      title: 'Paid Date',
+      title: t('paid_date'),
       dataIndex: 'paid_date',
       render: (row) => formatDate(row.paid_date),
     },
-    { key: 'payment_method', title: 'Method', dataIndex: 'payment_method', render: (row) => row.payment_method || '–' },
+    { key: 'payment_method', title: t('method'), dataIndex: 'payment_method', render: (row) => row.payment_method || '–' },
     {
       key: 'closed',
-      title: 'Closed',
+      title: t('closed'),
       dataIndex: 'closed',
       render: (row) => {
         const waiting = row.metadata?.waiting_for_confirm ? row.metadata.waiting_for_confirm : false;
@@ -150,7 +170,7 @@ const AdminsAppFeePage = () => {
                 : 'bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-60'
             }`}
           >
-            {isPaid ? 'Paid' : 'Mark paid'}
+            {isPaid ? t('paid') : t('mark_paid')}
           </button>
         ) : (
           <span className="text-xs text-gray-400">—</span>
@@ -159,7 +179,7 @@ const AdminsAppFeePage = () => {
     },
     {
       key: 'status',
-      title: 'Status',
+      title: t('status'),
       dataIndex: 'status',
       render: (row) => (
         <span
@@ -179,7 +199,7 @@ const AdminsAppFeePage = () => {
     },
     {
       key: 'actions',
-      title: 'Actions',
+      title: t('actions'),
       dataIndex: 'id',
       cellClassName: 'whitespace-nowrap',
       render: (row) => (
@@ -188,7 +208,7 @@ const AdminsAppFeePage = () => {
             type="button"
             onClick={() => setViewEditId({ id: row.id })}
             className="p-1.5 text-gray-600 hover:bg-gray-100 rounded"
-            title="View"
+            title={t('view')}
           >
             <Eye className="h-4 w-4" />
           </button>
@@ -196,7 +216,7 @@ const AdminsAppFeePage = () => {
             type="button"
             onClick={() => setViewEditId({ id: row.id })}
             className="p-1.5 text-gray-600 hover:bg-gray-100 rounded"
-            title="Edit"
+            title={t('edit')}
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -204,7 +224,7 @@ const AdminsAppFeePage = () => {
             type="button"
             onClick={() => setDeleteConfirmId(row.id)}
             className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-            title="Delete"
+            title={t('delete')}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -215,6 +235,22 @@ const AdminsAppFeePage = () => {
 
   return (
     <div className="p-4 md:p-6">
+      <div className="mb-4">
+        <h1 className="text-xl font-semibold text-gray-900">{t('app_fee_and_subscriptions')}</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{t('app_fee_admin_subtitle')}</p>
+      </div>
+
+      <AppFeeOverview
+        overview={statsResponse?.overview}
+        isLoading={statsLoading}
+        activeFilter={quickFilter}
+        onFilter={(key) => {
+          // Clicking the active tile clears it, so the filter is never a one-way trip.
+          setQuickFilter((cur) => (cur === key ? null : key));
+          setPage(1);
+        }}
+      />
+
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
           <Btn
@@ -223,15 +259,24 @@ const AdminsAppFeePage = () => {
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            New app fee
+            {t('new_app_fee')}
           </Btn>
+          {quickFilter === 'awaiting_verification' && (
+            <button
+              type="button"
+              onClick={() => setQuickFilter(null)}
+              className="text-xs px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200"
+            >
+              {t('showing_awaiting_verification')} ✕
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder={`${t("search")}...`}
               value={filters.search}
               onChange={(e) => setFilter('search', e.target.value)}
               className="pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm w-40 focus:ring-2 focus:ring-primary outline-none"
@@ -264,7 +309,7 @@ const AdminsAppFeePage = () => {
             onChange={(e) => setFilter('house_owner_id', e.target.value)}
             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-w-[160px]"
           >
-            <option value="">All house owners</option>
+            <option value="">{t('all_house_owners')}</option>
             {ownerOptions.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -276,14 +321,14 @@ const AdminsAppFeePage = () => {
             value={filters.start_date}
             onChange={(e) => setFilter('start_date', e.target.value)}
             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
-            title="From date"
+            title={t('from_date')}
           />
           <input
             type="date"
             value={filters.end_date}
             onChange={(e) => setFilter('end_date', e.target.value)}
             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
-            title="To date"
+            title={t('to_date')}
           />
         </div>
       </div>
@@ -293,7 +338,7 @@ const AdminsAppFeePage = () => {
         data={payments}
         loading={isLoading}
         rowKey="id"
-        emptyMessage="No app fee payments found"
+        emptyMessage={t('no_app_fee_payments_found')}
         showPagination
         pagination={{
           current: page,
@@ -321,9 +366,9 @@ const AdminsAppFeePage = () => {
         isOpen={!!deleteConfirmId}
         onClose={() => setDeleteConfirmId(null)}
         onConfirm={handleDeleteConfirm}
-        title="Delete app fee payment"
-        message="Are you sure you want to delete this app fee payment? This action cannot be undone."
-        confirmText="Delete"
+        title={t('delete_app_fee_payment')}
+        message={t('delete_app_fee_confirm')}
+        confirmText={t('delete')}
         isLoading={isDeleting}
         variant="danger"
       />

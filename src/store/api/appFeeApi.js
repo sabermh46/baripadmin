@@ -66,6 +66,32 @@ export const appFeeApi = baseApi.injectEndpoints({
         { type: 'AppFeePayments', id: 'LIST' },
       ],
     }),
+
+    // Portfolio figures for the admin overview. Tagged with the payments LIST id so
+    // verifying/creating/deleting an invoice refreshes the cards without a manual reload.
+    getAppFeeStats: builder.query({
+      query: () => ({ url: '/app-fees/payments/stats', method: 'GET' }),
+      providesTags: [{ type: 'AppFeePayments', id: 'LIST' }, { type: 'AppFeePayments', id: 'STATS' }],
+    }),
+
+    // Two integers behind the sidebar badges. Separate from the stats query because the nav
+    // mounts on every page while the stats page does not.
+    getAppFeeBadgeCounts: builder.query({
+      query: () => ({ url: '/app-fees/badge-counts', method: 'GET' }),
+      providesTags: [{ type: 'AppFeePayments', id: 'LIST' }, { type: 'AppFeePayments', id: 'BADGES' }],
+    }),
+
+    // A single owner's live subscription state, straight from AppFeeStatusService — the one
+    // definition of "expired" that the gate middleware also enforces.
+    getAppFeeStatus: builder.query({
+      query: (houseOwnerId) => ({ url: `/app-fees/payments/status/${houseOwnerId}`, method: 'GET' }),
+      providesTags: [{ type: 'AppFeePayments', id: 'LIST' }],
+    }),
+
+    getAppFeeDue: builder.query({
+      query: (houseOwnerId) => ({ url: `/app-fees/payments/calculate-due/${houseOwnerId}`, method: 'GET' }),
+      providesTags: [{ type: 'AppFeePayments', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -75,4 +101,8 @@ export const {
   useCreateAppFeePaymentMutation,
   useUpdateAppFeePaymentMutation,
   useDeleteAppFeePaymentMutation,
+  useGetAppFeeStatsQuery,
+  useGetAppFeeBadgeCountsQuery,
+  useGetAppFeeStatusQuery,
+  useGetAppFeeDueQuery,
 } = appFeeApi;

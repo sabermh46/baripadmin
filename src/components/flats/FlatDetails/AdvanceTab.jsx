@@ -5,7 +5,7 @@ import {
   Eye,
   Phone,
   Mail,
-  DollarSign,
+  Banknote,
   ArrowDownRight,
   TrendingUp,
   PlusCircle,
@@ -143,7 +143,7 @@ const AdvanceTab = ({
         <div className="bg-surface rounded-lg p-4 border border-subdued/20">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <DollarSign className="text-blue-600" size={24} />
+              <Banknote className="text-blue-600" size={24} />
             </div>
             <div>
               <p className="text-sm text-subdued">{t('total_advance')}</p>
