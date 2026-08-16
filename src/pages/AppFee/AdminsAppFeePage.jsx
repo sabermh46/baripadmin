@@ -13,6 +13,7 @@ import { useGetManagedOwnersQuery } from '../../store/api/houseApi';
 import AppFeeCreateModal from './AppFeeCreateModal';
 import AppFeeViewEditModal from './AppFeeViewEditModal';
 import AppFeeOverview from './AppFeeOverview';
+import AppFeeMetricModal from './AppFeeMetricModal';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 
@@ -63,6 +64,9 @@ const AdminsAppFeePage = () => {
   // because it is not a plain column filter — it narrows to pending invoices the owner has
   // already claimed to have paid, which is a metadata flag rather than a status.
   const [quickFilter, setQuickFilter] = useState(null);
+  // Which overview tile is expanded. Null keeps the breakdown query skipped, so none of the
+  // eight endpoints is hit until an admin actually asks for one.
+  const [openMetric, setOpenMetric] = useState(null);
   const [deletePayment, { isLoading: isDeleting }] = useDeleteAppFeePaymentMutation();
   const [updatePayment, { isLoading: isUpdating }] = useUpdateAppFeePaymentMutation();
 
@@ -244,11 +248,7 @@ const AdminsAppFeePage = () => {
         overview={statsResponse?.overview}
         isLoading={statsLoading}
         activeFilter={quickFilter}
-        onFilter={(key) => {
-          // Clicking the active tile clears it, so the filter is never a one-way trip.
-          setQuickFilter((cur) => (cur === key ? null : key));
-          setPage(1);
-        }}
+        onMetric={setOpenMetric}
       />
 
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -347,6 +347,29 @@ const AdminsAppFeePage = () => {
           pageSize: listParams.limit,
         }}
         onPageChange={setPage}
+      />
+
+      <AppFeeMetricModal
+        metric={openMetric}
+        isOpen={!!openMetric}
+        onClose={() => setOpenMetric(null)}
+        // A row in the breakdown is the same invoice the table below lists, so it opens the
+        // same editor rather than a read-only copy of it.
+        onOpenPayment={(id) => {
+          setOpenMetric(null);
+          setViewEditId({ id });
+        }}
+        onApplyQuickFilter={(key) => {
+          setQuickFilter(key);
+          setPage(1);
+        }}
+        // Owner rows narrow the table to that owner, which is the natural next step after
+        // spotting them in a "who is lapsed" list.
+        onFilterOwner={(houseOwnerId) => {
+          setOpenMetric(null);
+          setQuickFilter(null);
+          setFilter('house_owner_id', String(houseOwnerId));
+        }}
       />
 
       <AppFeeCreateModal

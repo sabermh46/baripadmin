@@ -158,7 +158,7 @@ const axiosBaseQuery = () => async (args, api) => {
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['Auth', 'User', 'House', 'Flat', 'Notice', 'AppFeePayments', 'ManagedOwners', 'ManagedUsers', 'Loan', 'LandingPage', 'Settings', 'AuditLog'],
+  tagTypes: ['Auth', 'User', 'House', 'Flat', 'Notice', 'AppFeePayments', 'AppFeeBreakdown', 'ManagedOwners', 'ManagedUsers', 'Loan', 'LandingPage', 'Settings', 'AuditLog'],
 
   // Restores the query cache that redux-persist wrote to IndexedDB, so a reload paints
   // from cache instead of waiting on the network. This is RTK Query's own rehydration

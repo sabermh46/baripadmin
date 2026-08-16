@@ -74,6 +74,21 @@ export const appFeeApi = baseApi.injectEndpoints({
       providesTags: [{ type: 'AppFeePayments', id: 'LIST' }, { type: 'AppFeePayments', id: 'STATS' }],
     }),
 
+    // The rows behind one overview tile, fetched only when that tile is clicked — hence a
+    // parameterised query rather than eight more fields on getAppFeeStats, which every admin
+    // page load would otherwise have to pay for.
+    getAppFeeBreakdown: builder.query({
+      query: (metric) => ({
+        url: '/app-fees/payments/stats/breakdown',
+        method: 'GET',
+        params: { metric },
+      }),
+      providesTags: (result, error, metric) => [
+        { type: 'AppFeePayments', id: 'LIST' },
+        { type: 'AppFeeBreakdown', id: metric },
+      ],
+    }),
+
     // Two integers behind the sidebar badges. Separate from the stats query because the nav
     // mounts on every page while the stats page does not.
     getAppFeeBadgeCounts: builder.query({
@@ -102,6 +117,7 @@ export const {
   useUpdateAppFeePaymentMutation,
   useDeleteAppFeePaymentMutation,
   useGetAppFeeStatsQuery,
+  useGetAppFeeBreakdownQuery,
   useGetAppFeeBadgeCountsQuery,
   useGetAppFeeStatusQuery,
   useGetAppFeeDueQuery,

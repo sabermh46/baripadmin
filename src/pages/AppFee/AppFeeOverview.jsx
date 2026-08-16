@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   BanknoteArrowUp,
   CalendarClock,
+  ChevronRight,
   CircleSlash,
   Clock,
   FileWarning,
@@ -20,7 +21,7 @@ const money = (n) =>
  * One metric. `tone` drives the accent so the eye can triage the row without reading:
  * amber/red tiles are the ones with work behind them.
  */
-const Tile = ({ icon: Icon, label, value, sub, tone = 'neutral', onClick, active }) => {
+const Tile = ({ icon: Icon, label, value, sub, tone = 'neutral', onClick, active, hint }) => {
   const tones = {
     neutral: 'text-gray-600 bg-gray-100',
     positive: 'text-emerald-700 bg-emerald-100',
@@ -35,8 +36,9 @@ const Tile = ({ icon: Icon, label, value, sub, tone = 'neutral', onClick, active
     <Wrapper
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`text-left bg-white border rounded-xl p-4 flex items-start gap-3 transition-colors ${
-        onClick ? 'hover:border-primary/60 cursor-pointer' : ''
+      title={hint}
+      className={`group relative text-left bg-white border rounded-xl p-4 flex items-start gap-3 transition-colors ${
+        onClick ? 'hover:border-primary/60 hover:bg-primary/2 cursor-pointer' : ''
       } ${active ? 'border-primary ring-1 ring-primary/30' : 'border-gray-200'}`}
     >
       <span className={`shrink-0 p-2 rounded-lg ${tones[tone]}`}>
@@ -49,6 +51,11 @@ const Tile = ({ icon: Icon, label, value, sub, tone = 'neutral', onClick, active
         </span>
         {sub ? <span className="block text-[11px] text-gray-500 mt-0.5">{sub}</span> : null}
       </span>
+      {/* Affordance only — the whole tile is the hit target. Without it there is nothing to
+          tell an admin these numbers open anything. */}
+      {onClick && (
+        <ChevronRight className="absolute top-3 right-3 h-4 w-4 text-gray-300 group-hover:text-primary transition-colors" />
+      )}
     </Wrapper>
   );
 };
@@ -67,10 +74,12 @@ const SkeletonTile = () => (
  * Admin app-fee overview.
  *
  * Split into "money" and "subscription health" because they answer different questions:
- * the first is how the month is going, the second is who needs chasing. The actionable
- * tiles double as filters for the table below, so a count is never a dead end.
+ * the first is how the month is going, the second is who needs chasing.
+ *
+ * Every tile opens its own breakdown: a bare count tells an admin that something needs doing
+ * without telling them what, so each number is a way in to the rows it was computed from.
  */
-const AppFeeOverview = ({ overview, isLoading, activeFilter, onFilter }) => {
+const AppFeeOverview = ({ overview, isLoading, activeFilter, onMetric }) => {
   const { t } = useTranslation();
 
   if (isLoading && !overview) {
@@ -104,6 +113,8 @@ const AppFeeOverview = ({ overview, isLoading, activeFilter, onFilter }) => {
               ? t('last_month_was', { amount: money(m.collectedLastMonth) })
               : `${delta >= 0 ? '▲' : '▼'} ${t('vs_last_month', { percent: Math.abs(deltaPct) })}`
           }
+          hint={t('view_breakdown')}
+          onClick={() => onMetric?.('collected_this_month')}
         />
         <Tile
           icon={Wallet}
@@ -111,6 +122,8 @@ const AppFeeOverview = ({ overview, isLoading, activeFilter, onFilter }) => {
           label={t('outstanding')}
           value={money(m.outstanding)}
           sub={t('awaiting_payment_overdue', { awaiting: a.awaitingPaymentCount, overdue: a.overdueCount })}
+          hint={t('view_breakdown')}
+          onClick={() => onMetric?.('outstanding')}
         />
         <Tile
           icon={Hourglass}
@@ -119,7 +132,8 @@ const AppFeeOverview = ({ overview, isLoading, activeFilter, onFilter }) => {
           value={a.pendingVerificationCount}
           sub={money(m.pendingVerificationAmount)}
           active={activeFilter === 'awaiting_verification'}
-          onClick={() => onFilter?.('awaiting_verification')}
+          hint={t('view_breakdown')}
+          onClick={() => onMetric?.('pending_verification')}
         />
         <Tile
           icon={TrendingUp}
@@ -127,6 +141,8 @@ const AppFeeOverview = ({ overview, isLoading, activeFilter, onFilter }) => {
           label={t('monthly_recurring')}
           value={money(m.monthlyRecurringRevenue)}
           sub={t('active_houses_times_fee', { houses: s.activeHouses, fee: money(m.monthlyFeePerHouse) })}
+          hint={t('view_breakdown')}
+          onClick={() => onMetric?.('monthly_recurring')}
         />
       </div>
 
@@ -137,6 +153,8 @@ const AppFeeOverview = ({ overview, isLoading, activeFilter, onFilter }) => {
           label={t('active_subscriptions')}
           value={`${s.active} / ${s.totalOwners}`}
           sub={t('house_owners_total', { count: s.totalOwners })}
+          hint={t('view_breakdown')}
+          onClick={() => onMetric?.('active_subscriptions')}
         />
         <Tile
           icon={CircleSlash}
@@ -144,6 +162,8 @@ const AppFeeOverview = ({ overview, isLoading, activeFilter, onFilter }) => {
           label={t('app_fee_not_started')}
           value={s.neverStarted}
           sub={t('never_had_paid_subscription')}
+          hint={t('view_breakdown')}
+          onClick={() => onMetric?.('never_started')}
         />
         <Tile
           icon={Clock}
@@ -151,6 +171,8 @@ const AppFeeOverview = ({ overview, isLoading, activeFilter, onFilter }) => {
           label={t('in_grace_period')}
           value={s.inGrace}
           sub={t('expired_within_offset')}
+          hint={t('view_breakdown')}
+          onClick={() => onMetric?.('in_grace')}
         />
         <Tile
           icon={AlertTriangle}
@@ -158,6 +180,8 @@ const AppFeeOverview = ({ overview, isLoading, activeFilter, onFilter }) => {
           label={t('blocked_lapsed')}
           value={s.blocked}
           sub={t('past_grace_access_gated')}
+          hint={t('view_breakdown')}
+          onClick={() => onMetric?.('blocked')}
         />
       </div>
 
