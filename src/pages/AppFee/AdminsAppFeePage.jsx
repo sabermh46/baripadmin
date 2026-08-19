@@ -9,11 +9,12 @@ import {
   useUpdateAppFeePaymentMutation,
   useGetAppFeeStatsQuery,
 } from '../../store/api/appFeeApi';
-import { useGetManagedOwnersQuery } from '../../store/api/houseApi';
+import useOwnerOptions from '../../hooks/useOwnerOptions';
 import AppFeeCreateModal from './AppFeeCreateModal';
 import AppFeeViewEditModal from './AppFeeViewEditModal';
 import AppFeeOverview from './AppFeeOverview';
 import AppFeeMetricModal from './AppFeeMetricModal';
+import VerifyClaimModal from './VerifyClaimModal';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 
@@ -67,6 +68,8 @@ const AdminsAppFeePage = () => {
   // Which overview tile is expanded. Null keeps the breakdown query skipped, so none of the
   // eight endpoints is hit until an admin actually asks for one.
   const [openMetric, setOpenMetric] = useState(null);
+  // The claim currently being checked against a bank/wallet statement.
+  const [verifyClaimFor, setVerifyClaimFor] = useState(null);
   const [deletePayment, { isLoading: isDeleting }] = useDeleteAppFeePaymentMutation();
   const [updatePayment, { isLoading: isUpdating }] = useUpdateAppFeePaymentMutation();
 
@@ -100,9 +103,10 @@ const AdminsAppFeePage = () => {
 
   const { data: listResponse, isLoading } = useGetAppFeePaymentsQuery(listParams);
   const { data: statsResponse, isLoading: statsLoading } = useGetAppFeeStatsQuery();
-  const { data: ownersResponse } = useGetManagedOwnersQuery(
-    { search: '', page: 1, limit: 100 }
-  );
+  // Shared picker cache — see useOwnerOptions. This screen and AppFeeCreateModal, which is
+  // rendered from it, previously asked for the owner list with two different arguments and
+  // so fetched it twice on the same page.
+  const { asOptions: ownerOptions } = useOwnerOptions();
 
   // Filtering happens server-side (`awaiting_verification`) so the pagination totals stay
   // honest — narrowing the fetched page client-side would report the unfiltered count.
@@ -111,18 +115,32 @@ const AdminsAppFeePage = () => {
   const total = meta.total ?? 0;
   const totalPages = meta.totalPages ?? 1;
 
-  const ownerOptions = ownersResponse?.data
-    ? ownersResponse.data.map((o) => ({ value: String(o.id), label: `${o.name} (${o.email})` }))
-    : [];
 
-  const handleQuickClose = async (id) => {
+  const showError = (err) =>
+    toast.error(err?.data?.error || err?.data?.message || err?.message || t('failed_to_update_payment'));
+
+  // Confirming a claim used to be a one-click button in the table that fired
+  // `{status:'paid'}` immediately — settling an invoice without ever putting the transaction
+  // number, the wallet or the claimed amount in front of the person confirming it. With no
+  // payment gateway, that check IS the payment system, so it now goes through a dialog that
+  // shows the evidence and offers the two real outcomes.
+  const handleConfirmClaim = async (id) => {
     try {
-      await updatePayment({ id, body: { status: 'paid' } }).unwrap();
-      toast.success(t('payment_marked_as_paid'));
+      await updatePayment({ id, body: { status: 'paid', sendMail: true } }).unwrap();
+      toast.success(t('payment_confirmed'));
+      setVerifyClaimFor(null);
     } catch (err) {
-      const msg =
-        err?.data?.error || err?.data?.message || err?.message || t('failed_to_update_payment');
-      toast.error(msg);
+      showError(err);
+    }
+  };
+
+  const handleRejectClaim = async (id, rejection_reason) => {
+    try {
+      await updatePayment({ id, body: { status: 'pending', rejection_reason } }).unwrap();
+      toast.success(t('sent_back_to_owner'));
+      setVerifyClaimFor(null);
+    } catch (err) {
+      showError(err);
     }
   };
 
@@ -154,31 +172,49 @@ const AdminsAppFeePage = () => {
     },
     { key: 'payment_method', title: t('method'), dataIndex: 'payment_method', render: (row) => row.payment_method || '–' },
     {
+      // The reference an admin has to match against their bKash / Nagad / bank statement.
+      // It was not shown anywhere on this page, which made verifying from the table
+      // impossible — the number simply was not on screen.
+      key: 'transaction_id',
+      title: t('transaction_number'),
+      dataIndex: 'transaction_id',
+      render: (row) => {
+        const ref = row.metadata?.claim?.transactionId ?? row.transaction_id;
+        if (!ref) return <span className="text-xs text-gray-400">—</span>;
+        return <span className="font-mono text-xs text-gray-700 break-all">{ref}</span>;
+      },
+    },
+    {
       key: 'closed',
-      title: t('closed'),
+      title: t('verification'),
       dataIndex: 'closed',
       render: (row) => {
-        const waiting = row.metadata?.waiting_for_confirm ? row.metadata.waiting_for_confirm : false;
-        const isPaid = row.metadata?.closed ? row.metadata.closed : false;
-        return waiting || isPaid ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleQuickClose(row.id);
-            }}
-            disabled={isUpdating || isPaid}
-            className={`px-2 py-1 text-xs rounded ${
-              isPaid
-                ? 'bg-green-100 text-green-700 cursor-default'
-                : 'bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-60'
-            }`}
-          >
-            {isPaid ? t('paid') : t('mark_paid')}
-          </button>
-        ) : (
-          <span className="text-xs text-gray-400">—</span>
-        );
+        const waiting = !!row.metadata?.waiting_for_confirm;
+        const isPaid = !!row.metadata?.closed;
+        const wasRejected = !!row.metadata?.claim_rejected;
+
+        if (isPaid) {
+          return <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">{t('paid')}</span>;
+        }
+        if (waiting) {
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setVerifyClaimFor(row);
+              }}
+              disabled={isUpdating}
+              className="px-2 py-1 text-xs rounded bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-60"
+            >
+              {t('review_claim')}
+            </button>
+          );
+        }
+        if (wasRejected) {
+          return <span className="px-2 py-1 text-xs rounded bg-red-50 text-red-700">{t('sent_back')}</span>;
+        }
+        return <span className="text-xs text-gray-400">—</span>;
       },
     },
     {
@@ -370,6 +406,15 @@ const AdminsAppFeePage = () => {
           setQuickFilter(null);
           setFilter('house_owner_id', String(houseOwnerId));
         }}
+      />
+
+      <VerifyClaimModal
+        payment={verifyClaimFor}
+        isOpen={!!verifyClaimFor}
+        onClose={() => setVerifyClaimFor(null)}
+        onConfirm={handleConfirmClaim}
+        onReject={handleRejectClaim}
+        isSaving={isUpdating}
       />
 
       <AppFeeCreateModal

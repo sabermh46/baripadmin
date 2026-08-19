@@ -9,17 +9,14 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import {
-  useGetFlatDetailsQuery,
+  useGetFlatOverviewQuery,
   useSendRentReminderMutation,
-  useGetFlatAdvancePaymentsQuery,
-  useGetPaymentReceiptsQuery,
   useResendPaymentReceiptMutation,
   useRemoveRenterMutation,
   useSendPaymentReceiptPdfMutation,
   useUpdateRentPaymentMutation,
   useDeleteRentPaymentMutation,
 } from '../../store/api/flatApi';
-import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import FlatForm from './FlatForm';
 import RecordPaymentModal from './RecordPaymentModal';
 import AdvancePaymentFormModal from './AdvancePaymentFormModal';
@@ -70,17 +67,17 @@ const FlatDetails = () => {
   const [openDeletePayment, setOpenDeletePayment] = useState(false);
   const [selectedPaymentForDelete, setSelectedPaymentForDelete] = useState(null);
 
-  // ── Queries ───────────────────────────────────────────────────────────────
-  const { data: paymentReceiptsData, refetch: refetchPaymentReceipts } =
-    useGetPaymentReceiptsQuery({ flatId: id }, { skip: !id });
-  const { data: flatData, isLoading, refetch: refetchDetails } =
-    useGetFlatDetailsQuery(id);
-  const { data: advancePaymentsData, refetch: refetchAdvancePayments } =
-    useGetFlatAdvancePaymentsQuery({ flatId: id }, { skip: !id });
-  const { data: rentersResponse } = useGetAvailableRentersQuery(
-    { houseId: flatData?.data?.flat?.house_id, search: '' },
-    { skip: !flatData?.data?.flat?.house_id || !id, refetchOnMountOrArgChange: true }
-  );
+  // ── Query ─────────────────────────────────────────────────────────────────
+  // One request for the whole screen. This was four: the flat, its advance payments, its
+  // emailed receipts, and the assignable renters — and the renter list could not even be
+  // requested until the flat came back, since it needs the flat's house_id.
+  //
+  // `refetch` is aliased to the names the handlers below already use, so a single refresh
+  // now covers everything the four separate refetches used to cover individually.
+  const { data: flatData, isLoading, refetch } = useGetFlatOverviewQuery(id, { skip: !id });
+  const refetchDetails = refetch;
+  const refetchAdvancePayments = refetch;
+  const refetchPaymentReceipts = refetch;
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const [sendReminder, { isLoading: isSendingReminder }] = useSendRentReminderMutation();
@@ -96,17 +93,22 @@ const FlatDetails = () => {
   const house = flatData?.data?.house || {};
   const payments = useMemo(() => flatData?.data?.payments || [], [flatData?.data?.payments]);
   const stats = flatData?.data?.stats || {};
+  // These three used to read `.data` off responses that were bare JSON arrays — the
+  // advance-payments and payment-receipts endpoints both return an array at the top level,
+  // so `advancePaymentsData?.data` was always undefined and both the Advance tab and the
+  // receipts log rendered permanently empty regardless of what the API returned. They are
+  // properties of one enveloped response now, so there is no shape to guess at.
   const advancePayments = useMemo(
-    () => advancePaymentsData?.data || [],
-    [advancePaymentsData?.data]
+    () => flatData?.data?.advancePayments || [],
+    [flatData?.data?.advancePayments]
   );
   const availableRenters = useMemo(
-    () => rentersResponse?.data || rentersResponse || [],
-    [rentersResponse]
+    () => flatData?.data?.availableRenters || [],
+    [flatData?.data?.availableRenters]
   );
   const paymentReceipts = useMemo(
-    () => paymentReceiptsData?.data || [],
-    [paymentReceiptsData?.data]
+    () => flatData?.data?.receipts || [],
+    [flatData?.data?.receipts]
   );
   const totalRemainingAdvance = useMemo(
     () => advancePayments.reduce((sum, p) => sum + (parseFloat(p.remaining_amount) || 0), 0),

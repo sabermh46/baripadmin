@@ -158,7 +158,36 @@ const axiosBaseQuery = () => async (args, api) => {
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['Auth', 'User', 'House', 'Flat', 'Notice', 'AppFeePayments', 'AppFeeBreakdown', 'ManagedOwners', 'ManagedUsers', 'Loan', 'LandingPage', 'Settings', 'AuditLog'],
+  /**
+   * EVERY tag type used anywhere in the app must be listed here.
+   *
+   * RTK Query silently drops a providesTags/invalidatesTags entry whose type is not
+   * declared — it warns once in development and then ignores it. Seventeen types were in
+   * use across the API slices and none of them were declared: Notification, Renter,
+   * Payment, AdvancePayment, PaymentReceipt, Caretaker, CaretakerAssignment, Houses,
+   * HouseFlats, HouseStats, HouseCaretakers, Analytics, HouseOwnerAnalytics, Report,
+   * SystemSettings, EmailStats, WorkerStats.
+   *
+   * So across 56 call sites, no mutation ever invalidated anything. Marking a notification
+   * read, creating a renter, recording a payment, assigning a caretaker — none of them
+   * refreshed the lists they changed. That is why so many components call refetch() by
+   * hand: the manual refetches were compensating for invalidation that never fired, and
+   * they are the reason a single action could cost several requests.
+   *
+   * Adding the missing types is what makes cache invalidation work at all, and is the
+   * precondition for removing those manual refetches.
+   */
+  tagTypes: [
+    'Auth', 'User', 'Settings', 'SystemSettings', 'AuditLog', 'LandingPage',
+    'House', 'Houses', 'HouseFlats', 'HouseStats', 'HouseCaretakers',
+    'Flat', 'Renter', 'Notice',
+    'Payment', 'AdvancePayment', 'PaymentReceipt', 'Loan',
+    'Caretaker', 'CaretakerAssignment',
+    'AppFeePayments', 'AppFeeBreakdown',
+    'ManagedOwners', 'ManagedUsers',
+    'Notification',
+    'Analytics', 'HouseOwnerAnalytics', 'Report', 'EmailStats', 'WorkerStats',
+  ],
 
   // Restores the query cache that redux-persist wrote to IndexedDB, so a reload paints
   // from cache instead of waiting on the network. This is RTK Query's own rehydration

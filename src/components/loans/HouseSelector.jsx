@@ -4,7 +4,8 @@ import { ChevronDown, Loader2, Check, Building, BookUser } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import debounce from 'lodash/debounce';
 import { useAuth } from '../../hooks';
-import { useGetHousesQuery, useGetManagedOwnersQuery } from '../../store/api/houseApi';
+import { useGetHousesQuery } from '../../store/api/houseApi';
+import useOwnerOptions from '../../hooks/useOwnerOptions';
 
 /**
  * Dedicated house selector for Loans (and other) pages.
@@ -39,10 +40,11 @@ const HouseSelector = ({ value, onChange, label, className = '', placeholder }) 
   const ownerHouses = ownerHousesData?.data || [];
 
   // —— Admin: managed owners with search
-  const { data: ownersData, isLoading: ownersLoading } = useGetManagedOwnersQuery(
-    { search: debouncedOwnerSearch || '', limit: 50, page: 1 },
-    { skip: isHouseOwner }
-  );
+  // Shared picker cache (useOwnerOptions) — same entry every other owner dropdown uses.
+  const { owners: ownersFiltered, isLoading: ownersLoading } = useOwnerOptions({
+    search: debouncedOwnerSearch || '',
+  });
+  const ownersData = { data: ownersFiltered };
   const owners = useMemo(() => ownersData?.data || [], [ownersData?.data]);
 
   // —— Admin: houses derived from the owners just fetched above, instead of a second GET

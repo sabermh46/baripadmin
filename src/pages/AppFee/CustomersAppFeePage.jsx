@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
-import {
-  useGetAppFeePaymentsQuery,
-  useGetAppFeeStatusQuery,
-  useGetAppFeeDueQuery,
-} from '../../store/api/appFeeApi';
-import { useAuth } from '../../hooks';
+import { useGetMyAppFeeQuery } from '../../store/api/appFeeApi';
 import AppFeeViewEditModal from './AppFeeViewEditModal';
 import { ContentLoader } from '../../components/common/RouteLoader';
 import { AlertTriangle, BadgeCheck, CalendarClock, Clock, Home, Receipt } from 'lucide-react';
@@ -19,20 +14,10 @@ const fmt = (value, pattern = 'dd MMM yyyy') => {
   return Number.isNaN(d.getTime()) ? null : format(d, pattern);
 };
 
-/**
- * The invoice an owner should act on: still pending, and raised by an admin (or the monthly
- * cron, which attributes itself to the platform's web_owner). An owner cannot settle an
- * invoice they raised themselves, so those are excluded — the "Already paid?" flow only
- * makes sense against something the platform is asking them to pay.
- */
-const selectActionableInvoice = (payments = []) => {
-  const candidates = payments
-    .filter((p) => p.status === 'pending')
-    .filter((p) => ['web_owner', 'staff'].includes(p.metadata?.createdBy?.role))
-    .sort((a, b) => new Date(a.start_date ?? 0) - new Date(b.start_date ?? 0));
-
-  return candidates[0] ?? null;
-};
+// The "which invoice should this owner act on" rule used to live here as
+// selectActionableInvoice(). It now comes back as `actionable` on the same response, so the
+// definition — pending, and raised by the platform rather than by the owner — exists once,
+// on the server, next to the data it filters.
 
 /** Big, unambiguous statement of where the subscription stands. */
 const StatusPanel = ({ status, due }) => {
@@ -123,14 +108,16 @@ const StatusPanel = ({ status, due }) => {
 const CustomersAppFeePage = () => {
   const { t } = useTranslation();
   const [viewEditId, setViewEditId] = useState(null);
-  const { user } = useAuth();
 
-  const { data: listResponse, isLoading } = useGetAppFeePaymentsQuery({ page: 1, limit: 50 });
-  const { data: status } = useGetAppFeeStatusQuery(user?.id, { skip: !user?.id });
-  const { data: due } = useGetAppFeeDueQuery(user?.id, { skip: !user?.id });
+  // One request instead of three. The house owner is resolved server-side, which is also
+  // what fixes this page for caretakers — it used to send the caretaker's own user id as a
+  // house-owner id, so status and due both came back 403 and the panel silently vanished.
+  const { data, isLoading } = useGetMyAppFeeQuery();
 
-  const payments = listResponse?.data ?? [];
-  const actionable = selectActionableInvoice(payments);
+  const status = data?.status;
+  const due = data?.due;
+  const payments = data?.payments ?? [];
+  const actionable = data?.actionable ?? null;
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-4xl">
@@ -144,6 +131,18 @@ const CustomersAppFeePage = () => {
       {actionable && (
         <div className="border border-primary/30 bg-primary/5 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
+            {/* A refused claim used to be completely invisible here: the invoice simply went
+                back to unpaid with no message, so "we confirmed it" and "we could not find
+                it" looked identical from the owner's side. */}
+            {actionable.metadata?.claim_rejected && (
+              <div className="mb-2.5 rounded-lg border border-red-200 bg-red-50 p-2.5">
+                <p className="text-xs font-semibold text-red-800">{t('payment_could_not_be_confirmed')}</p>
+                {actionable.metadata.claim_rejected.reason && (
+                  <p className="text-xs text-red-700 mt-0.5">{actionable.metadata.claim_rejected.reason}</p>
+                )}
+                <p className="text-[11px] text-red-600 mt-1">{t('check_transaction_number_and_resubmit')}</p>
+              </div>
+            )}
             <p className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
               <Receipt className="h-4 w-4 text-primary" />
               {t('invoice_awaiting_payment', { id: actionable.id })}

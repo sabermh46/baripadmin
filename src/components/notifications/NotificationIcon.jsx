@@ -1,6 +1,6 @@
 // src/components/notifications/NotificationIcon.jsx - Updated version
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Check, Trash2, RefreshCw } from 'lucide-react';
 import useNotifications from '../../hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,12 +13,15 @@ const NotificationIcon = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [hasOpened, setHasOpened] = useState(false);
     const dropdownRef = useRef(null);
-    const [isRefreshing, setIsRefreshing] = useState(false);
 
+    // Passing no filters is what makes the bell share the notification page's cache entry —
+    // see DEFAULT_FILTERS in useNotifications. `skip` keeps the list unfetched until the
+    // dropdown is opened for the first time, so the badge alone costs one request.
     const {
         notifications,
         unreadCount,
         loading,
+        isFetching,
         refresh,
         markAsRead,
         deleteNotification,
@@ -60,14 +63,10 @@ const NotificationIcon = () => {
         }
     };
 
-    const handleRefresh = async () => {
-        setIsRefreshing(true);
-        try {
-            await refresh();
-        } finally {
-            setIsRefreshing(false);
-        }
-    };
+    // The spinner tracks RTK Query's own isFetching rather than local state: refresh() only
+    // invalidates the cache, so a local flag would have flipped back before the resulting
+    // request had even been sent.
+    const handleRefresh = () => refresh();
 
     const handleNotificationClick = async (notification) => {
         if (!notification.read) {
@@ -176,10 +175,10 @@ const NotificationIcon = () => {
                                 <button
                                     onClick={handleRefresh}
                                     className="text-sm text-gray-500 hover:text-gray-700 flex items-center"
-                                    disabled={isRefreshing}
+                                    disabled={isFetching}
                                     aria-label="Refresh notifications"
                                 >
-                                    <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    <RefreshCw className={`w-4 h-4 mr-1 ${isFetching ? 'animate-spin' : ''}`} />
                                     {t('refresh')}
                                 </button>
                             </div>
@@ -193,7 +192,7 @@ const NotificationIcon = () => {
 
                     {/* Notifications List */}
                     <div className="overflow-y-auto max-h-96">
-                        {loading && !isRefreshing ? (
+                        {loading ? (
                             <div className="p-8 text-center">
                                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
                                 <p className="mt-2 text-gray-500">{t('loading_notifications')}</p>
@@ -286,13 +285,16 @@ const NotificationIcon = () => {
 
                     {/* Footer */}
                     <div className="p-4 border-t border-gray-100 bg-gray-50">
-                        <a
-                            href="/notification"
+                        {/* Link, not <a href>. The anchor triggered a full document load —
+                            tearing down the SPA, refetching the bundle and emptying the
+                            entire RTK Query cache — every time someone opened the list. */}
+                        <Link
+                            to="/notification"
                             className="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
                             onClick={() => setIsOpen(false)}
                         >
                             {t('view_all_notifications')}
-                        </a>
+                        </Link>
                     </div>
                 </div>
             )}

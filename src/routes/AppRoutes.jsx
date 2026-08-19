@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks';
 import { ContentLoader } from '../components/common/RouteLoader';
 
@@ -77,16 +77,35 @@ const ProtectedRoute = ({ children, roles = [], permissions = [] }) => {
 // Public route wrapper
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return <ContentLoader />;
   }
-  
+
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return <>{children}</>;
+};
+
+/**
+ * "/" is the marketing page for visitors and the dashboard for anyone signed in.
+ *
+ * It used to render PublicHome unconditionally, which meant a logged-in user who opened the
+ * installed app, tapped the logo, or hit a bookmark landed on the sales page and had to
+ * navigate to their own dashboard by hand. Offline that was worse: the landing page needs
+ * the network, while the dashboard renders from the persisted cache.
+ *
+ * The auth check has to wait for isLoading, or a hard refresh would flash the landing page
+ * before the session is restored and then jump.
+ */
+const HomeEntry = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) return <ContentLoader />;
+
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <PublicHome />;
 };
 
 
@@ -116,7 +135,7 @@ const AppRoutes = () => {
     <Suspense fallback={<ContentLoader />}>
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<PublicHome />} /> {/* This Should be public, and should not redirect */}
+        <Route path="/" element={<HomeEntry />} />
         <Route path="/login" element={
           <PublicRoute>
             <LoginPage />
@@ -307,9 +326,9 @@ const AppRoutes = () => {
             <div className="text-center">
               <h1 className="text-4xl font-bold text-gray-800 mb-4">404</h1>
               <p className="text-xl text-gray-600 mb-8">Page Not Found</p>
-              <a href="/" className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
+              <Link to="/" className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
                 Go Home
-              </a>
+              </Link>
             </div>
           </div>
         } />

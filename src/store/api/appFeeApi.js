@@ -96,6 +96,19 @@ export const appFeeApi = baseApi.injectEndpoints({
       providesTags: [{ type: 'AppFeePayments', id: 'LIST' }, { type: 'AppFeePayments', id: 'BADGES' }],
     }),
 
+    // The owner-facing app-fee page in one request: subscription status, amount due, the
+    // invoice list, and which invoice needs acting on. Replaces getAppFeeStatus +
+    // getAppFeeDue + getAppFeePayments, which were three calls for one screen — and which
+    // sent the caretaker's own id as a house-owner id and got 403 for two of the three.
+    getMyAppFee: builder.query({
+      query: (houseOwnerId) => ({
+        url: '/app-fees/me',
+        method: 'GET',
+        params: houseOwnerId ? { house_owner_id: houseOwnerId } : undefined,
+      }),
+      providesTags: [{ type: 'AppFeePayments', id: 'LIST' }, { type: 'AppFeePayments', id: 'ME' }],
+    }),
+
     // A single owner's live subscription state, straight from AppFeeStatusService — the one
     // definition of "expired" that the gate middleware also enforces.
     getAppFeeStatus: builder.query({
@@ -118,6 +131,7 @@ export const {
   useDeleteAppFeePaymentMutation,
   useGetAppFeeStatsQuery,
   useGetAppFeeBreakdownQuery,
+  useGetMyAppFeeQuery,
   useGetAppFeeBadgeCountsQuery,
   useGetAppFeeStatusQuery,
   useGetAppFeeDueQuery,

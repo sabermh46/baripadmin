@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
 import { useGetProfitReportQuery } from '../../store/api/reportApi';
-import { useGetHousesQuery, useGetManagedOwnersQuery } from '../../store/api/houseApi'; 
+import { useGetHousesQuery } from '../../store/api/houseApi'; 
 import { useAuth } from '../../hooks';
 import Table from '../../components/common/Table';
 import Btn from '../../components/common/Button';
@@ -10,6 +10,7 @@ import { FileText, Calculator, User, Loader2, ChevronDown, Check, Search } from 
 import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from '@headlessui/react';
 
 import appLogo from '../../assets/icons/logo.svg';
+import useOwnerOptions from '../../hooks/useOwnerOptions';
 
 export const ReportGenPage = () => {
     const { user, isHouseOwner, isCaretaker, isStaff, isWebOwner } = useAuth();
@@ -26,10 +27,12 @@ export const ReportGenPage = () => {
 
     // 1. FETCH OWNERS
     const canSeeAllOwners = isStaff || isWebOwner || isCaretaker;
-    const { data: managedOwnersResponse, isLoading: ownersLoading } = useGetManagedOwnersQuery(
-        { search: ownerSearch, limit: 50, page: 1 }, 
-        { skip: !canSeeAllOwners }
-    );
+    // Shared picker cache (useOwnerOptions) — one request for every owner dropdown.
+    const { owners: ownersFiltered, isLoading: ownersLoading } = useOwnerOptions({
+        search: ownerSearch,
+        skip: !canSeeAllOwners,
+    });
+    const managedOwnersResponse = { data: ownersFiltered };
     
     const ownersList = managedOwnersResponse?.data || [];
 

@@ -66,9 +66,21 @@ export default defineConfig({
         display_override: ['standalone', 'minimal-ui'],
         orientation: 'portrait',
         scope: '/',
-        // Marks launches from the installed icon, so analytics can separate app usage
-        // from browser usage.
-        start_url: '/?source=pwa',
+        // Opens the installed app on the dashboard, not the marketing landing page.
+        //
+        // This used to be '/', which meant tapping the home-screen icon loaded the public
+        // sales page — the one screen in the app that needs the network and that a
+        // signed-in user never wants. '/dashboard' renders straight from the persisted
+        // cache, so the app opens to real data with no connection at all. A signed-out
+        // visitor is redirected to /login by the route guard, which is the right landing
+        // for them too.
+        //
+        // Changing this is safe only because `id` above is pinned: Chrome would otherwise
+        // derive app identity from start_url and treat this as a brand-new app, orphaning
+        // every existing install.
+        // The query marks launches from the installed icon so analytics can separate app
+        // usage from browser usage.
+        start_url: '/dashboard?source=pwa',
         categories: ['business', 'productivity', 'finance'],
         // Explicitly declines "install the native app instead" — there is no native app.
         prefer_related_applications: false,

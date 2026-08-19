@@ -8,13 +8,21 @@ import {
   useDeleteAppFeePaymentMutation,
 } from '../../store/api/appFeeApi';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
+// The wallet matters, not just "mobile money": an admin confirming a manual payment has to
+// know whether to open bKash, Nagad or Rocket to find the transaction number.
 const PAYMENT_METHODS = [
+  { value: 'bkash', label: 'bKash' },
+  { value: 'nagad', label: 'Nagad' },
+  { value: 'rocket', label: 'Rocket' },
   { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'mobile_money', label: 'Mobile Money' },
   { value: 'cash', label: 'Cash' },
   { value: 'other', label: 'Other' },
 ];
+
+// Cash changes hands in person, so it is the one method with no reference to quote.
+const REFERENCE_REQUIRED = (method) => method !== 'cash';
 
 const formatDateForInput = (d) => {
   if (!d) return '';
@@ -35,6 +43,7 @@ const AppFeeViewEditModal = ({
   defaultStatus,
 }) => {
   const { isWebOwner, isStaff } = useAuth();
+  const { t } = useTranslation();
   const canEdit = isWebOwner || isStaff || forceEditable;
 
   const { data: paymentResponse, isLoading } = useGetAppFeePaymentQuery(paymentId, {
@@ -84,6 +93,15 @@ const AppFeeViewEditModal = ({
   const handleSave = async (e) => {
     e.preventDefault();
     if (!paymentId || !formData || !isDirty) return;
+
+    // With no payment gateway, the transaction number is the only thing an admin can match a
+    // claim against. Submitting "I have paid this" without one produces an unverifiable
+    // claim that will simply be sent back, so it is caught here rather than server-side.
+    if (formData.status === 'paid' && REFERENCE_REQUIRED(formData.payment_method) && !formData.transaction_id?.trim()) {
+      toast.error(t('transaction_number_required_to_report_payment'));
+      return;
+    }
+
     try {
       const body = {
         status: formData.status || undefined,

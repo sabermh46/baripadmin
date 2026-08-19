@@ -22,6 +22,27 @@ export const flatApi = baseApi.injectEndpoints({
       providesTags: ['Flat'],
     }),
 
+    /**
+     * The whole flat detail screen in one request.
+     *
+     * Replaces getFlatDetails + getFlatAdvancePayments + getPaymentReceipts +
+     * getAvailableRenters. Those were not just four requests but two *waves*: the renter
+     * list could not be requested until the flat came back, because it needed the flat's
+     * house_id to scope candidates. The assign-renter dropdown was therefore empty for the
+     * entire first round trip.
+     *
+     * Tagged with all four of the old tags so existing mutations keep invalidating it —
+     * recording a payment, adding an advance, or assigning a renter all still refresh this
+     * without any of them needing to know it exists.
+     */
+    getFlatOverview: builder.query({
+      query: (id) => ({
+        url: `/flats/${id}/overview`,
+        method: 'GET',
+      }),
+      providesTags: ['Flat', 'AdvancePayment', 'PaymentReceipt', 'Renter'],
+    }),
+
     // Create flat
     createFlat: builder.mutation({
       query: ({ houseId, ...data }) => ({
@@ -215,6 +236,7 @@ export const flatApi = baseApi.injectEndpoints({
 export const {
   useGetFlatsQuery,
   useGetFlatDetailsQuery,
+  useGetFlatOverviewQuery,
   useCreateFlatMutation,
   useUpdateFlatMutation,
   useDeleteFlatMutation,

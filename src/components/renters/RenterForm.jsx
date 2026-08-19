@@ -9,9 +9,10 @@ import {
 } from '../../store/api/renterApi';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks';
-import { useGetManagedOwnersQuery } from '../../store/api/houseApi';
+
 import { useTranslation } from 'react-i18next';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
+import useOwnerOptions from '../../hooks/useOwnerOptions';
 
 const renterSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -35,10 +36,11 @@ const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
   const { isHouseOwner, isStaff, isWebOwner, user } = useAuth();
 
   // 2. Updated Query to include search param
-  const { data: managedOwners, isLoading: ownersLoading } = useGetManagedOwnersQuery(
-    { search: ownerSearch }, 
-    { skip: isHouseOwner }
-  );
+  // Shared picker cache (useOwnerOptions): one fixed query argument across every owner
+  // dropdown in the app, filtered in memory. This used to refetch the whole owner list on
+  // each keystroke of the search box.
+  const { owners: ownerRows, isLoading: ownersLoading } = useOwnerOptions({ search: ownerSearch });
+  const managedOwners = { data: ownerRows };
 
   const { t } = useTranslation();
     
