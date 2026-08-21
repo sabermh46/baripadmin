@@ -154,6 +154,25 @@ export default defineConfig({
           // part of the initial payload regardless.
           if (id.includes('vite/preload-helper')) return 'react-core'
 
+          // Rollup's CommonJS interop helper (` commonjsHelpers.js`) — the same class of
+          // bug, and this one shipped a WHITE SCREEN.
+          //
+          // React is CJS, so react-core needs this helper. Left unpinned, Rollup hoisted it
+          // into whichever chunk happened to reach it first — the i18n chunk — and react-core
+          // then imported it back:
+          //
+          //     react-core  --(getDefaultExportFromCjs)-->  i18n
+          //     i18n        --(createContext)------------>  react-core
+          //
+          // A circular chunk dependency. One side has to evaluate first, and it was i18n:
+          // react-i18next ran `React.createContext()` while react-core was still
+          // initialising, so React was undefined and the app died on load with
+          // "Cannot read properties of undefined (reading 'createContext')".
+          //
+          // Dev never showed it because dev does not bundle — there are no chunks to cycle.
+          // Pinning the helper into react-core makes every dependency point one way.
+          if (id.includes('commonjsHelpers')) return 'react-core'
+
           if (!id.includes('node_modules')) return
 
           // Order matters and the test must be path-anchored. The previous first line was
