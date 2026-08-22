@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks';
 import { ContentLoader } from '../components/common/RouteLoader';
 
@@ -21,12 +21,12 @@ const ViewAllStaff         = lazy(() => import('../pages/Admin/staff/ViewAllStaf
 const AuditLogs            = lazy(() => import('../pages/Admin/audit/AuditLogs'));
 const SystemSettings       = lazy(() => import('../pages/Admin/SystemSettings'));
 const HouseOwnersPage      = lazy(() => import('../pages/Admin/HouseOwnersPage'));
+const ArchivedHouses       = lazy(() => import('../components/admin/house/ArchivedHouses'));
 const HouseOwnerDetailPage = lazy(() => import('../pages/Admin/HouseOwnerDetail'));
 const HousesPage           = lazy(() => import('../pages/House'));
 const CreateHouseForm      = lazy(() => import('../components/admin/house/CreateHouseForm'));
 const HouseDetails         = lazy(() => import('../components/admin/house/HouseDetails'));
 const HouseEditForm        = lazy(() => import('../components/admin/house/HouseEditForm'));
-const FlatList             = lazy(() => import('../components/flats/FlatList'));
 const FlatDetails          = lazy(() => import('../components/flats/FlatDetails'));
 const RenterList           = lazy(() => import('../components/renters/RenterList'));
 const CareTakerPage        = lazy(() => import('../pages/Caretaker'));
@@ -117,17 +117,40 @@ const HomeEntry = () => {
 // Role-specific dashboards are selected inside <Dashboard/> itself.
 
 // Defined outside the component so the reference is stable across renders.
-const ALL_ROLES = ['web_owner', 'house_owner', 'staff', 'caretaker'];
+// `developer` belongs here. Leaving it out denied the developer account every page that
+// uses ALL_ROLES — while SideNav happily rendered all of those links for it, so the whole
+// app was a set of dead links for the highest-ranked role in the system.
+const ALL_ROLES = ['developer', 'web_owner', 'house_owner', 'staff', 'caretaker'];
 
 // Lightweight role check for routes that are already inside the Layout route.
 // Auth + isLoading are guaranteed by the parent ProtectedRoute — no need to
 // re-check them on every navigation and risk an Outlet flash.
-const RoleGuard = ({ children, roles = [] }) => {
-  const { user } = useAuth();
+const RoleGuard = ({ children, roles = [], permissions = [] }) => {
+  const { user, hasPermission } = useAuth();
+
   if (roles.length > 0 && user?.role?.slug && !roles.includes(user.role.slug)) {
     return <Navigate to="/access-denied" replace />;
   }
+
+  // Lets a route mirror the permission its API already enforces, instead of approximating
+  // it with a role list that drifts. hasPermission() short-circuits true for web_owner and
+  // developer, so this only ever narrows things for staff.
+  if (permissions.length > 0 && !permissions.every((p) => hasPermission(p))) {
+    return <Navigate to="/access-denied" replace />;
+  }
+
   return <>{children}</>;
+};
+
+/**
+ * /houses/:id/flats -> /houses/:id
+ *
+ * The separate flats route meant seeing a house and seeing its flats were two navigations
+ * for one question. `replace` keeps it out of history, so Back does not bounce.
+ */
+const FlatsRedirect = () => {
+  const { houseId } = useParams();
+  return <Navigate to={`/houses/${houseId}`} replace />;
 };
 
 const AppRoutes = () => {
@@ -216,11 +239,10 @@ const AppRoutes = () => {
                 <HouseEditForm />
               </RoleGuard>
             } />
-            <Route path="/houses/:houseId/flats" element={
-              <RoleGuard roles={ALL_ROLES}>
-                <FlatList />
-              </RoleGuard>
-            } />
+            {/* Flats are part of the house page now, not a page of their own. Kept as a
+                redirect so existing links, bookmarks and the sidebar's toMatch entry still
+                land somewhere sensible instead of 404ing. */}
+            <Route path="/houses/:houseId/flats" element={<FlatsRedirect />} />
             <Route path="/renters" element={
               <RoleGuard roles={ALL_ROLES}>
                 <RenterList />
@@ -232,13 +254,13 @@ const AppRoutes = () => {
               </RoleGuard>
             } />
             <Route path="/houses/create" element={
-              <RoleGuard roles={['web_owner', 'staff']}>
+              <RoleGuard roles={['developer', 'web_owner', 'staff']}>
                 <CreateHouseForm />
               </RoleGuard>
             } />
 
             <Route path="/caretakers" element={
-              <RoleGuard roles={['web_owner', 'staff', 'house_owner']}>
+              <RoleGuard roles={['developer', 'web_owner', 'staff', 'house_owner']}>
                 <CareTakerPage />
               </RoleGuard>
             } />
@@ -249,47 +271,56 @@ const AppRoutes = () => {
             } />
 
             <Route path="/caretakers/:id/details" element={
-              <RoleGuard roles={['web_owner', 'staff', 'house_owner']}>
+              <RoleGuard roles={['developer', 'web_owner', 'staff', 'house_owner']}>
                 <CaretakerDetails />
               </RoleGuard>
             } />
 
             {/* ===== STAFF-SPECIFIC ROUTES ===== */}
             <Route path="staff/audit-logs" element={
-              <RoleGuard roles={['web_owner']}>
+              <RoleGuard roles={['developer', 'web_owner']}>
                 <AuditLogs />
               </RoleGuard>
             } />
             <Route path="staff/user-approvals" element={
-              <RoleGuard roles={['staff', 'web_owner']}>
+              <RoleGuard roles={['developer', 'staff', 'web_owner']}>
                 <ComingSoonPage />
               </RoleGuard>
             } />
 
             {/* ===== ADMIN-SPECIFIC ROUTES ===== */}
             <Route path="admin/settings" element={
-              <RoleGuard roles={['web_owner']}>
+              <RoleGuard roles={['developer', 'web_owner']}>
                 <SystemSettings />
               </RoleGuard>
             } />
             <Route path="admin/generate-token" element={
-              <RoleGuard roles={['web_owner', 'staff']}>
+              <RoleGuard roles={['developer', 'web_owner', 'staff']}>
                 <GenerateToken />
               </RoleGuard>
             } />
 
             <Route path="admin/staff" element={
-              <RoleGuard roles={['web_owner']}>
+              <RoleGuard roles={['developer', 'web_owner']}>
                 <ViewAllStaff />
               </RoleGuard>
             } />
+            {/* Staff belong here, but on users.view — the endpoint returns a directory of
+                people with their contact details, which houses.view has no business
+                granting. The permission prop mirrors what that endpoint enforces. */}
+            {/* Archived houses are web_owner-only, exactly as the endpoint behind them is. */}
+            <Route path="houses/archived" element={
+              <RoleGuard roles={['developer', 'web_owner']}>
+                <ArchivedHouses />
+              </RoleGuard>
+            } />
             <Route path="admin/house-owners" element={
-              <RoleGuard roles={['web_owner']}>
+              <RoleGuard roles={['developer', 'web_owner', 'staff']} permissions={['users.view']}>
                 <HouseOwnersPage />
               </RoleGuard>
             } />
             <Route path="admin/house-owners/:ownerId" element={
-              <RoleGuard roles={['web_owner']}>
+              <RoleGuard roles={['developer', 'web_owner', 'staff']} permissions={['users.view']}>
                 <HouseOwnerDetailPage />
               </RoleGuard>
             } />

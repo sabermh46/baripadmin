@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, Edit, Trash2, Eye, Plus, 
-  Home, Users, Layers, RefreshCw, MapPin, LayoutGrid, List, MoreVertical
-} from 'lucide-react';
+  Home, Users, Layers, RefreshCw, MapPin, LayoutGrid, List, MoreVertical, Archive } from 'lucide-react';
 import { useGetHousesQuery, useDeleteHouseMutation } from '../../../store/api/houseApi';
 import { useAuth } from '../../../hooks';
 import { toast } from 'react-toastify';
@@ -13,7 +12,19 @@ import Table from '../../common/Table';
 const HouseList = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { isWebOwner, isHouseOwner, isCaretaker } = useAuth();
+  const { isWebOwner, isHouseOwner, isCaretaker, hasPermission } = useAuth();
+
+  // Gate on the PERMISSION, not the role.
+  //
+  // These were `isWebOwner`, which hid the buttons from every staff member — including
+  // one explicitly granted houses.create. The backend has always allowed it
+  // (HouseController::store accepts staff holding houses.create for an owner they manage,
+  // and destroy accepts houses.delete), so the UI was strictly narrower than the API and
+  // the granted permission did nothing a user could see.
+  //
+  // hasPermission already returns true for web_owner and developer, so they are unaffected.
+  const canCreateHouse = hasPermission('houses.create');
+  const canDeleteHouse = hasPermission('houses.delete');
   
   // Default view based on role
   const [viewMode, setViewMode] = useState(isWebOwner ? 'table' : 'grid');
@@ -37,7 +48,7 @@ const HouseList = () => {
 
   const handleDelete = async (e, id, address) => {
     e.stopPropagation();
-    if (!isWebOwner) return toast.error(t('action_not_allowed'));
+    if (!canDeleteHouse) return toast.error(t('action_not_allowed'));
     
     if (window.confirm(`${t('confirm_delete')} "${address}"?`)) {
       try {
@@ -123,7 +134,7 @@ const HouseList = () => {
           <button onClick={() => navigate(`/houses/${row?.id}/edit`)} className="p-2 text-subdued hover:text-secondary hover:bg-secondary/5 rounded-lg transition-colors">
             <Edit className="w-4 h-4" />
           </button>
-          {isWebOwner && (
+          {canDeleteHouse && (
             <button onClick={(e) => handleDelete(e, row?.id, row?.address)} className="p-2 text-subdued hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
               <Trash2 className="w-4 h-4" />
             </button>
@@ -156,7 +167,7 @@ const HouseList = () => {
             <RefreshCw className={`w-5 h-5 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
 
-          {isWebOwner && (
+          {canCreateHouse && (
             <button onClick={() => navigate('/houses/create')} className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20">
               <Plus className="w-5 h-5" /> {t('add_house')}
             </button>
@@ -171,6 +182,20 @@ const HouseList = () => {
           <StatCard icon={<Layers />} label={t('total_flats')} value={data.stats.flats} color="green" />
           <StatCard icon={<Users />} label={t('active_properties')} value={data.stats.active} color="purple" />
         </div>
+      )}
+
+      {/* Archived houses were reachable by URL only — the endpoint existed, nothing linked
+          to it. An owner whose house had been archived looked, from the app, like an owner
+          who had never had one. */}
+      {isWebOwner && (
+        <button
+          type="button"
+          onClick={() => navigate('/houses/archived')}
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary"
+        >
+          <Archive className="h-4 w-4" />
+          {t('archived_houses')}
+        </button>
       )}
 
       {/* Search Bar */}
@@ -196,7 +221,7 @@ const HouseList = () => {
               house={house} 
               t={t} 
               onDelete={handleDelete} 
-              isWebOwner={isWebOwner}
+              canDelete={canDeleteHouse}
               navigate={navigate}
             />
           ))}
@@ -247,7 +272,7 @@ const StatCard = ({ icon, label, value, color }) => (
   </div>
 );
 
-const HouseCard = ({ house, t, onDelete, isWebOwner, onClick, navigate }) => (
+const HouseCard = ({ house, t, onDelete, canDelete, onClick, navigate }) => (
   <div 
     onClick={() => navigate(`/houses/${house.id}`)}
     className="group bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden"
@@ -289,7 +314,7 @@ const HouseCard = ({ house, t, onDelete, isWebOwner, onClick, navigate }) => (
       </div>
       
       <div className="flex items-center gap-1 ">
-         {isWebOwner && (
+         {canDelete && (
            <button 
              onClick={(e) => onDelete(e, house.id, house.address)}
              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

@@ -4,6 +4,7 @@ import {
 } from "../../../store/api/staffApi";
 import MobileResponsiveTable from "../../../components/common/MobileResponsiveTable";
 import Modal from "../../../components/common/Modal";
+import ProtectedImage from "../../../components/common/ProtectedImage";
 import {
   Search,
   User,
@@ -104,29 +105,20 @@ const ViewAllStaff = () => {
     }
   };
 
-  const getAvatar = (staff) => {
-    if (staff.avatarUrl) {
-      return (
-        <img
-          src={staff.avatarUrl}
-          alt={staff.name}
-          className="w-8 h-8 rounded-full object-cover"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src =
-              "https://ui-avatars.com/api/?name=" +
-              encodeURIComponent(staff.name) +
-              "&background=random";
-          }}
-        />
-      );
-    }
-    return (
-      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-        <User className="h-4 w-4 text-primary-600" />
-      </div>
-    );
-  };
+  // The old version fell back to ui-avatars.com, which sent the staff member's name to
+  // a third-party service on every render just to draw an initial we can draw ourselves.
+  const getAvatar = (staff) => (
+    <ProtectedImage
+      src={staff.avatarUrl}
+      alt={staff.name}
+      className="w-8 h-8 rounded-full object-cover shrink-0"
+      fallback={
+        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+          <User className="h-4 w-4 text-primary-600" />
+        </div>
+      }
+    />
+  );
 
   const actionButtons = [
     {

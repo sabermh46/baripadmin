@@ -1,6 +1,7 @@
 // pages/Caretakers.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import ProtectedImage from '../common/ProtectedImage';
 import {
   useGetCaretakersQuery,
   useDeleteCaretakerMutation,
@@ -21,6 +22,7 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import { useAuth } from '../../hooks';
 import Btn from '../common/Button';
 import ConfirmationModal from '../common/ConfirmationModal';
@@ -43,7 +45,7 @@ const CaretakerList = () => {
   
   const { data, isLoading, error, refetch } = useGetCaretakersQuery(filters);
   const [deleteCaretaker, { isLoading: isDeleting }] = useDeleteCaretakerMutation();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({
@@ -67,7 +69,7 @@ const CaretakerList = () => {
       setSelectedCaretaker(null);
       refetch();
     } catch (error) {
-      toast.error(error.data?.error || 'Failed to delete caretaker');
+      toast.error(apiErrorMessage(error, 'Failed to delete caretaker'));
     }
   };
 
@@ -82,17 +84,16 @@ const CaretakerList = () => {
       key: 'caretaker',
       render: (row) => (
         <div className="flex items-center">
-          {row.avatarUrl ? (
-            <img
-              src={row.avatarUrl}
-              alt={row.name}
-              className="h-10 w-10 rounded-full mr-3"
-            />
-          ) : (
-            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center mr-3">
-              <User className="h-5 w-5 text-primary-600" />
-            </div>
-          )}
+          <ProtectedImage
+            src={row.avatarUrl}
+            alt={row.name}
+            className="h-10 w-10 rounded-full object-cover mr-3 shrink-0"
+            fallback={
+              <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center mr-3 shrink-0">
+                <User className="h-5 w-5 text-primary-600" />
+              </div>
+            }
+          />
           <div>
             <div className="font-medium text-gray-900">{row.name}</div>
             <div className="text-sm text-gray-500">{row.email}</div>
@@ -223,8 +224,10 @@ const CaretakerList = () => {
           </p>
         </div>
         
-        {(user.role.slug === 'web_owner' ||
-          (user.role.slug === 'staff' && user.permissions?.includes('caretakers.create'))) && (
+        {/* Was a hand-rolled role check that left the developer role out, so a developer —
+            who bypasses every permission — could not see this button. hasPermission already
+            encodes the web_owner/developer bypass. */}
+        {hasPermission('caretakers.create') && (
           <Btn onClick={() => setAddModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('add_caretaker')}

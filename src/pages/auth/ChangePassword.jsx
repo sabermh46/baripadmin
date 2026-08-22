@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useChangePasswordMutation } from '../../store/api/authApi';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import NavigateBack from '../../components/common/NavigateBack';
 import { useTranslation } from 'react-i18next';
 
@@ -25,7 +26,7 @@ const ChangePassword = () => {
       toast.success(t("password_updated_successfully"));
       setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      toast.error(err?.data?.error || t("failed_to_change_password"));
+      toast.error(apiErrorMessage(err, t("failed_to_change_password")));
     }
   };
 

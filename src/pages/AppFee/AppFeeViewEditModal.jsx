@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiErrorMessage } from '../../utils/apiError';
 import Modal from '../../components/common/Modal';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 import { useAuth } from '../../hooks';
@@ -123,9 +124,7 @@ const AppFeeViewEditModal = ({
       setInitialData(JSON.stringify(formData));
       onSuccess?.();
     } catch (res) {
-      const msg =
-        res?.data?.error || res?.data?.message || res?.message || 'Failed to update payment';
-      toast.error(msg);
+      toast.error(apiErrorMessage(res, 'Failed to update payment'));
     }
   };
 
@@ -139,7 +138,7 @@ const AppFeeViewEditModal = ({
       onSuccess?.();
     } catch (res) {
       const msg =
-        res?.data?.error || res?.data?.message || res?.message || 'Failed to delete payment';
+        apiErrorMessage(res, 'Failed to delete payment');
       toast.error(msg);
     }
   };

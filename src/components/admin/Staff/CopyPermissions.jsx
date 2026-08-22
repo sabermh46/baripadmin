@@ -7,6 +7,7 @@ import {
 } from '../../../store/api/staffApi';
 import Modal from '../../../components/common/Modal';
 import Table from '../../../components/common/Table';
+import ProtectedImage from '../../common/ProtectedImage';
 import {
   Copy,
   Users,
@@ -97,17 +98,16 @@ const CopyPermissions = ({
       key: 'staff',
       render: (staff) => (
         <div className="flex items-center gap-3">
-          {staff.avatarUrl ? (
-            <img
-              src={staff.avatarUrl}
-              alt={staff.name}
-              className="w-8 h-8 rounded-full"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-              <Users className="h-4 w-4 text-gray-600" />
-            </div>
-          )}
+          <ProtectedImage
+            src={staff.avatarUrl}
+            alt={staff.name}
+            className="w-8 h-8 rounded-full object-cover shrink-0"
+            fallback={
+              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4 text-gray-600" />
+              </div>
+            }
+          />
           <div>
             <div className="font-medium text-gray-900">{staff.name}</div>
             <div className="text-sm text-gray-500">{staff.email}</div>

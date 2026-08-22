@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Banknote, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { useApplyAdvancePaymentMutation } from '../../store/api/flatApi';
 import { toast } from 'react-toastify';
-import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
+import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../utils/apiError';
 import { format } from 'date-fns';
 
 const ApplyAdvancePaymentModal = ({ 
@@ -15,6 +16,7 @@ const ApplyAdvancePaymentModal = ({
   advancePayments = [],
   selectedAdvancePayment = null 
 }) => {
+  const { t } = useTranslation();
   const [selectedRentPayment, setSelectedRentPayment] = useState('');
   const [selectedAdvance, setSelectedAdvance] = useState('');
   const [amountToApply, setAmountToApply] = useState('');
@@ -70,11 +72,11 @@ const ApplyAdvancePaymentModal = ({
         amount: parseFloat(amountToApply)
       }).unwrap();
       
-      toast.success(`Successfully applied $${parseFloat(amountToApply).toLocaleString()} from advance payment`);
+      toast.success(`Successfully applied ৳${parseFloat(amountToApply).toLocaleString()} from advance payment`);
       onClose();
     } catch (error) {
       console.error('Failed to apply advance payment:', error);
-      toast.error(showMessageInLanguage(error?.data?.error) || `Failed to apply advance payment: ${error.message}`);
+      toast.error(apiErrorMessage(error, t('failed_to_apply_advance')));
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { apiErrorMessage } from '../../../utils/apiError';
 import { 
   useDeleteTokenMutation, 
   useGenerateTokenMutation, 
@@ -18,7 +19,10 @@ import MetadataInput from '../../../components/common/MetaDataInput';
 import { useGetManagedOwnersQuery } from '../../../store/api/houseApi';
 
 const GenerateToken = () => {
-  const { isHouseOwner, user } = useAuth();
+  const { isHouseOwner, user, hasPermission } = useAuth();
+  // Staff need registrationToken.create to generate an invitation; the server
+  // refuses without it, so the form should not be offered without it either.
+  const canGenerate = hasPermission('registrationToken.create');
   const [generateToken, { isLoading }] = useGenerateTokenMutation();
   const [deleteToken, { isLoading: isDeleting }] = useDeleteTokenMutation();
   const { data: tokensResponse, isLoading: isTokensLoading, refetch } = useGetRegistrationTokensQuery();
@@ -261,19 +265,7 @@ const GenerateToken = () => {
       
     } catch (error) {
       console.error('Token generation failed:', error);
-      let errorMessage = 'Failed to generate token';
-      
-      if (error?.data?.message) {
-        errorMessage = error.data.message;
-      } else if (error?.error) {
-        errorMessage = error.error;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      } else if (error?.data?.error) {
-        errorMessage = error.data.error;
-      }
-      
-      toast.error(`Error: ${errorMessage}`);
+      toast.error(apiErrorMessage(error, 'Failed to generate token'));
     }
   };
 
@@ -466,7 +458,9 @@ const GenerateToken = () => {
         </button>
       </div>
 
-      {/* Generate Token Form */}
+      {/* Generate Token Form. Hidden without the permission — the list of existing tokens
+          below stays visible, since reading them is a separate capability from issuing one. */}
+      {canGenerate && (
       <div className="bg-white rounded-xl shadow-sm border max-w-full border-gray-200 p-4 md:p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Generate New Token</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -695,6 +689,7 @@ const GenerateToken = () => {
           </button>
         </form>
       </div>
+      )}
 
       {/* Tokens Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 max-w-full overflow-x-auto">

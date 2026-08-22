@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { apiErrorMessage } from '../../utils/apiError';
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useLoginMutation } from "../../store/api/authApi"; // your original version
 import { useAppDispatch } from "../../hooks";
@@ -58,7 +59,7 @@ export default function LoginPage() {
       dispatch(setCredentials(result));
       navigate("/dashboard");
     } catch (err) {
-      setError(err?.data?.error || "Invalid email or password");
+      setError(apiErrorMessage(err, "Invalid email or password"));
     }
   };
 

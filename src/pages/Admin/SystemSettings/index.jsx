@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiErrorMessage } from '../../../utils/apiError';
 import { 
   useGetSystemSettingsQuery,
   useUpdateSystemSettingMutation,
@@ -161,7 +162,7 @@ const SystemSettings = () => {
       
     } catch (error) {
       console.error('Failed to update setting:', error);
-      setErrors({ submit: error.data?.error || 'Failed to update setting' });
+      setErrors({ submit: apiErrorMessage(error, 'Failed to update setting') });
     }
   };
 

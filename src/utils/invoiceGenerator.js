@@ -44,6 +44,7 @@ function formatMonth(rawMonth) {
  * @param {string} data.renterName
  * @param {string} data.houseName
  * @param {string} [data.houseAddress]
+ * @param {string} [data.ownerName]
  * @param {string} [data.ownerEmail]
  * @param {string} [data.ownerPhone]
  * @param {string} data.flatNumber
@@ -65,6 +66,7 @@ export async function generateRentReceiptPdf(data) {
     renterName = 'N/A',
     houseName = 'N/A',
     houseAddress,
+    ownerName,
     ownerEmail,
     ownerPhone,
     flatNumber = 'N/A',
@@ -138,6 +140,7 @@ export async function generateRentReceiptPdf(data) {
     1 + // house name
     (forMonth ? 1 : 0) +
     addrLines.length +
+    (ownerName ? 1 : 0) +
     (ownerEmail ? 1 : 0) +
     (ownerPhone ? 1 : 0);
   // 7 title + 7 first-line gap + remaining lines at 7px each + 4 bottom padding
@@ -184,24 +187,31 @@ export async function generateRentReceiptPdf(data) {
   doc.setFontSize(8);
   doc.setTextColor(80);
   let rY = boxY + 21;
-  if (forMonth) {
-    doc.text(`For Month: ${formatMonth(forMonth)}`, 108, rY);
-    rY += 7;
-  }
   if (addrLines.length > 0) {
     addrLines.forEach(line => {
       doc.text(line, 108, rY);
       rY += 7;
     });
   }
+  if (forMonth) {
+    doc.text(`For Month: ${formatMonth(forMonth)}`, 108, rY);
+    rY += 7;
+  }
+  // The landlord, so the receipt says who took the money and how to reach them. A receipt
+  // that names only the tenant leaves them nobody to ask about it.
+  if (ownerName) {
+    doc.text(`Owner: ${ownerName}`, 108, rY);
+    rY += 7;
+  }
+  if (ownerPhone) {
+    doc.text(`Phone: ${ownerPhone}`, 108, rY);
+    rY += 7;
+  }
   if (ownerEmail) {
     doc.setFontSize(7.5);
     doc.text(`Email: ${ownerEmail}`, 108, rY);
     doc.setFontSize(8);
     rY += 7;
-  }
-  if (ownerPhone) {
-    doc.text(`Phone: ${ownerPhone}`, 108, rY);
   }
 
   // ── Payment Breakdown Table ──────────────────────────────────────────────

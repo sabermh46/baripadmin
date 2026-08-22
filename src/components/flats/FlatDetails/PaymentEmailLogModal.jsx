@@ -15,7 +15,11 @@ const PaymentEmailLogModal = ({
 
   const paymentLogs = useMemo(() => {
     if (!selectedPayment || !Array.isArray(paymentReceipts)) return [];
-    return paymentReceipts.filter((l) => l.row_id === selectedPayment.id);
+    // `row_id` was the raw column name; the endpoint now returns it as `paymentId`.
+    // Both are accepted so a stale cached response still matches.
+    return paymentReceipts.filter(
+      (l) => (l.paymentId ?? l.row_id) === selectedPayment.id
+    );
   }, [paymentReceipts, selectedPayment]);
 
   if (!open || !selectedPayment) return null;

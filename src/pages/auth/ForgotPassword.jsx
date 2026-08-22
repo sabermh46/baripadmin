@@ -4,6 +4,7 @@ import { useForgotPasswordMutation } from '../../store/api/authApi';
 import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import { useTranslation } from 'react-i18next';
 
 const ForgotPassword = () => {
@@ -20,7 +21,7 @@ const ForgotPassword = () => {
       setIsSubmitted(true);
       toast.success(t("we_sent_password_reset_link"));
     } catch (err) {
-      toast.error(err?.data?.message || t("failed_to_send_reset_link"));
+      toast.error(apiErrorMessage(err, t("failed_to_send_reset_link")));
     }
   };
 

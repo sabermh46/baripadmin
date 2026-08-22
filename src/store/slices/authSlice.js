@@ -47,6 +47,16 @@ const authSlice = createSlice({
       state.error = null;
     },
 
+    /**
+     * Replaces the cached permission list without touching the session.
+     *
+     * Separate from setCredentials on purpose: this must not reissue tokens, reset expiry,
+     * or look like a login. It is a correction to what the UI is allowed to draw.
+     */
+    setPermissions: (state, action) => {
+      if (state.user) state.user.permissions = action.payload ?? [];
+    },
+
     logout: (state) => {
       state.user = null;
       state.accessToken = null;
@@ -70,6 +80,7 @@ const authSlice = createSlice({
 
 export const {
   setCredentials,
+  setPermissions,
   logout,
   setUser,
   setLoading,

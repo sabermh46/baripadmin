@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { apiErrorMessage } from '../../../utils/apiError';
 import { Search, Shield, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
@@ -106,9 +107,7 @@ const CreateStaffModal = ({ isOpen, onClose, onSuccess }) => {
       onSuccess?.();
       handleClose();
     } catch (err) {
-      const msg =
-        err?.data?.error || err?.data?.message || err?.message || 'Failed to create staff member';
-      toast.error(msg);
+      toast.error(apiErrorMessage(err, 'Failed to create staff member'));
     }
   };
 

@@ -1,6 +1,7 @@
 // pages/CaretakerDetails.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import ProtectedImage from '../common/ProtectedImage';
 import {
   useGetCaretakerDetailsQuery,
   useUpdateAssignmentPermissionsMutation,
@@ -26,6 +27,7 @@ import {
   Plus
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import { useAuth } from '../../hooks';
 import Btn from '../common/Button';
 import ConfirmationModal from '../common/ConfirmationModal';
@@ -86,7 +88,7 @@ const CaretakerDetails = () => {
       setEditingAssignment(null);
       refetch();
     } catch (error) {
-      toast.error(error.data?.error || 'Failed to update permissions');
+      toast.error(apiErrorMessage(error, 'Failed to update permissions'));
     }
   };
 
@@ -100,7 +102,7 @@ const CaretakerDetails = () => {
       setSelectedAssignment(null);
       refetch();
     } catch (error) {
-      toast.error(error.data?.error || 'Failed to remove assignment');
+      toast.error(apiErrorMessage(error, 'Failed to remove assignment'));
     }
   };
 
@@ -149,7 +151,7 @@ const CaretakerDetails = () => {
             <AlertCircle className="h-5 w-5 text-red-400 mr-3" />
             <div>
               <h3 className="text-sm font-medium text-red-800">
-                {error?.data?.error || 'Caretaker not found'}
+                {apiErrorMessage(error, 'Caretaker not found')}
               </h3>
               <div className="mt-2">
                 <Btn onClick={() => navigate('/caretakers')}>
@@ -185,17 +187,16 @@ const CaretakerDetails = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center space-x-4">
-            {caretaker?.avatarUrl ? (
-              <img
-                src={caretaker?.avatarUrl}
-                alt={caretaker?.name}
-                className="h-20 w-20 rounded-full"
-              />
-            ) : (
-              <div className="h-20 w-20 rounded-full bg-primary-100 flex items-center justify-center">
-                <User className="h-10 w-10 text-primary-600" />
-              </div>
-            )}
+            <ProtectedImage
+              src={caretaker?.avatarUrl}
+              alt={caretaker?.name}
+              className="h-20 w-20 rounded-full object-cover shrink-0"
+              fallback={
+                <div className="h-20 w-20 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+                  <User className="h-10 w-10 text-primary-600" />
+                </div>
+              }
+            />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{caretaker?.name}</h1>
               <div className="flex items-center space-x-4 mt-2">

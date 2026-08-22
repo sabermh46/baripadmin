@@ -14,6 +14,7 @@ import Modal, { useModal } from '../../components/common/Modal';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import TkSymbol from '../../components/common/TkSymbol';
 
 const formatDate = (d) => {
@@ -79,7 +80,7 @@ const CreateLoanModal = ({ isOpen, onClose, selectedHouseId, onSuccess }) => {
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err?.data?.error || err?.data?.message || err?.message || 'Failed to create loan');
+      toast.error(apiErrorMessage(err, 'Failed to create loan'));
     }
   };
 
@@ -234,7 +235,7 @@ const EditLoanModal = ({ isOpen, onClose, loan, onSuccess }) => {
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err?.data?.error || err?.data?.message || err?.message || 'Failed to update loan');
+      toast.error(apiErrorMessage(err, 'Failed to update loan'));
     }
   };
 
@@ -366,7 +367,7 @@ const RecordPaymentModal = ({ isOpen, onClose, loan, onSuccess }) => {
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err?.data?.error || err?.data?.message || err?.message || 'Failed to record payment');
+      toast.error(apiErrorMessage(err, 'Failed to record payment'));
     }
   };
 
@@ -490,7 +491,7 @@ const EditLoanPaymentModal = ({ isOpen, onClose, payment, loan, onSuccess }) => 
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err?.data?.error || err?.data?.message || err?.message || 'Failed to update payment');
+      toast.error(apiErrorMessage(err, 'Failed to update payment'));
     }
   };
 
@@ -669,7 +670,7 @@ const LoansPage = () => {
       deleteConfirmModal.close();
       setSelectedLoan(null);
     } catch (err) {
-      toast.error(err?.data?.error || err?.data?.message || err?.message || 'Failed to delete loan');
+      toast.error(apiErrorMessage(err, 'Failed to delete loan'));
     }
   };
 

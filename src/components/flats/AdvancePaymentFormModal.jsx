@@ -7,9 +7,9 @@ import {
   useDeleteAdvancePaymentMutation,
 } from '../../store/api/flatApi';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import TkSymbol from '../common/TkSymbol';
 import ConfirmationModal from '../common/ConfirmationModal';
-import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 import { useTranslation } from 'react-i18next';
 
 const MODES = { view: 'view', create: 'create', update: 'update' };
@@ -88,7 +88,7 @@ const AdvancePaymentFormModal = ({
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(showMessageInLanguage(err?.data?.error) || 'Failed to create advance payment');
+      toast.error(apiErrorMessage(err, 'Failed to create advance payment'));
     }
   };
 
@@ -109,7 +109,7 @@ const AdvancePaymentFormModal = ({
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(showMessageInLanguage(err?.data?.error) || 'Failed to update advance payment');
+      toast.error(apiErrorMessage(err, 'Failed to update advance payment'));
     }
   };
 
@@ -121,7 +121,7 @@ const AdvancePaymentFormModal = ({
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(showMessageInLanguage(err?.data?.error) || 'Failed to delete advance payment');
+      toast.error(apiErrorMessage(err, 'Failed to delete advance payment'));
     }
   };
 

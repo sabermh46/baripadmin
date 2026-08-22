@@ -5,7 +5,7 @@ import { useAssignRenterMutation } from '../../store/api/flatApi';
 import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
+import { apiErrorMessage } from '../../utils/apiError';
 import Btn from '../common/Button';
 
 const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = () => {} }) => {
@@ -237,7 +237,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
       setNextPaymentDate('');
     } catch (error) {
       console.error('Failed to assign renter:', error);
-      toast.error(showMessageInLanguage(error?.data?.error) || `Failed to assign renter: ${error.message}`);
+      toast.error(apiErrorMessage(error, 'Could not assign the renter.'));
     }
   };
 
@@ -306,12 +306,15 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
               </label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued" size={20} />
+                {/* Today used to be the floor, which made it impossible to record a tenancy
+                    that began earlier in the year — the common case when a renter is entered
+                    into the system after they have already moved in. */}
                 <input
                   type="date"
                   value={nextPaymentDate}
                   onChange={(e) => setNextPaymentDate(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
-                  min={format(new Date(), 'yyyy-MM-dd')}
+                  min={`${new Date().getFullYear()}-01-01`}
                 />
               </div>
             </div>

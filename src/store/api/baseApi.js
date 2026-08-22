@@ -39,6 +39,34 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+/**
+ * Endpoints whose whole job is to judge credentials, so a 401 from them is the answer, not
+ * a sign that the session lapsed.
+ *
+ * Without this list, signing in with the wrong password did the following: POST /auth/login
+ * returned 401, the interceptor read that as an expired access token and fired
+ * POST /auth/refresh, that refresh had no cookie to work with and returned 401 too — and the
+ * login form ended up displaying "Invalid or expired refresh token" instead of "Invalid email
+ * or password", after a full page reload. The user had never been logged in at all.
+ *
+ * It never looped: `_retry` caps each request at one retry, and the /auth/refresh branch
+ * returns before it can refresh a refresh. It was one wasted round trip and one wrong
+ * sentence, every time somebody mistyped a password.
+ */
+const AUTHENTICATING_ENDPOINTS = [
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/validate-token',
+  '/auth/change-password',
+  '/auth/set-password',
+];
+
+const isAuthenticatingRequest = (url = '') =>
+  AUTHENTICATING_ENDPOINTS.some((path) => url.includes(path));
+
 // Response interceptor — use HttpOnly cookie for silent token refresh
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -55,8 +83,19 @@ axiosInstance.interceptors.response.use(
       const status = error.response?.status;
       if (status === 401 || status === 403) {
         store?.dispatch({ type: 'auth/logout' });
-        window.location.replace('/login');
+
+        // Only leave if there is somewhere to go. Replacing /login with /login is a full
+        // reload that throws away React state — including the error message just written
+        // into the form the user is looking at.
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.replace('/login');
+        }
       }
+      return Promise.reject(error);
+    }
+
+    // A 401 from anything above means "those details are wrong", and refreshing cannot help.
+    if (isAuthenticatingRequest(originalRequest?.url)) {
       return Promise.reject(error);
     }
 
@@ -144,6 +183,24 @@ const axiosBaseQuery = () => async (args, api) => {
 
     if (err.isAuthError || retriedAndStillUnauthorised) {
       api.dispatch({ type: 'auth/logout' });
+    }
+
+    // A 403 means the server disagrees with what this client thinks it may do — which is
+    // precisely when the cached permission list is worth re-reading. See permissionSync.js.
+    // Fire-and-forget: the original error is still returned to the caller unchanged.
+    if (err.response?.status === 403) {
+      // Imported lazily rather than at the top of the file: permissionSync.js imports
+      // axiosInstance from here, so a static import is a cycle — and the build's
+      // chunk-cycle guard rejects those. It also means a bug in the sync path cannot
+      // break module evaluation for the whole API layer.
+      //
+      // This call had no import at all, so every 403 threw "handleForbidden is not
+      // defined" from inside the baseQuery — turning an ordinary permission denial into
+      // an unhandled error, which is what put the console in the state it was in.
+      const url = typeof args === 'string' ? args : args?.url;
+      import('../permissionSync.js')
+        .then(({ handleForbidden }) => handleForbidden(api.dispatch, api.getState, url, err.response?.data))
+        .catch(() => { /* resyncing permissions is best-effort; never mask the original 403 */ });
     }
 
     return {

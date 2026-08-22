@@ -23,7 +23,11 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // argsIgnorePattern matches varsIgnorePattern so a destructured component prop
+      // renamed to a capitalised identifier — `({ icon: Icon })`, used as <Icon /> — is not
+      // reported. This config has no eslint-plugin-react, so JSX usage does not count as a
+      // reference and every icon-prop component was flagged falsely.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]|^_' }],
     },
   },
 ])

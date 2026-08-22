@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useResetPasswordMutation } from '../../store/api/authApi';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import NavigateBack from '../../components/common/NavigateBack';
 
 const ResetPassword = () => {
@@ -24,7 +25,7 @@ const ResetPassword = () => {
       toast.success("Password reset successful! Please login.");
       navigate('/login');
     } catch (err) {
-      toast.error(err?.data?.error || "Failed to reset password");
+      toast.error(apiErrorMessage(err, "Failed to reset password"));
     }
   };
 

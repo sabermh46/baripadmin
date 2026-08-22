@@ -1,4 +1,5 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { setupListeners } from '@reduxjs/toolkit/query';
 import {
   persistStore,
   persistReducer,
@@ -83,9 +84,35 @@ const combinedReducer = combineReducers({
  * browser and be served straight from disk to whoever logs in next, before any request
  * goes out. Clearing the slice makes the next session start cold.
  */
+const dropApiCache = (state, action) =>
+  combinedReducer({ ...state, [baseApi.reducerPath]: undefined }, action);
+
 const rootReducer = (state, action) => {
   if (action.type === 'auth/logout') {
-    return combinedReducer({ ...state, [baseApi.reducerPath]: undefined }, action);
+    return dropApiCache(state, action);
+  }
+
+  /**
+   * A DIFFERENT person just signed in on this browser.
+   *
+   * Purging on logout alone left a hole: logout is the tidy path, and it is not the
+   * only one. Close the tab without signing out, or end the session any way that
+   * does not dispatch `auth/logout`, and the next person to log in inherits the
+   * previous user's cached houses, renters and payments — served straight out of
+   * IndexedDB before any request goes to the server.
+   *
+   * Keyed on the user id changing rather than on setCredentials alone, because that
+   * same action fires on every silent token refresh (AuthInitializer, and the 401
+   * retry in baseApi). Purging there would discard the whole cache roughly once an
+   * hour for no reason.
+   */
+  if (action.type === 'auth/setCredentials') {
+    const incoming = action.payload?.user?.id;
+    const current = state?.auth?.user?.id;
+
+    if (incoming != null && incoming !== current) {
+      return dropApiCache(state, action);
+    }
   }
 
   return combinedReducer(state, action);
@@ -102,5 +129,13 @@ export const store = configureStore({
       },
     }).concat(authApi.middleware)
 });
+
+/**
+ * Without this, RTK Query's refetchOnFocus and refetchOnReconnect never fire — the flags are
+ * read, but nothing is listening for the browser events that trigger them. baseApi has set
+ * `refetchOnReconnect: true` all along and it has never once worked: coming back from a
+ * dropped connection left every screen showing whatever it had before the drop.
+ */
+setupListeners(store.dispatch);
 
 export const persistor = persistStore(store);

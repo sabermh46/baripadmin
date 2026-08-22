@@ -79,7 +79,9 @@ export const flatApi = baseApi.injectEndpoints({
         method: 'POST',
         data: { renter_id: renterId, amenities, next_payment_date, advance_payments },
       }),
-      invalidatesTags: ['Flat'],
+      // The house page renders occupancy, the flat cards and the renters section from one
+      // house response — all three change the moment a flat gains or loses a tenant.
+      invalidatesTags: ['Flat', 'House', 'Renter'],
     }),
 
     // Remove renter from flat
@@ -89,7 +91,7 @@ export const flatApi = baseApi.injectEndpoints({
         method: 'DELETE',
         data: { refund_amount },
       }),
-      invalidatesTags: ['Flat'],
+      invalidatesTags: ['Flat', 'House', 'Renter'],
     }),
 
     // Get flat payment history

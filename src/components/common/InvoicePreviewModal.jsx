@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Send, SkipForward, Loader2, FileText } from 'lucide-react';
 
 /**
@@ -14,6 +15,7 @@ import { X, Send, SkipForward, Loader2, FileText } from 'lucide-react';
  *   isSending   {boolean}
  */
 const InvoicePreviewModal = ({ open, pdfBase64, renterName, onConfirm, onSkip, isSending }) => {
+  const { t } = useTranslation();
   const [note, setNote] = useState('');
 
   if (!open || !pdfBase64) return null;
@@ -34,9 +36,9 @@ const InvoicePreviewModal = ({ open, pdfBase64, renterName, onConfirm, onSkip, i
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
           <div>
-            <h3 className="font-bold text-gray-800 text-lg">Receipt Preview</h3>
+            <h3 className="font-bold text-gray-800 text-lg">{t('receipt_preview')}</h3>
             {renterName && (
-              <p className="text-sm text-gray-500 mt-0.5">For: {renterName}</p>
+              <p className="text-sm text-gray-500 mt-0.5">{t('receipt_for', { name: renterName })}</p>
             )}
           </div>
           <button
@@ -52,7 +54,7 @@ const InvoicePreviewModal = ({ open, pdfBase64, renterName, onConfirm, onSkip, i
         <div className="flex-1 overflow-hidden bg-gray-100 min-h-0">
           <iframe
             src={dataUri}
-            title="Receipt Preview"
+            title={t('receipt_preview')}
             className="w-full h-full border-0"
           />
         </div>
@@ -61,19 +63,19 @@ const InvoicePreviewModal = ({ open, pdfBase64, renterName, onConfirm, onSkip, i
         <div className="px-5 pt-4 pb-2 border-t border-gray-200 shrink-0">
           <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
             <FileText size={13} />
-            Note / Notice (optional)
+            {t('receipt_note_label')}
           </label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             disabled={isSending}
             rows={2}
-            placeholder="Add a note or notice that will be printed on the receipt…"
+            placeholder={t('receipt_note_placeholder')}
             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-300 disabled:opacity-50 placeholder:text-gray-400"
           />
           {note.trim() && (
             <p className="text-xs text-orange-500 mt-1">
-              Note will be included in the sent PDF.
+              {t('receipt_note_included')}
             </p>
           )}
         </div>
@@ -81,7 +83,7 @@ const InvoicePreviewModal = ({ open, pdfBase64, renterName, onConfirm, onSkip, i
         {/* Footer actions */}
         <div className="flex items-center justify-between px-5 py-3 bg-gray-50 rounded-b-xl shrink-0">
           <p className="text-sm text-gray-500">
-            Send this receipt to the renter's email?
+            {t('receipt_send_question')}
           </p>
           <div className="flex gap-3">
             <button
@@ -90,7 +92,7 @@ const InvoicePreviewModal = ({ open, pdfBase64, renterName, onConfirm, onSkip, i
               className="flex items-center gap-2 px-5 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition-colors"
             >
               <SkipForward size={16} />
-              Skip
+              {t('skip')}
             </button>
             <button
               onClick={handleConfirm}
@@ -103,7 +105,7 @@ const InvoicePreviewModal = ({ open, pdfBase64, renterName, onConfirm, onSkip, i
               ) : (
                 <Send size={16} />
               )}
-              {isSending ? 'Sending…' : 'Send Receipt'}
+              {isSending ? t('sending') : t('send_receipt')}
             </button>
           </div>
         </div>

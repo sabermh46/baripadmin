@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiErrorMessage } from '../../../utils/apiError';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Home, Save, X, Building, MapPin, Layers,
@@ -157,8 +158,10 @@ const HouseEditForm = () => {
     if (!validateForm()) return;
 
     try {
-      const result = await updateHouse({ id, ...formData }).unwrap();
-      if (result.success) {
+      // Same silent-success bug as CreateHouseForm: PUT /houses/{id} returns the house,
+      // not a `success` flag, so this block never ran and a saved edit gave no feedback.
+      await updateHouse({ id, ...formData }).unwrap();
+      {
         toast.success(t('property_updated_successfully'));
         setSuccess(true);
         setTimeout(() => {
@@ -216,7 +219,7 @@ const HouseEditForm = () => {
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <div>
               <p className="font-medium">Update Failed</p>
-              <p className="text-sm">{error.data?.error || 'Something went wrong. Please try again.'}</p>
+              <p className="text-sm">{apiErrorMessage(error)}</p>
             </div>
           </div>
         )}

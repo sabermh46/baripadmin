@@ -9,12 +9,27 @@ const initialState = {
   serviceWorker: null,
   updateAvailable: false,
   deferredPrompt: null,
+
+  /**
+   * How the flat list is laid out on the house detail page.
+   *
+   * Lives in the ui slice because that slice is persisted (see store/index.js whitelist),
+   * so the choice survives a reload and a return visit — a layout preference the user set
+   * once should not reset every time they open a house.
+   *
+   * 'comfortable' = wide cards, 'compact' = dense cards, 'list' = one row each.
+   */
+  flatViewMode: 'comfortable',
 };
 
 const uiSlice = createSlice({
   name: 'ui',
   initialState,
   reducers: {
+    setFlatViewMode: (state, action) => {
+      state.flatViewMode = action.payload;
+    },
+
     addNotification: (state, action) => {
       const notification = {
         ...action.payload,
@@ -73,6 +88,7 @@ const uiSlice = createSlice({
 });
 
 export const {
+  setFlatViewMode,
   addNotification,
   markNotificationAsRead,
   setOnlineStatus,

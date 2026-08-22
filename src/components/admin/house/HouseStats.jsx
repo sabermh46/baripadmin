@@ -6,6 +6,7 @@ import {
 import { useGetHousesQuery } from '../../../store/api/houseApi';
 import HouseList from './HouseList';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../../utils/apiError';
 import AccessDeniedPage from '../../../pages/utility/AccessDeniedPage';
 import { ContentLoader, LoaderMinimal } from '../../common/RouteLoader';
 import { useAuth } from '../../../hooks';
@@ -21,7 +22,7 @@ const HouseStats = () => {
 
 
   if (error) {
-    toast.error(error?.data?.error || 'Failed to load properties.');
+    toast.error(apiErrorMessage(error, 'Failed to load properties.'));
 
     if (error?.status === 403) {
       return <AccessDeniedPage />;

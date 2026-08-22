@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import {
   useGetFlatOverviewQuery,
   useSendRentReminderMutation,
@@ -93,6 +94,11 @@ const FlatDetails = () => {
   const house = flatData?.data?.house || {};
   const payments = useMemo(() => flatData?.data?.payments || [], [flatData?.data?.payments]);
   const stats = flatData?.data?.stats || {};
+  // Derived server-side so the flat page and the house page describe the same flat in the
+  // same words: where the rent stands, what it costs in total, and who is living in it.
+  const rentState = flatData?.data?.rentState || {};
+  const charges = flatData?.data?.charges || {};
+  const tenancy = flatData?.data?.tenancy || null;
   // These three used to read `.data` off responses that were bare JSON arrays — the
   // advance-payments and payment-receipts endpoints both return an array at the top level,
   // so `advancePaymentsData?.data` was always undefined and both the Advance tab and the
@@ -119,12 +125,20 @@ const FlatDetails = () => {
     [advancePayments]
   );
 
-  const renter = {
-    name: flat.renterName,
-    phone: flat.renterPhone,
-    email: flat.renterEmail,
-    id: flat.renterId,
-  };
+  // Read from flat.renter, which is what the API sends. This used to be assembled from
+  // flat.renterName / renterPhone / renterEmail / renterId — four keys the flat endpoint has
+  // never returned, so every field was undefined. That is why Record Payment always claimed
+  // the renter had no email on file, and why the receipt preview could never open.
+  const renter = useMemo(
+    () => ({
+      id: flat.renter?.id ?? flat.renter_id,
+      name: flat.renter?.name,
+      phone: flat.renter?.phone,
+      email: flat.renter?.email,
+      nid: flat.renter?.nid,
+    }),
+    [flat.renter, flat.renter_id]
+  );
 
   const paymentRenterIds = useMemo(
     () => [...new Set(payments.map(p => p.renter_id).filter(Boolean))],
@@ -139,21 +153,21 @@ const FlatDetails = () => {
     const idsSet = new Set(paymentRenterIds);
     if (flat.renter_id) idsSet.add(flat.renter_id);
     return Array.from(idsSet).map(rid => {
-      if (rid === flat.renter_id) return { value: rid, label: flat.renterName || `Renter #${rid}` };
+      if (rid === flat.renter_id) return { value: rid, label: flat.renter?.name || `Renter #${rid}` };
       const r = availableRenters.find(x => x.id === rid || x.id === parseInt(rid, 10));
       return { value: rid, label: r ? r.name : `Renter #${rid}` };
     });
-  }, [paymentRenterIds, flat.renter_id, flat.renterName, availableRenters]);
+  }, [paymentRenterIds, flat.renter_id, flat.renter?.name, availableRenters]);
 
   const advanceRenterOptions = useMemo(() => {
     const idsSet = new Set(advanceRenterIds);
     if (flat.renter_id) idsSet.add(flat.renter_id);
     return Array.from(idsSet).map(rid => {
-      if (rid === flat.renter_id) return { value: rid, label: flat.renterName || `Renter #${rid}` };
+      if (rid === flat.renter_id) return { value: rid, label: flat.renter?.name || `Renter #${rid}` };
       const r = availableRenters.find(x => x.id === rid || x.id === parseInt(rid, 10));
       return { value: rid, label: r ? r.name : `Renter #${rid}` };
     });
-  }, [advanceRenterIds, flat.renter_id, flat.renterName, availableRenters]);
+  }, [advanceRenterIds, flat.renter_id, flat.renter?.name, availableRenters]);
 
   const effectivePaymentRenterId = selectedPaymentRenterId ?? flat.renter_id;
   const effectiveAdvanceRenterId = selectedAdvanceRenterId ?? flat.renter_id;
@@ -177,21 +191,21 @@ const FlatDetails = () => {
 
   const selectedPaymentRenterInfo = useMemo(() => {
     if (effectivePaymentRenterId === flat.renter_id)
-      return { name: flat.renterName, phone: flat.renterPhone, email: flat.renterEmail };
+      return { name: flat.renter?.name, phone: flat.renter?.phone, email: flat.renter?.email };
     const r = availableRenters.find(
       x => x.id === effectivePaymentRenterId || x.id === parseInt(effectivePaymentRenterId, 10)
     );
     return r ? { name: r.name, phone: r.phone, email: r.email } : null;
-  }, [effectivePaymentRenterId, flat.renter_id, flat.renterName, flat.renterPhone, flat.renterEmail, availableRenters]);
+  }, [effectivePaymentRenterId, flat.renter_id, flat.renter, availableRenters]);
 
   const selectedAdvanceRenterInfo = useMemo(() => {
     if (effectiveAdvanceRenterId === flat.renter_id)
-      return { name: flat.renterName, phone: flat.renterPhone, email: flat.renterEmail };
+      return { name: flat.renter?.name, phone: flat.renter?.phone, email: flat.renter?.email };
     const r = availableRenters.find(
       x => x.id === effectiveAdvanceRenterId || x.id === parseInt(effectiveAdvanceRenterId, 10)
     );
     return r ? { name: r.name, phone: r.phone, email: r.email } : null;
-  }, [effectiveAdvanceRenterId, flat.renter_id, flat.renterName, flat.renterPhone, flat.renterEmail, availableRenters]);
+  }, [effectiveAdvanceRenterId, flat.renter_id, flat.renter, availableRenters]);
 
   if (isLoading) {
     return (
@@ -201,27 +215,10 @@ const FlatDetails = () => {
     );
   }
 
-  let flatMetadata = {};
-  try {
-    flatMetadata = flat.metadata && typeof flat.metadata === 'string'
-      ? JSON.parse(flat.metadata)
-      : flat.metadata || {};
-  } catch { /* ignore parse error */ }
-
-  const calculateNextDueDate = () => {
-    if (flat.rent_due_date) return new Date(flat.rent_due_date);
-    if (!flat.should_pay_rent_day) return null;
-    const today = new Date();
-    let d = new Date(today.getFullYear(), today.getMonth(), flat.should_pay_rent_day);
-    if (today.getDate() > flat.should_pay_rent_day) d.setMonth(d.getMonth() + 1);
-    return d;
-  };
-  const nextDueDate = calculateNextDueDate();
-
-  const pendingPayments = payments.filter(
-    p => ['pending', 'overdue'].includes(p.status) &&
-         parseFloat(p.amount) > (parseFloat(p.paid_amount) || 0)
-  );
+  // flatMetadata / calculateNextDueDate / pendingPayments used to be derived here and handed
+  // to the Overview tab. All three now come from the API (charges, rentState), where the
+  // next due date is the flat's actual scheduled date rather than a guess reconstructed from
+  // the day-of-month, and "pending" follows the same definition the rest of the app uses.
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSendReminder = async () => {
@@ -240,21 +237,34 @@ const FlatDetails = () => {
   };
 
   const handleResendReceiptClick = async (payment) => {
-    const renterInfo = selectedPaymentRenterInfo || { name: flat.renterName, email: flat.renterEmail };
+    const renterInfo = selectedPaymentRenterInfo || { name: flat.renter?.name, email: flat.renter?.email };
+    // Reissue the receipt that was sent, not a fresh one built from today's data.
+    //
+    // `snap` is what the payment recorded about itself at the time. Three of these used to
+    // be wrong on a resend: `amenities` was hardcoded `[]`, so the itemised Service Charges
+    // Detail table vanished from the reissued copy while its total still appeared above;
+    // renter and house names came from the flat as it stands now, so a receipt reissued
+    // after the tenant changed would name the wrong person; and the headline read `amount`
+    // (what was billed) before `paid_amount` (what was collected) under a heading that says
+    // TOTAL PAID.
+    const snap = payment.receipt || {};
     const invoiceData = {
-      renterName: renterInfo.name || 'N/A',
-      houseName: flat.houseName || house.name || 'N/A',
-      houseAddress: flat.houseAddress || house.address || null,
-      ownerEmail: flat.ownerEmail || null,
-      ownerPhone: flat.ownerPhone || null,
-      flatNumber: flat.number,
-      totalAmount: payment.amount || payment.paid_amount || 0,
+      renterName: snap.renterName || renterInfo.name || 'N/A',
+      houseName: snap.houseName || house.name || 'N/A',
+      houseAddress: house.address || null,
+      ownerName: house.owner?.name || null,
+      ownerEmail: house.owner?.email || null,
+      ownerPhone: house.owner?.phone || null,
+      flatNumber: snap.flatNumber || flat.number,
+      totalAmount: payment.paid_amount || payment.amount || 0,
       paymentDate: payment.paid_date,
       transactionId: payment.transaction_id || null,
       baseRent: payment.base_amount || payment.amount || 0,
       amenitiesTotal: payment.amenities_charge || 0,
       lateFee: payment.late_fee_amount || 0,
-      amenities: [],
+      // Falls back to the flat's current amenities only for rows raised before the snapshot
+      // existed (an invoice created by assignment carries no metadata of its own).
+      amenities: snap.amenities?.length ? snap.amenities : (flat.metadata?.amenities ?? []),
       forMonth: payment.for_month || null,
       paymentMethod: payment.payment_method || null,
       paymentId: payment.id,
@@ -278,7 +288,7 @@ const FlatDetails = () => {
       toast.success(t('receipt_resent') || 'Payment receipt resent successfully');
       refetchPaymentReceipts();
     } catch (error) {
-      toast.error(showMessageInLanguage(error?.data?.error) || 'Failed to resend receipt');
+      toast.error(apiErrorMessage(error, 'Failed to resend receipt'));
     } finally {
       setResendPreviewOpen(false);
       setResendPdfBase64(null);
@@ -300,7 +310,7 @@ const FlatDetails = () => {
       setSelectedPaymentForEdit(null);
       refetchDetails();
     } catch (err) {
-      toast.error(showMessageInLanguage(err?.data?.error) || 'Failed to update payment');
+      toast.error(apiErrorMessage(err, 'Failed to update payment'));
     }
   };
 
@@ -317,7 +327,7 @@ const FlatDetails = () => {
       setSelectedPaymentForDelete(null);
       refetchDetails();
     } catch (err) {
-      toast.error(showMessageInLanguage(err?.data?.error) || 'Failed to delete payment');
+      toast.error(apiErrorMessage(err, 'Failed to delete payment'));
     }
   };
 
@@ -329,9 +339,7 @@ const FlatDetails = () => {
       refetchDetails();
       refetchAdvancePayments();
     } catch (err) {
-      toast.error(
-        showMessageInLanguage(err?.data?.error) || err?.data?.error || 'Failed to remove renter'
-      );
+      toast.error(apiErrorMessage(err, 'Failed to remove renter'));
     }
   };
 
@@ -473,14 +481,12 @@ const FlatDetails = () => {
         {activeTab === 'overview' && (
           <OverviewTab
             flat={flat}
-            house={house}
             stats={stats}
-            renter={renter}
+            rentState={rentState}
+            charges={charges}
+            tenancy={tenancy}
             advancePayments={advancePayments}
             availableAdvance={availableAdvance}
-            pendingPayments={pendingPayments}
-            flatMetadata={flatMetadata}
-            nextDueDate={nextDueDate}
             setOpenPayment={setOpenPayment}
             setOpenAssignModal={setOpenAssignModal}
           />
@@ -526,6 +532,8 @@ const FlatDetails = () => {
       />
 
       <RecordPaymentModal
+        rentState={rentState}
+        house={house}
         open={openPayment}
         onClose={() => { setOpenPayment(false); refetchDetails(); refetchAdvancePayments(); }}
         flat={flat}

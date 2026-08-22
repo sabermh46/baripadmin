@@ -9,7 +9,7 @@ import {
   useUpdateFlatMutation
 } from '../../store/api/flatApi';
 import { toast } from 'react-toastify';
-import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
+import { apiErrorMessage } from '../../utils/apiError';
 
 const flatSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -78,7 +78,7 @@ useEffect(() => {
       onClose();
       reset();
     } catch (error) {
-      toast.error(showMessageInLanguage(error.data?.error));
+      toast.error(apiErrorMessage(error));
       console.error('Failed to save flat:', error);
     }
   };

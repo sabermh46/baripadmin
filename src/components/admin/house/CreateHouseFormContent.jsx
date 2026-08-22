@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useCreateHouseMutation } from '../../../store/api/houseApi';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../../utils/apiError';
 import AmenitiesInput from '../../common/AmenitiesInput';
 
 /**
@@ -99,7 +100,7 @@ const CreateHouseFormContent = ({ ownerId, ownerName, onSuccess, onClose }) => {
       });
       setErrors({});
     } catch (err) {
-      toast.error(err?.data?.error || 'Failed to create property');
+      toast.error(apiErrorMessage(err, 'Failed to create property'));
     }
   };
 

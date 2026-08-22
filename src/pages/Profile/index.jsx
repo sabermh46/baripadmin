@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { apiErrorMessage } from '../../utils/apiError';
 import { useDispatch } from 'react-redux';
 import { useAuth } from '../../hooks';
 import { useSetPasswordMutation, useLinkGoogleAccountMutation, useUploadAvatarMutation } from '../../store/api/authApi';
@@ -73,7 +74,7 @@ const ProfilePage = () => {
       setPassword('');
       setConfirmPassword('');
     } catch (error) {
-      setMessage(error?.data?.error || 'Failed to set password');
+      setMessage(apiErrorMessage(error, 'Failed to set password'));
     }
   };
 
@@ -95,7 +96,7 @@ const ProfilePage = () => {
       const updatedMetadata = { ...(user.metadata || {}), avatarPath: result.avatarPath };
       dispatch(setUser({ ...user, metadata: updatedMetadata }));
     } catch (err) {
-      setAvatarError(err?.data?.error || 'Failed to upload avatar');
+      setAvatarError(apiErrorMessage(err, 'Failed to upload avatar'));
     }
   };
 

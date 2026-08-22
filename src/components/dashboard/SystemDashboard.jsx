@@ -2,246 +2,185 @@
 // components/dashboard/SystemDashboard.jsx
 import React, { useMemo } from 'react';
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+  AreaChart, Area
 } from 'recharts';
+import { Link } from 'react-router-dom';
 import { useGetDashboardDataQuery } from '../../store/api/analyticsApi';
-import { Users, Home, Building, Users as Staff, Shield, Activity, Banknote, TrendingUp } from 'lucide-react';
-import { ContentLoader, LoaderMinimal } from '../common/RouteLoader';
+import {
+  Users, Home, Building, Users as Staff, Shield, Activity, Mail, Inbox,
+  AlertTriangle, CheckCircle2, Wallet, Receipt, Database, BellRing, UserX, ChevronRight,
+} from 'lucide-react';
+import { ContentLoader } from '../common/RouteLoader';
 import Btn from '../common/Button';
 import { useAuth } from '../../hooks';
 import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../utils/apiError';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-// Import your logo or use the URL string
 import appLogo from '../../assets//icons/logo.svg';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
-const StatCard = ({ title, value, icon: Icon, color, change }) => (
-  <div className="bg-white rounded-xl shadow-lg py-4 md:py-6 px-1 text-center hover:shadow-xl transition-shadow duration-300">
-    <div className="flex items-center justify-center mb-4">
-      <div className={`p-3 rounded-lg bg-${color}-100`}>
-        <Icon className={`h-6 w-6 text-${color}-600`} />
-      </div>
-      {change && (
-        <span className={`text-sm font-medium ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-          {change > 0 ? '+' : ''}{change}%
-        </span>
-      )}
+const money = (n) =>
+  `\u09f3${Number(n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+
+/**
+ * Tailwind scans source for complete class names, so `bg-${color}-100` was never emitted and
+ * every icon on this dashboard rendered unstyled. A static map is what the scanner can see.
+ */
+const TONES = {
+  blue: 'bg-blue-50 text-blue-600',
+  green: 'bg-emerald-50 text-emerald-600',
+  amber: 'bg-amber-50 text-amber-600',
+  purple: 'bg-violet-50 text-violet-600',
+  rose: 'bg-rose-50 text-rose-600',
+  slate: 'bg-slate-100 text-slate-600',
+};
+
+const StatCard = ({ title, value, icon: Icon, tone = 'slate', sub }) => (
+  <div className="bg-white rounded-2xl border border-gray-200 p-4 hover:border-gray-300 transition-colors">
+    <div className={`inline-flex p-2 rounded-lg ${TONES[tone] ?? TONES.slate}`}>
+      <Icon className="h-4 w-4" />
     </div>
-    <h3 className="text-2xl font-bold text-gray-800 mb-1">{value.toLocaleString()}</h3>
-    <p className="text-gray-600 text-sm">{title}</p>
+    <p className="text-2xl font-bold text-gray-900 mt-2.5 tabular-nums leading-none">{value}</p>
+    <p className="text-[11px] uppercase tracking-wider text-gray-400 mt-1.5">{title}</p>
+    {sub && <p className="text-[11px] text-gray-500 mt-0.5 truncate">{sub}</p>}
   </div>
 );
 
 const ChartCard = ({ title, children, className = '' }) => (
-  <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`}>
-    <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
+  <div className={`bg-white rounded-2xl border border-gray-200 p-5 ${className}`}>
+    <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">{title}</h3>
     {children}
   </div>
 );
 
-const RecentActivityItem = ({ type, title, address, user, time, icon: Icon }) => (
-  <div className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-    <div className="flex-shrink-0">
-      <Icon className="h-5 w-5 text-gray-400" />
+/**
+ * One operational reading. Green when there is nothing to do, amber or red when there is —
+ * so the row can be read at a glance instead of parsed number by number.
+ */
+const OpsStat = ({ icon: Icon, label, value, detail, state = 'ok' }) => {
+  const tones = {
+    ok: 'text-emerald-600 bg-emerald-50',
+    warn: 'text-amber-600 bg-amber-50',
+    bad: 'text-red-600 bg-red-50',
+  };
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-2.5">
+      <span className={`shrink-0 p-1.5 rounded-lg ${tones[state]}`}>
+        <Icon className="h-3.5 w-3.5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] uppercase tracking-wider text-gray-400 truncate">{label}</p>
+        <p className="text-sm font-semibold text-gray-900 tabular-nums">{value}</p>
+      </div>
+      {detail && <span className="text-[11px] text-gray-500 shrink-0">{detail}</span>}
     </div>
-    <div className="flex-1 min-w-0">
+  );
+};
+
+const ActivityRow = ({ title, meta, time, icon: Icon }) => (
+  <div className="flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50">
+    <Icon className="h-4 w-4 text-gray-300 mt-0.5 shrink-0" />
+    <div className="min-w-0 flex-1">
       <p className="text-sm font-medium text-gray-900 truncate">{title}</p>
-      <p className="text-sm text-gray-500 truncate">
-        {address} • {user} • {time}
+      {/* Joined after filtering: the old version printed "\u2022 Admin \u2022 8/22/2026" with a
+          leading bullet whenever a field was absent, which was most of the time. */}
+      <p className="text-xs text-gray-500 truncate">
+        {[meta, time].filter(Boolean).join(' \u00b7 ')}
       </p>
     </div>
   </div>
 );
 
-const SystemDashboard = () => {
-  const { data, error, isLoading, refetch } = useGetDashboardDataQuery();
+const EmptyRows = ({ label }) => (
+  <p className="text-sm text-gray-400 text-center py-6">{label}</p>
+);
 
-  console.log(data);
-  
-// {
-//     "systemOverview": {
-//         "userGrowth": [
-//             {
-//                 "month": "2025-08",
-//                 "count": 0
-//             },
-//             {
-//                 "month": "2025-09",
-//                 "count": 0
-//             },
-//             {
-//                 "month": "2025-10",
-//                 "count": 0
-//             },
-//             {
-//                 "month": "2025-11",
-//                 "count": 0
-//             },
-//             {
-//                 "month": "2025-12",
-//                 "count": 0
-//             },
-//             {
-//                 "month": "2026-01",
-//                 "count": 4
-//             }
-//         ],
-//         "houseStats": {
-//             "totalHouses": 2,
-//             "activeHouses": 2,
-//             "inactiveHouses": 0,
-//             "housesWithFlats": 3,
-//             "housesWithCaretakers": 0,
-//             "recentHouses": [
-//                 {
-//                     "id": 3,
-//                     "uuid": "dcbaaad6-a17a-4894-8fd6-c34815040073",
-//                     "address": "wh",
-//                     "active": 1,
-//                     "flatCount": 2,
-//                     "caretakerCount": 0,
-//                     "owner": {
-//                         "name": "Sumon Rahman H",
-//                         "email": "false.xenon.7@gmail.com"
-//                     },
-//                     "createdAt": "2026-01-30T16:46:58.569Z"
-//                 },
-//                 {
-//                     "id": 2,
-//                     "uuid": "39f206ab-1531-4135-b82e-e1d7042f5ab3",
-//                     "address": "qwertyui",
-//                     "active": 1,
-//                     "flatCount": 1,
-//                     "caretakerCount": 0,
-//                     "owner": {
-//                         "name": "H O 1",
-//                         "email": "houseOwner01@gmail.com"
-//                     },
-//                     "createdAt": "2026-01-28T17:39:27.713Z"
-//                 }
-//             ]
-//         },
-//         "roleDistribution": [
-//             {
-//                 "role": "DEVELOPER",
-//                 "count": 1,
-//                 "slug": "developer"
-//             },
-//             {
-//                 "role": "WEB_OWNER",
-//                 "count": 1,
-//                 "slug": "web_owner"
-//             },
-//             {
-//                 "role": "STAFF",
-//                 "count": 0,
-//                 "slug": "staff"
-//             },
-//             {
-//                 "role": "HOUSE_OWNER",
-//                 "count": 2,
-//                 "slug": "house_owner"
-//             },
-//             {
-//                 "role": "CARETAKER",
-//                 "count": 0,
-//                 "slug": "caretaker"
-//             }
-//         ],
-//         "summary": {
-//             "totalUsers": 4,
-//             "activeUsers": 4,
-//             "totalNotifications": 1,
-//             "recentActivity": 3,
-//             "uptime": "99.9%",
-//             "databaseHealth": "healthy",
-//             "serverLoad": "low"
-//         }
-//     },
-//     "recentActivities": {
-//         "recentUsers": [
-//             {
-//                 "id": 4,
-//                 "name": "Sumon Rahman H",
-//                 "email": "false.xenon.7@gmail.com",
-//                 "role": {
-//                     "name": "HOUSE_OWNER",
-//                     "slug": "house_owner"
-//                 },
-//                 "createdAt": "2026-01-30T16:00:49.995Z"
-//             },
-//             {
-//                 "id": 3,
-//                 "name": "H O 1",
-//                 "email": "houseOwner01@gmail.com",
-//                 "role": {
-//                     "name": "HOUSE_OWNER",
-//                     "slug": "house_owner"
-//                 },
-//                 "createdAt": "2026-01-25T17:40:23.999Z"
-//             },
-//             {
-//                 "id": 2,
-//                 "name": "Tanvir Haque",
-//                 "email": "tanvirhaque.org@gmail.com",
-//                 "role": {
-//                     "name": "WEB_OWNER",
-//                     "slug": "web_owner"
-//                 },
-//                 "createdAt": "2026-01-24T18:14:25.256Z"
-//             },
-//             {
-//                 "id": 1,
-//                 "name": "Saber Mahmud Sourav",
-//                 "email": "sabermahmud.sourav.7@gmail.com",
-//                 "role": {
-//                     "name": "DEVELOPER",
-//                     "slug": "developer"
-//                 },
-//                 "createdAt": "2026-01-24T18:14:25.254Z"
-//             }
-//         ],
-//         "recentHouses": [
-//             {
-//                 "id": 3,
-//                 "name": "White House",
-//                 "address": "wh",
-//                 "active": 1,
-//                 "owner": {
-//                     "name": "Sumon Rahman H",
-//                     "email": "false.xenon.7@gmail.com"
-//                 },
-//                 "createdAt": "2026-01-30T16:46:58.569Z"
-//             },
-//             {
-//                 "id": 2,
-//                 "name": "Proshanti 2.0",
-//                 "address": "qwertyui",
-//                 "active": 1,
-//                 "owner": {
-//                     "name": "H O 1",
-//                     "email": "houseOwner01@gmail.com"
-//                 },
-//                 "createdAt": "2026-01-28T17:39:27.713Z"
-//             }
-//         ],
-//         "recentNotices": []
-//     },
-//     "quickStats": {
-//         "totalUsers": 4,
-//         "totalHouses": 2,
-//         "totalFlats": 3,
-//         "totalRenters": 3,
-//         "activeStaff": 0,
-//         "activeCaretakers": 0,
-//         "systemHealth": "healthy"
-//     },
-//     "timestamp": "2026-01-30T18:43:41.926Z"
-// }
+/**
+ * House owners with no house.
+ *
+ * Rendered in danger colours because it is one: the account is counted in every total on
+ * this page, but it bills nothing and collects nothing, and nothing else on the platform
+ * distinguishes it from a working owner. Shown only when there is at least one — a standing
+ * red panel that is usually empty teaches people to ignore red.
+ */
+const OwnersWithoutHouse = ({ data, t }) => {
+  const count = data?.count ?? 0;
+  const owners = data?.owners ?? [];
+  if (count === 0) return null;
+
+  return (
+    <section className="rounded-2xl border-2 border-red-200 bg-red-50/60 overflow-hidden">
+      <div className="flex items-start gap-3 px-5 pt-4 pb-3">
+        <span className="shrink-0 p-2 rounded-lg bg-red-100 text-red-600">
+          <UserX className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-semibold text-red-900">
+            {count === 1 ? t('owners_without_house_one') : t('owners_without_house_many', { count })}
+          </p>
+          <p className="text-sm text-red-800/80 mt-0.5">{t('owners_without_house_hint')}</p>
+          {/* Outside the row links below — an anchor inside an anchor is invalid, and this
+              belongs to the group rather than to any single owner. */}
+          {owners.some((o) => o.archivedHouses > 0) && (
+            <Link to="/houses/archived" className="inline-block text-sm font-medium text-red-700 underline mt-1.5">
+              {t('view_archived')}
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white/70 divide-y divide-red-100">
+        {owners.map((o) => (
+          <Link
+            key={o.id}
+            to={`/admin/house-owners/${o.id}`}
+            className="group flex items-center gap-3 px-5 py-2.5 hover:bg-white transition-colors"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900 truncate">{o.name}</p>
+              <p className="text-xs text-gray-500 truncate">
+                {[o.email, o.phone].filter(Boolean).join(' \u00b7 ')}
+              </p>
+            </div>
+
+            <div className="shrink-0 text-right">
+              <p className="text-xs text-gray-500">
+                {o.daysWaiting === 0 ? t('joined_today') : t('joined_days_ago', { count: o.daysWaiting })}
+              </p>
+              {/* An owner whose house was archived is a different story from one who never
+                  had a house, and the fix is different too. */}
+              {o.archivedHouses > 0 && (
+                <p className="text-[11px] text-amber-700">{t('house_was_archived')}</p>
+              )}
+            </div>
+
+            <ChevronRight className="h-4 w-4 text-red-300 group-hover:text-red-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+          </Link>
+        ))}
+
+        {count > owners.length && (
+          <p className="px-5 py-2 text-xs text-gray-500">{t('and_n_more', { count: count - owners.length })}</p>
+        )}
+      </div>
+    </section>
+  );
+};
+
+const SystemDashboard = () => {
+  const { data, error, isLoading, isFetching, refetch } = useGetDashboardDataQuery(undefined, {
+    // Always fetch on mount, follow the tab back when it regains focus, and poll while it is
+    // actually being looked at. skipPollingIfUnfocused means a dashboard left open in a
+    // background tab costs nothing until someone returns to it.
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    pollingInterval: 60_000,
+    skipPollingIfUnfocused: true,
+  });
 
   const getLogoBase64 = (url) => {
         return new Promise((resolve) => {
@@ -270,7 +209,7 @@ const SystemDashboard = () => {
     try {
         const logoData = await getLogoBase64(appLogo);
         if (logoData) doc.addImage(logoData, 'PNG', 20, 15, 12, 12);
-    } catch (e) {
+    } catch {
         doc.setFillColor(...primaryColorRGB);
         doc.circle(26, 21, 6, 'F');
     }
@@ -313,8 +252,13 @@ const SystemDashboard = () => {
             ['Total Users', data.quickStats.totalUsers, 'Active'],
             ['Total Houses', data.quickStats.totalHouses, 'Operational'],
             ['Total Flats', data.quickStats.totalFlats, 'Recorded'],
-            ['System Health', '100%', 'Excellent'],
-            ['Server Load', data.systemOverview.summary.serverLoad.toUpperCase(), 'Normal'],
+            // 'System Health 100% Excellent' and a server-load reading used to sit here.
+            // Neither was measured. What replaces them is measured.
+            ['Occupied Flats', `${data.platform.occupiedFlats} of ${data.platform.totalFlats}`, `${data.platform.occupancyRate}%`],
+            ['Rent Collected (month)', money(data.platform.rentCollectedThisMonth), 'Received'],
+            ['Rent Outstanding', money(data.platform.rentOutstanding), data.platform.rentOverdueCount > 0 ? `${data.platform.rentOverdueCount} overdue` : 'None overdue'],
+            ['Email Queue', `${data.operations.emailPending} pending`, data.operations.emailFailed > 0 ? `${data.operations.emailFailed} failed` : 'Healthy'],
+            ['Background Jobs', `${data.operations.jobsPending} pending`, data.operations.jobsFailed > 0 ? `${data.operations.jobsFailed} failed` : 'Healthy'],
         ],
         theme: 'striped',
         headStyles: { fillColor: primaryColorRGB },
@@ -366,86 +310,186 @@ const SystemDashboard = () => {
     doc.save(`System_Dashboard_Report_${new Date().getTime()}.pdf`);
 };
 
-  const {t} = useTranslation();
-  const stats = useMemo(() => [
-    { title: t('total_users'), value: data?.quickStats?.totalUsers || 0, icon: Users, color: 'blue' },
-    { title: t('total_houses'), value: data?.quickStats?.totalHouses || 0, icon: Home, color: 'green' },
-    { title: t('total_flats'), value: data?.quickStats?.totalFlats || 0, icon: Building, color: 'yellow' },
-    { title: t('active_staff'), value: data?.quickStats?.activeStaff || 0, icon: Staff, color: 'purple' },
-    { title: t('caretakers'), value: data?.quickStats?.activeCaretakers || 0, icon: Shield, color: 'red' },
-    { title: t('system_health'), value: '100%', icon: Activity, color: 'indigo' }
-  ], [data]);
-
+  const { t } = useTranslation();
   const { user } = useAuth();
 
-  if (isLoading) {
-    return (
-      <ContentLoader />
-    );
-  }
+  const ops = data?.operations ?? {};
+  const platform = data?.platform ?? {};
+  const quick = data?.quickStats ?? {};
+
+  const stats = useMemo(() => [
+    { title: t('total_users'), value: quick.totalUsers ?? 0, icon: Users, tone: 'blue' },
+    { title: t('total_houses'), value: quick.totalHouses ?? 0, icon: Home, tone: 'green' },
+    {
+      title: t('total_flats'),
+      value: quick.totalFlats ?? 0,
+      icon: Building,
+      tone: 'amber',
+      sub: t('occupied_of_total', { occupied: platform.occupiedFlats ?? 0, total: platform.totalFlats ?? 0 }),
+    },
+    { title: t('renters'), value: quick.totalRenters ?? 0, icon: Users, tone: 'purple' },
+    { title: t('active_staff'), value: quick.activeStaff ?? 0, icon: Staff, tone: 'rose' },
+    { title: t('caretakers'), value: quick.activeCaretakers ?? 0, icon: Shield, tone: 'slate' },
+  ], [quick, platform, t]);
+
+  if (isLoading) return <ContentLoader />;
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-red-500 text-4xl mb-4">⚠️</div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Failed to load dashboard</h3>
-          <p className="text-red-600 text-sm mb-2">
-            {error?.data?.error || 'An unexpected error occurred.'}
-          </p>
-          <p className="text-gray-600 mb-4">Please try again</p>
-            <Btn type="primary" onClick={refetch}>Retry</Btn>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-sm">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">{t('failed_to_load_dashboard')}</h3>
+          <p className="text-sm text-gray-600 mb-4">{apiErrorMessage(error)}</p>
+          <Btn type="primary" onClick={refetch}>{t('retry')}</Btn>
         </div>
       </div>
     );
   }
 
+  const updatedAt = data?.timestamp ? new Date(data.timestamp) : null;
+  const emailLate = (ops.emailOldestPendingMins ?? 0) > 30;
+
   return (
-    <div className="min-h-screen">
+    <div className="space-y-5">
       {/* Header */}
-
-      <div className='font-bold font-oswald text-sm text-slate-800'>
-                  {t('welcome')}, <span className='text-primary font-mooli'>{ user?.name }!</span>
-              </div>
-
-      <div className="flex gap-4 flex-wrap justify-between mb-6">
+      <div className="flex flex-wrap gap-4 justify-between items-start">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-700">{t('system_dashboard')}</h1>
-          <p className="text-gray-600 mt-1">
-            Last updated: {new Date(data?.timestamp).toLocaleString()}
+          <p className="text-sm text-gray-500">
+            {t('welcome')}, <span className="font-semibold text-primary">{user?.name}</span>
           </p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mt-0.5">{t('system_dashboard')}</h1>
+          {/* Guarded: an absent timestamp used to render the words "Invalid Date". */}
+          {updatedAt && !Number.isNaN(updatedAt.getTime()) && (
+            <p className="text-xs text-gray-400 mt-1 inline-flex items-center gap-1.5">
+              {/* isFetching rather than isLoading: a refresh of data already on screen should
+                  say so quietly, not blank the page out and start again. */}
+              {isFetching && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
+              {isFetching ? t('updating') : t('last_updated', { time: updatedAt.toLocaleString() })}
+            </p>
+          )}
         </div>
-        <div className="flex flex-wrap gap-3 items-center">
-
-          <Btn className={`flex-1`} type="secondary" onClick={refetch}>{t('refresh')}</Btn>
-          <Btn className={`flex-1`} onClick={handleExportPDF} type="secondary">{t('export_report')}</Btn>
-          <Btn className={`flex-1`} type='primary' href={'/admin/generate-token'}>{t('generate_invitation_link')}</Btn>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Btn type="secondary" onClick={refetch}>{t('refresh')}</Btn>
+          <Btn type="secondary" onClick={handleExportPDF}>{t('export_report')}</Btn>
+          <Btn type="primary" href="/admin/generate-token">{t('generate_invitation_link')}</Btn>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        {stats.map((stat, index) => (
-          <StatCard key={index} {...stat} />
-        ))}
+      <OwnersWithoutHouse data={data?.ownersWithoutHouse} t={t} />
+
+      {/* Money first — what the platform is actually doing */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          icon={Wallet}
+          tone="green"
+          title={t('rent_collected_this_month')}
+          value={money(platform.rentCollectedThisMonth)}
+        />
+        <StatCard
+          icon={Receipt}
+          tone={platform.rentOutstanding > 0 ? 'rose' : 'slate'}
+          title={t('rent_outstanding')}
+          value={money(platform.rentOutstanding)}
+          sub={platform.rentOverdueCount > 0 ? t('n_overdue', { count: platform.rentOverdueCount }) : t('nothing_owed')}
+        />
+        <StatCard
+          icon={Wallet}
+          tone="blue"
+          title={t('app_fee_collected_this_month')}
+          value={money(platform.appFeeCollectedThisMonth)}
+          sub={platform.appFeeAwaitingCheck > 0 ? t('n_awaiting_check', { count: platform.appFeeAwaitingCheck }) : undefined}
+        />
+        <StatCard
+          icon={Building}
+          tone="amber"
+          title={t('occupancy')}
+          value={`${platform.occupancyRate ?? 0}%`}
+          sub={t('occupied_of_total', { occupied: platform.occupiedFlats ?? 0, total: platform.totalFlats ?? 0 })}
+        />
       </div>
 
-      {/* Main Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* User Growth Chart */}
+      {/* Counts */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+        {stats.map((stat, index) => <StatCard key={index} {...stat} />)}
+      </div>
+
+      {/*
+        This strip replaces a radar chart of six invented percentages — Response Time 95,
+        Uptime 99, Database 98, Cache 92, Security 100, Backups 97 — none of which was
+        measured anywhere. Everything below is read from the tables that would actually
+        show a problem: mail that is not going out, jobs that failed, a database slowing
+        down. It is the only part of this page that can tell an admin to do something.
+      */}
+      <div className="bg-white rounded-2xl border border-gray-200">
+        <div className="px-5 pt-4 pb-1 flex items-center justify-between">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+            {t('system_operations')}
+          </h3>
+          {ops.emailFailed > 0 || ops.jobsFailed > 0 || emailLate ? (
+            <span className="text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+              {t('needs_attention')}
+            </span>
+          ) : (
+            <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              {t('all_clear')}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 p-2">
+          <OpsStat
+            icon={Inbox}
+            label={t('email_queue')}
+            value={t('n_pending', { count: ops.emailPending ?? 0 })}
+            detail={emailLate ? t('waiting_minutes', { count: ops.emailOldestPendingMins }) : null}
+            state={emailLate ? 'bad' : (ops.emailPending > 0 ? 'warn' : 'ok')}
+          />
+          <OpsStat
+            icon={Mail}
+            label={t('email_sent_today')}
+            value={ops.emailSentToday ?? 0}
+            detail={ops.emailFailed > 0 ? t('n_failed', { count: ops.emailFailed }) : null}
+            state={ops.emailFailed > 0 ? 'bad' : 'ok'}
+          />
+          <OpsStat
+            icon={Activity}
+            label={t('background_jobs')}
+            value={t('n_pending', { count: ops.jobsPending ?? 0 })}
+            detail={ops.jobsFailed > 0 ? t('n_failed', { count: ops.jobsFailed }) : null}
+            state={ops.jobsFailed > 0 ? 'bad' : 'ok'}
+          />
+          <OpsStat
+            icon={BellRing}
+            label={t('push_subscriptions')}
+            value={ops.pushSubscriptions ?? 0}
+            state={(ops.pushSubscriptions ?? 0) > 0 ? 'ok' : 'warn'}
+          />
+          <OpsStat
+            icon={Database}
+            label={t('database_response')}
+            value={`${data?.systemOverview?.summary?.databaseLatencyMs ?? 0} ms`}
+            detail={t('activity_24h', { count: data?.systemOverview?.summary?.recentActivity ?? 0 })}
+            state={(data?.systemOverview?.summary?.databaseLatencyMs ?? 0) > 200 ? 'warn' : 'ok'}
+          />
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title={t('user_growth_last_12_months')}>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data?.systemOverview?.userGrowth}>
+              <AreaChart data={data?.systemOverview?.userGrowth ?? []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" />
-                <YAxis />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Area 
-                  type="monotone" 
-                  dataKey="count" 
-                  stroke="var(--color-primary)" 
-                  fill="var(--color-primary-300)" 
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="var(--color-primary)"
+                  fill="var(--color-primary-300)"
                   fillOpacity={0.3}
                 />
               </AreaChart>
@@ -453,7 +497,6 @@ const SystemDashboard = () => {
           </div>
         </ChartCard>
 
-        {/* House Statistics */}
         <ChartCard title={t('house_distribution')}>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
@@ -461,140 +504,93 @@ const SystemDashboard = () => {
                 { name: t('active'), value: data?.systemOverview?.houseStats?.activeHouses || 0 },
                 { name: t('inactive'), value: data?.systemOverview?.houseStats?.inactiveHouses || 0 },
                 { name: t('with_flats'), value: data?.systemOverview?.houseStats?.housesWithFlats || 0 },
-                { name: t('with_caretakers'), value: data?.systemOverview?.houseStats?.housesWithCaretakers || 0 }
+                { name: t('with_caretakers'), value: data?.systemOverview?.houseStats?.housesWithCaretakers || 0 },
               ]}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" />
-                <YAxis />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#00C49F" />
+                <Bar dataKey="value" fill="#00C49F" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
-
-        {/* Role Distribution */}
-        <ChartCard title={t('role_distribution')}>
-          <div className="h-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data?.systemOverview?.roleDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry) => `${entry.role}: ${entry.count}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {data?.systemOverview?.roleDistribution?.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </ChartCard>
-
-        {/* Performance Metrics */}
-        <ChartCard title={t('system_performance')}>
-          <div className="h-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={[
-                { metric: 'Response Time', value: 95, fullMark: 100 },
-                { metric: 'Uptime', value: 99, fullMark: 100 },
-                { metric: 'Database', value: 98, fullMark: 100 },
-                { metric: 'Cache', value: 92, fullMark: 100 },
-                { metric: 'Security', value: 100, fullMark: 100 },
-                { metric: 'Backups', value: 97, fullMark: 100 }
-              ]}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="metric" />
-                <PolarRadiusAxis />
-                <Radar 
-                  name="Performance" 
-                  dataKey="value" 
-                  stroke="#8884d8" 
-                  fill="#8884d8" 
-                  fillOpacity={0.6}
-                />
-                <Legend />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </ChartCard>
       </div>
 
-      {/* Recent Activities */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Users */}
-        <ChartCard title={t('recent_users')} className="lg:col-span-1">
-          <div className="space-y-2">
-            {data?.recentActivities?.recentUsers?.map((user, index) => (
-              <RecentActivityItem
-                key={index}
-                type="User"
-                title={user.name || user.email}
-                user={user.role?.name}
-                time={new Date(user.createdAt).toLocaleDateString()}
-                icon={Users}
-              />
-            ))}
-          </div>
-        </ChartCard>
-
-        {/* Recent Houses */}
-        <ChartCard title={t('recent_houses')} className="lg:col-span-1">
-          <div className="space-y-2">
-            {data?.recentActivities?.recentHouses?.map((house, index) => (
-              <RecentActivityItem
-                key={index}
-                type="House"
-                title={house?.name}
-                address={house?.address}
-                user={house?.owner?.name}
-                time={new Date(house?.createdAt).toLocaleDateString()}
-                icon={Home}
-              />
-            ))}
-          </div>
-        </ChartCard>
-
-        {/* Recent Notices */}
-        <ChartCard title={t('recent_notices')} className="lg:col-span-1">
-          <div className="space-y-2">
-            {data?.recentActivities?.recentNotices?.map((notice, index) => (
-              <RecentActivityItem
-                key={index}
-                type="Notice"
-                title={notice.title}
-                user={notice.house?.address}
-                time={new Date(notice.createdAt).toLocaleDateString()}
-                icon={Activity}
-              />
-            ))}
-          </div>
-        </ChartCard>
-      </div>
-
-      {/* Footer Status */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
-        <div className="flex flex-col md:flex-row md:items-center justify-between text-sm text-gray-600">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>System Status: Operational</span>
-          </div>
-          <div>
-            <span>Cache: </span>
-            <span className="text-green-600 font-medium">Active</span>
-            <span className="mx-2">•</span>
-            <span>Workers: </span>
-            <span className="text-green-600 font-medium">2/2 Running</span>
-          </div>
+      <ChartCard title={t('role_distribution')}>
+        <div className="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data?.systemOverview?.roleDistribution ?? []}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={(entry) => `${entry.role}: ${entry.count}`}
+                outerRadius={80}
+                dataKey="count"
+              >
+                {(data?.systemOverview?.roleDistribution ?? []).map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
+      </ChartCard>
+
+      {/* Recent activity — each list now says so when it is empty, rather than
+          rendering a titled card with nothing under it. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <ChartCard title={t('recent_users')}>
+          {data?.recentActivities?.recentUsers?.length ? (
+            <div className="space-y-1">
+              {data.recentActivities.recentUsers.map((u, i) => (
+                <ActivityRow
+                  key={i}
+                  title={u.name || u.email}
+                  meta={u.role?.name}
+                  time={u.createdAt ? new Date(u.createdAt).toLocaleDateString() : null}
+                  icon={Users}
+                />
+              ))}
+            </div>
+          ) : <EmptyRows label={t('no_records_yet')} />}
+        </ChartCard>
+
+        <ChartCard title={t('recent_houses')}>
+          {data?.recentActivities?.recentHouses?.length ? (
+            <div className="space-y-1">
+              {data.recentActivities.recentHouses.map((h, i) => (
+                <ActivityRow
+                  key={i}
+                  title={h?.name}
+                  meta={[h?.address, h?.owner?.name].filter(Boolean).join(' \u00b7 ')}
+                  time={h?.createdAt ? new Date(h.createdAt).toLocaleDateString() : null}
+                  icon={Home}
+                />
+              ))}
+            </div>
+          ) : <EmptyRows label={t('no_records_yet')} />}
+        </ChartCard>
+
+        <ChartCard title={t('recent_notices')}>
+          {data?.recentActivities?.recentNotices?.length ? (
+            <div className="space-y-1">
+              {data.recentActivities.recentNotices.map((n, i) => (
+                <ActivityRow
+                  key={i}
+                  title={n.title}
+                  meta={n.house?.address}
+                  time={n.createdAt ? new Date(n.createdAt).toLocaleDateString() : null}
+                  icon={Activity}
+                />
+              ))}
+            </div>
+          ) : <EmptyRows label={t('no_records_yet')} />}
+        </ChartCard>
       </div>
     </div>
   );

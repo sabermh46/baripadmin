@@ -3,13 +3,16 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Mail, Home, UserPlus, Eye } from 'lucide-react';
 import { useGetManagedOwnersQuery } from '../../store/api/houseApi';
+import { useAuth } from '../../hooks';
 import debounce from 'lodash/debounce';
 import Table from '../../components/common/Table';
 import CreateHouseOwnerModal from '../AppFee/CreateHouseOwnerModal';
+import ProtectedImage from '../../components/common/ProtectedImage';
 import { t } from 'i18next';
 
 const HouseOwnersPage = () => {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -44,9 +47,18 @@ const HouseOwnersPage = () => {
       key: 'name',
       render: (owner) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-            {owner.name.charAt(0)}
-          </div>
+          {/* The API returns avatarUrl now; initials remain the fallback for owners
+              who never uploaded one, and for a picture that fails to load. */}
+          <ProtectedImage
+            src={owner.avatarUrl}
+            alt={owner.name}
+            className="w-10 h-10 rounded-full object-cover shrink-0"
+            fallback={
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                {owner.name.charAt(0)}
+              </div>
+            }
+          />
           <div>
             <div className="font-medium text-gray-900">{owner.name}</div>
             <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -141,6 +153,10 @@ const HouseOwnersPage = () => {
           <h1 className="text-2xl font-bold text-text">{t('house_owners')}</h1>
           <p className="text-subdued text-sm">Manage and monitor all registered property owners.</p>
         </div>
+        {/* The page opens to any staff holding houses.view, but creating an owner needs
+            users.create — which the server enforces. Ungated, the button was an invitation
+            to fill in a whole form and be refused at the end of it. */}
+        {hasPermission('users.create') && (
         <button
           className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-fit"
           onClick={() => setCreateOwnerOpen(true)}
@@ -148,6 +164,7 @@ const HouseOwnersPage = () => {
           <UserPlus size={18} />
           Add Owner
         </button>
+        )}
       </div>
 
       {/* Filter Bar */}

@@ -26,7 +26,7 @@ import RenterForm from '../renters/RenterForm';
 import { useGetHouseDetailsQuery } from '../../store/api/houseApi';
 import Btn from '../common/Button';
 import { toast } from 'react-toastify';
-import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
+import { apiErrorMessage } from '../../utils/apiError';
 import { useTranslation } from 'react-i18next';
 
 const FlatList = () => {
@@ -88,7 +88,7 @@ const FlatList = () => {
         toast.success('Flat deleted successfully');
       } catch (error) {
         console.error('Failed to delete flat:', error);
-        toast.error(showMessageInLanguage(error?.data?.error || error.message));
+        toast.error(apiErrorMessage(error));
       }
     }
   };

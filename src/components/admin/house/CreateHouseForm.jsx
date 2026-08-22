@@ -4,6 +4,7 @@ import { useCreateHouseMutation, useGetManagedOwnersQuery } from '../../../store
 import { useAuth } from '../../../hooks';
 import Btn from '../../common/Button';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../../utils/apiError';
 import AmenitiesInput from '../../common/AmenitiesInput';
 
 const CreateHouseForm = ({ onSuccess, onCancel }) => {
@@ -115,8 +116,18 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
     if (!validateForm()) return;
 
     try {
+      // No `if (result.success)` guard.
+      //
+      // POST /houses returns the created house itself — there is no `success` key in the
+      // response and never has been. So the guard was always false: the house was created
+      // (201), unwrap() returned it happily, and then every line below was skipped. No
+      // toast, no form reset, no onSuccess — the page just sat there looking like nothing
+      // had happened, which is exactly what it looked like.
+      //
+      // unwrap() already throws on a failed request, so reaching this line IS the success
+      // signal. That is the pattern every other create form in the app uses.
       const result = await createHouse(formData).unwrap();
-      if (result.success) {
+      {
         setSuccess(true);
         toast.success("Property created successfully!");
         reset();
@@ -133,12 +144,13 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
           },
           active: false,
         });
-        if (onSuccess) onSuccess(result.data);
+        // `result` IS the created house — the response has no `data` wrapper either.
+        if (onSuccess) onSuccess(result);
         setTimeout(() => setSuccess(false), 3000);
       }
     } catch (err) {
       console.error('Submit error:', err);
-      toast.error(err.data?.error || 'Failed to create property');
+      toast.error(apiErrorMessage(err, 'Failed to create property'));
     }
   };
 
@@ -190,7 +202,7 @@ const CreateHouseForm = ({ onSuccess, onCancel }) => {
             <X size={18} />
             <div>
               <p className="font-medium">Error</p>
-              <p className="text-sm">{error.data?.error || 'Something went wrong. Please try again.'}</p>
+              <p className="text-sm">{apiErrorMessage(error)}</p>
             </div>
           </div>
         )}

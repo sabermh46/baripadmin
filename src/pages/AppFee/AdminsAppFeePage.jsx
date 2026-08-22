@@ -16,6 +16,7 @@ import AppFeeOverview from './AppFeeOverview';
 import AppFeeMetricModal from './AppFeeMetricModal';
 import VerifyClaimModal from './VerifyClaimModal';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import { useTranslation } from 'react-i18next';
 
 // Built from `t` inside the component rather than at module scope, so switching language
@@ -117,7 +118,7 @@ const AdminsAppFeePage = () => {
 
 
   const showError = (err) =>
-    toast.error(err?.data?.error || err?.data?.message || err?.message || t('failed_to_update_payment'));
+    toast.error(apiErrorMessage(err, t('failed_to_update_payment')));
 
   // Confirming a claim used to be a one-click button in the table that fired
   // `{status:'paid'}` immediately — settling an invoice without ever putting the transaction

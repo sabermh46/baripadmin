@@ -122,11 +122,9 @@ const HouseOwnerComponent = () => {
       value: summary?.totalHouses ?? 0, 
       icon: HomeIcon,
       subtext: `${summary?.activeHouses ?? 0} active, ${summary?.inactiveHouses ?? 0} inactive`,
-      hover: {
-        cardFor: "houses",
-        print: "grid",
-        data: houses
-      }
+      // Every card hands the modal the same three collections; `cardFor` decides which of
+      // them it renders and how. Houses carry their flats, so the flats card needs them too.
+      hover: { cardFor: "houses", houses }
     },
     { 
       label: t('total_flats'), 
@@ -134,33 +132,21 @@ const HouseOwnerComponent = () => {
       icon: Flats,
       subtext: `${summary?.occupiedFlats ?? 0} occupied, ${summary?.vacantFlats ?? 0} vacant`,
       
-      hover: {
-        cardFor: "flats",
-        print: "listGrid",
-        data: houses
-      }
+      hover: { cardFor: "flats", houses }
     },
     { 
       label: t('active_renters'), 
       value: summary?.totalRenters ?? 0, 
       icon: Renters,
       subtext: `${summary?.activeRenters ?? 0} active, ${summary?.inactiveRenters ?? 0} inactive`,
-      hover: {
-        cardFor: "renters",
-        print: "grid",
-        data: renters
-      }
+      hover: { cardFor: "renters", renters }
     },
     { 
       label: t('active_caretakers'), 
       value: summary?.assignedCaretakers ?? 0, 
       icon: CareTaker,
       subtext: "Assigned to your houses",
-      hover: {
-        cardFor: "caretakers",
-        print: "grid",
-        data: caretakers
-      }
+      hover: { cardFor: "caretakers", caretakers }
     },
   ];
 

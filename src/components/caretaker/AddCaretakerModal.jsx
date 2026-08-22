@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { apiErrorMessage } from '../../utils/apiError';
 import { Search } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
@@ -97,8 +98,7 @@ const AddCaretakerModal = ({ isOpen, onClose, onSuccess }) => {
       onSuccess?.();
       handleClose();
     } catch (err) {
-      const msg = err?.data?.error || err?.data?.message || err?.message || 'Failed to create caretaker';
-      toast.error(msg);
+      toast.error(apiErrorMessage(err, 'Failed to create caretaker'));
     }
   };
 

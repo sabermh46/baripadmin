@@ -30,7 +30,9 @@ export const renterApi = baseApi.injectEndpoints({
         body: formData,
         // Note: No Content-Type header for FormData - browser sets it automatically with boundary
       }),
-      invalidatesTags: ['Renter'],
+      // 'House' too: GET /houses/{id} now carries the owner's unassigned renters, so a
+      // renter created from the house page has to show up there without a manual reload.
+      invalidatesTags: ['Renter', 'House'],
     }),
 
     // Update renter (with file upload)
@@ -43,7 +45,8 @@ export const renterApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (result, error, { id }) => [
         'Renter',
-        { type: 'Renter', id }
+        { type: 'Renter', id },
+        'House',
       ],
     }),
 
@@ -53,7 +56,7 @@ export const renterApi = baseApi.injectEndpoints({
         url: `/renters/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Renter'],
+      invalidatesTags: ['Renter', 'House'],
     }),
 
     // Get available renters

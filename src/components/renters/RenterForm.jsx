@@ -8,6 +8,7 @@ import {
   useUpdateRenterMutation
 } from '../../store/api/renterApi';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import { useAuth } from '../../hooks';
 
 import { useTranslation } from 'react-i18next';
@@ -162,7 +163,7 @@ const removeFile = (setImage, setPreview, inputName) => {
           setNidFrontPreview(null);
           setNidBackPreview(null);
         } catch (error) {
-          toast.error(showMessageInLanguage(`Failed to update renter: ${error?.data?.error || error?.message}`));
+          toast.error(apiErrorMessage(error, 'Could not update the renter.'));
           console.error('Failed to update renter:', error);
         }
       } else {
@@ -176,12 +177,12 @@ const removeFile = (setImage, setPreview, inputName) => {
           setNidFrontPreview(null);
           setNidBackPreview(null);
         } catch (error) {
-          toast.error(showMessageInLanguage(error?.data?.error || error?.message));
+          toast.error(apiErrorMessage(error));
           console.error('Failed to create renter:', error);
         }
       }
     } catch (error) {
-      toast.error(showMessageInLanguage(`Failed to save renter: ${error?.data?.error || error?.message}`));
+      toast.error(apiErrorMessage(error, 'Could not save the renter.'));
       console.error('Failed to save renter:', error);
     }
   };

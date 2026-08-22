@@ -13,6 +13,19 @@ export const houseApi = baseApi.injectEndpoints({
     }),
 
     // Get all houses with pagination
+    // Archived (soft-deleted) houses. web_owner only, mirroring the route's own guard.
+    getArchivedHouses: builder.query({
+      query: (params) => ({ url: '/houses/archived', method: 'GET', params }),
+      providesTags: ['Houses'],
+    }),
+
+    restoreHouse: builder.mutation({
+      query: (id) => ({ url: `/houses/${id}/restore`, method: 'POST' }),
+      // 'ManagedOwners' too: restoring a house is what takes an owner off the
+      // "no house" warning on the admin dashboard.
+      invalidatesTags: ['Houses', 'House', 'Analytics', 'ManagedOwners'],
+    }),
+
     getHouses: builder.query({
       query: ({ page = 1, limit = 20, search, ownerId, sortBy = 'createdAt', sortOrder = 'desc', withRenters } = {}) => ({
         url: '/houses',
@@ -107,6 +120,8 @@ export const houseApi = baseApi.injectEndpoints({
 export const {
   useCreateHouseMutation,
   useGetHousesQuery,
+  useGetArchivedHousesQuery,
+  useRestoreHouseMutation,
   useLazyGetHousesQuery,
   useGetHouseDetailsQuery,
   useLazyGetHouseDetailsQuery,

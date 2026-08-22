@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import { 
   Building, 
   Calendar, 
@@ -115,7 +116,7 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
       setSelectedCategory(expenseCategories[0]);
       setSelectedPaymentMethod(paymentMethods[0]);
     } catch (error) {
-      toast.error(error?.data?.message || 'Failed to record expense');
+      toast.error(apiErrorMessage(error, 'Failed to record expense'));
       console.error('Expense recording error:', error);
     }
   };

@@ -1,4 +1,5 @@
 import React from 'react';
+import { apiErrorMessage } from '../../utils/apiError';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ExternalLink, Filter, Mail, Phone } from 'lucide-react';
 import Modal from '../../components/common/Modal';
@@ -279,7 +280,7 @@ const AppFeeMetricModal = ({ metric, isOpen, onClose, onOpenPayment, onApplyQuic
         {error ? (
           <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            {error?.data?.error || error?.data?.message || t('something_went_wrong')}
+            {apiErrorMessage(error, t('something_went_wrong'))}
           </div>
         ) : isLoading ? (
           <SkeletonRows />

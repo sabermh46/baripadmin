@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiErrorMessage } from '../../utils/apiError';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   useRegisterMutation,
@@ -186,7 +187,7 @@ const SignupPage = () => {
         }
       });
     } catch (err) {
-      setError(err?.data?.error || 'Registration failed');
+      setError(apiErrorMessage(err, 'Registration failed'));
     }
   };
 

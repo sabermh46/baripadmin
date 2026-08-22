@@ -10,6 +10,10 @@ import ExpensesSection from './sections/ExpensesSection';
 import LoansSection from './sections/LoansSection';
 import LoanPaymentsSection from './sections/LoanPaymentsSection';
 
+// Module-level so the identity is stable across renders and across sections.
+const EMPTY_ARRAY = Object.freeze([]);
+const EMPTY_OBJECT = Object.freeze({});
+
 const HouseOwnerDetailPage = () => {
   const { ownerId } = useParams();
   const navigate = useNavigate();
@@ -23,7 +27,16 @@ const HouseOwnerDetailPage = () => {
 
   const handleSectionSuccess = useCallback(
     (payload) => {
-      if (payload?.section === 'houses') refetch();
+      if (payload?.section !== 'houses') return;
+      try {
+        // refetch() throws outright if the query was never started — which happens whenever
+        // this ran while `skip` was on, or after the section had unsubscribed. An uncaught
+        // throw from a child's callback unmounts the tree, so a reload that could not happen
+        // took the page white instead of being a no-op.
+        refetch();
+      } catch {
+        /* nothing subscribed to refetch; the next mount fetches fresh anyway */
+      }
     },
     [refetch]
   );
@@ -54,15 +67,20 @@ const HouseOwnerDetailPage = () => {
     );
   }
 
+  // `dna.houses ?? []` builds a brand-new array on every render whenever the key is absent,
+  // and each section keys a useEffect on the value it is handed — so an absent section
+  // re-ran its effect forever. Frozen empties are shared, so an absent key is a stable
+  // reference and the effects settle.
   const dna = owner.dna || {};
   const profile = dna.profile || owner;
-  const houses = dna.houses ?? [];
-  const flats = dna.flats ?? [];
-  const appFeePayments = dna.appFeePayments ?? [];
-  const income = dna.income ?? {};
-  const expenses = dna.expenses ?? [];
-  const loans = dna.loans ?? [];
-  const loanPayments = dna.loanPayments ?? [];
+  const houses = dna.houses ?? EMPTY_ARRAY;
+  const archivedHouses = dna.archivedHouses ?? EMPTY_ARRAY;
+  const flats = dna.flats ?? EMPTY_ARRAY;
+  const appFeePayments = dna.appFeePayments ?? EMPTY_ARRAY;
+  const income = dna.income ?? EMPTY_OBJECT;
+  const expenses = dna.expenses ?? EMPTY_ARRAY;
+  const loans = dna.loans ?? EMPTY_ARRAY;
+  const loanPayments = dna.loanPayments ?? EMPTY_ARRAY;
 
   return (
     <div className="space-y-6 bg-background min-h-screen">
@@ -86,6 +104,7 @@ const HouseOwnerDetailPage = () => {
         <ProfileSection profile={profile} user={owner} onSuccess={handleSectionSuccess} />
         <HousesSection
           houses={houses}
+          archivedHouses={archivedHouses}
           flats={flats}
           ownerId={ownerId}
           ownerName={owner?.name}

@@ -23,6 +23,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import RenterForm from './RenterForm';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { apiErrorMessage } from '../../utils/apiError';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 
 const RenterList = () => {
@@ -68,7 +69,7 @@ const view = queryParams.get('view');
 
   if (error) {
     console.error('Failed to fetch renters:', error);
-    toast.error(showMessageInLanguage(error?.data?.error || 'Failed to fetch renters'));  
+    toast.error(showMessageInLanguage(apiErrorMessage(error, 'Failed to fetch renters')));  
   }
   
   const [deleteRenter, { isLoading: isDeleting }] = useDeleteRenterMutation();

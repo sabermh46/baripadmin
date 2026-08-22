@@ -1,7 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { Printer } from 'lucide-react';
 import TkSymbol from './TkSymbol';
+import { useTranslation } from 'react-i18next';
+import { downloadProtectedFile } from './ProtectedImage';
 
 /**
  * PrintEmailInfo - Displays email log info and supports printing (including HTML body).
@@ -10,7 +12,9 @@ import TkSymbol from './TkSymbol';
  * @param {string} log.htmlBody - Optional HTML content to display/print
  */
 const PrintEmailInfo = ({ log, meta: metaProp, htmlBody }) => {
+  const { t } = useTranslation();
   const printRef = useRef(null);
+  const [openingPdf, setOpeningPdf] = useState(false);
 
   let meta = metaProp;
   if (!meta && log?.metadata) {
@@ -82,29 +86,63 @@ const PrintEmailInfo = ({ log, meta: metaProp, htmlBody }) => {
             >
               {log?.status}
             </span>
-            {
-              meta?.invoicePdfPath && (
-                <a href={ `${import.meta.env.VITE_APP_API_URL}/${meta?.invoicePdfPath}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 text-xs hover:underline">PDF Attachment</a>
-              )
-            }
+            {/* Two things were wrong with linking straight to the file. The path is served
+                under /uploads/, not off the API root, so the URL pointed nowhere; and that
+                route now requires a bearer token, so a plain anchor gets a 401. Fetch it
+                with credentials and hand the browser the bytes. */}
+            {meta?.invoicePdfPath && (
+              <button
+                type="button"
+                disabled={openingPdf}
+                onClick={async () => {
+                  setOpeningPdf(true);
+                  try {
+                    await downloadProtectedFile(
+                      `/uploads/${meta.invoicePdfPath}`,
+                      `receipt-${meta.forMonth || log?.id || 'rent'}.pdf`
+                    );
+                  } finally {
+                    setOpeningPdf(false);
+                  }
+                }}
+                className="text-blue-600 text-xs hover:underline disabled:opacity-50"
+              >
+                {openingPdf ? t('opening') : t('view_pdf_receipt')}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {(isRentReminder || isPaymentReceipt) && meta && (
         <div className="meta-section p-3 bg-subdued/5 rounded-lg border border-subdued/10 text-sm space-y-1">
-          <p><span className="meta-label text-subdued">Renter:</span> {meta.renterName}</p>
-          <p><span className="meta-label text-subdued">Flat:</span> {meta.flatNumber} • {meta.houseName}</p>
-          <p><span className="meta-label text-subdued">Amount:</span> <TkSymbol />{meta.amount}</p>
+          {meta.renterName && (
+            <p><span className="meta-label text-subdued">{t('email_log_renter')}</span> {meta.renterName}</p>
+          )}
+          {(meta.flatNumber || meta.houseName) && (
+            <p>
+              <span className="meta-label text-subdued">{t('email_log_flat')}</span>{' '}
+              {[meta.flatNumber, meta.houseName].filter(Boolean).join(' • ')}
+            </p>
+          )}
+          {meta.amount != null && (
+            <p>
+              <span className="meta-label text-subdued">{t('email_log_amount')}</span>{' '}
+              <TkSymbol />{Number(meta.amount).toLocaleString()}
+            </p>
+          )}
+          {meta.forMonth && (
+            <p><span className="meta-label text-subdued">{t('email_log_for_month')}</span> {meta.forMonth}</p>
+          )}
           {isRentReminder && meta.dueDate && (
-            <p><span className="meta-label text-subdued">Due:</span> {meta.dueDate}</p>
+            <p><span className="meta-label text-subdued">{t('email_log_due')}</span> {meta.dueDate}</p>
           )}
         </div>
       )}
 
       {htmlBody && (
         <div className="html-body mt-3">
-          <p className="text-xs text-subdued mb-2 font-medium">Email body:</p>
+          <p className="text-xs text-subdued mb-2 font-medium">{t('email_log_body')}</p>
           <iframe
             srcDoc={htmlBody}
             title="Email HTML body"

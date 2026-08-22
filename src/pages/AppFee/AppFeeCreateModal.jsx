@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { apiErrorMessage } from '../../utils/apiError';
 import { Search } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { useAuth } from '../../hooks';
@@ -161,12 +162,7 @@ const AppFeeCreateModal = ({ isOpen, onClose, onSuccess }) => {
       onSuccess?.();
       handleClose();
     } catch (res) {
-      const msg =
-        res?.data?.error ||
-        res?.data?.message ||
-        res?.message ||
-        'Failed to create app fee payment';
-      toast.error(msg);
+      toast.error(apiErrorMessage(res, 'Failed to create app fee payment'));
     }
   };
 

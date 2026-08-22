@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiErrorMessage } from '../../utils/apiError';
 import Modal from '../../components/common/Modal';
 import { useCreateUserMutation } from '../../store/api/authApi';
 import { toast } from 'react-toastify';
@@ -68,9 +69,7 @@ const CreateHouseOwnerModal = ({ isOpen, onClose, onSuccess }) => {
       onSuccess?.();
       handleClose();
     } catch (err) {
-      const msg =
-        err?.data?.error || err?.data?.message || err?.message || 'Failed to create house owner';
-      toast.error(msg);
+      toast.error(apiErrorMessage(err, 'Failed to create house owner'));
     }
   };
 

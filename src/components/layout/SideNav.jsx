@@ -13,7 +13,7 @@ import {
   Users,
   UsersRound,
 } from "lucide-react";
-import { useState, useMemo, memo } from "react";
+import { useState, memo } from "react";
 import { useAppDispatch, useAuth } from "../../hooks";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLogoutMutation } from "../../store/api/authApi";
@@ -66,6 +66,8 @@ const NAV_ITEMS = [
     labelKey: "house_owners",
     icon: BookUser,
     roles: ["developer", "web_owner", "staff"],
+    // Staff need users.view for this; without it the page is an Access Denied.
+    permission: "users.view",
   },
   {
     path: "/renters",
@@ -163,7 +165,7 @@ const AppFeeBadges = ({ counts, collapsed }) => {
 };
 
 export const SideNav = ({ onClicked }) => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { t, i18n } = useTranslation();
   const [googleAvatarError, setGoogleAvatarError] = useState(false);
   const isBengali = i18n.language?.startsWith('bn');
@@ -178,8 +180,15 @@ export const SideNav = ({ onClicked }) => {
 
   // Admin-only endpoint, so skip entirely for house owners and caretakers — otherwise every
   // one of their page loads would fire a request that can only come back 403.
+  //
+  // The role check alone was not enough: the endpoint also requires app_fees.view of staff,
+  // so a staff member without it fired a guaranteed 403 on every page load and again on
+  // every poll. Now that a 403 triggers a permission resync, that was a resync every five
+  // minutes for an answer already known.
+  const canSeeAppFees = isAdmin && (roleSlug !== 'staff' || hasPermission('app_fees.view'));
+
   const { data: appFeeBadges } = useGetAppFeeBadgeCountsQuery(undefined, {
-    skip: !isAdmin,
+    skip: !canSeeAppFees,
     pollingInterval: 5 * 60 * 1000,
   });
 
@@ -194,10 +203,17 @@ export const SideNav = ({ onClicked }) => {
     }
   };
 
-  const filteredNavItems = useMemo(
-    () => NAV_ITEMS.filter((item) => !item.roles || (roleSlug && item.roles.includes(roleSlug))),
-    [roleSlug]
-  );
+  // Items may also name a permission. The nav could only filter by role before, so a staff
+  // member saw links to pages their permissions would refuse — and the route guard met them
+  // with Access Denied, which reads as a broken app rather than a boundary.
+  //
+  // Not memoised: it is a dozen objects, and the permission list is resynced at runtime by
+  // the 403 handler, so a stale memo would keep showing a link that has just been revoked.
+  const filteredNavItems = NAV_ITEMS.filter((item) => {
+    if (item.roles && !(roleSlug && item.roles.includes(roleSlug))) return false;
+    if (item.permission && !hasPermission(item.permission)) return false;
+    return true;
+  });
 
   return (
     <>

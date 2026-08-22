@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Mail, Phone, User } from 'lucide-react';
 import { useAuth } from '../../../../hooks';
 import { useNavigate } from 'react-router-dom';
+import ProtectedImage from '../../../../components/common/ProtectedImage';
 
 const formatDate = (d) => {
   if (!d) return '–';
@@ -29,17 +30,21 @@ const ProfileSection = ({ profile, user, onSuccess }) => {
       </h3>
         <div className="bg-gray-100 rounded-lg p-4 space-y-2 flex-4 max-w-full min-w-max">
           <div className="flex items-center gap-3">
-            {data.avatarUrl ? (
-              <img
-                src={data.avatarUrl}
-                alt={data.name}
-                className="w-12 h-12 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                {(data.name || '?').charAt(0)}
-              </div>
-            )}
+            {/* A plain <img> could never work here: an uploaded avatar is the relative
+                path /uploads/avatars/x.jpg, which the browser resolves against the app's
+                own origin rather than the API's, and that route now requires a token
+                besides. ProtectedImage fetches it with credentials, and passes a Google
+                picture URL straight through. */}
+            <ProtectedImage
+              src={data.avatarUrl}
+              alt={data.name}
+              className="w-12 h-12 rounded-full object-cover shrink-0"
+              fallback={
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg shrink-0">
+                  {(data.name || '?').charAt(0)}
+                </div>
+              }
+            />
             <div>
               <p className="font-medium text-gray-900">{data.name || '–'}</p>
               <p className="text-sm text-gray-500 flex items-center gap-1">
