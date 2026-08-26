@@ -1,8 +1,32 @@
 import { baseApi } from './baseApi';
 
+/**
+ * App-fee endpoints are deliberately exempt from the app-wide cache policy.
+ *
+ * baseApi keeps query data for 600s and, through `refetchOnMountOrArgChange: 120`, will
+ * happily re-render a two-minute-old answer without asking the server. That is the right
+ * default for a list of flats, and the wrong one here: this is the money surface, an admin is
+ * told by push notification the moment something changes, and opening the page to find the
+ * old figures reads as the system being broken.
+ *
+ * So: nothing is kept once nothing is watching it, every mount refetches, and returning to
+ * the tab or the network refetches too. Push-driven invalidation (see App.jsx) covers the
+ * instant case; the polling on the pages themselves is only a backstop for when push is not
+ * granted or has silently lapsed.
+ */
+const LIVE = {
+  // Drop the moment the last subscriber unmounts — never re-render a stale figure.
+  keepUnusedDataFor: 0,
+  // `true`, not a number of seconds: refetch on every mount, no grace window.
+  refetchOnMountOrArgChange: true,
+  refetchOnFocus: true,
+  refetchOnReconnect: true,
+};
+
 export const appFeeApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAppFeePayments: builder.query({
+      ...LIVE,
       query: (params = {}) => ({
         url: '/app-fees/payments',
         method: 'GET',
@@ -28,6 +52,7 @@ export const appFeeApi = baseApi.injectEndpoints({
     }),
 
     getAppFeePayment: builder.query({
+      ...LIVE,
       query: (id) => ({
         url: `/app-fees/payments/${id}`,
         method: 'GET',
@@ -70,6 +95,7 @@ export const appFeeApi = baseApi.injectEndpoints({
     // Portfolio figures for the admin overview. Tagged with the payments LIST id so
     // verifying/creating/deleting an invoice refreshes the cards without a manual reload.
     getAppFeeStats: builder.query({
+      ...LIVE,
       query: () => ({ url: '/app-fees/payments/stats', method: 'GET' }),
       providesTags: [{ type: 'AppFeePayments', id: 'LIST' }, { type: 'AppFeePayments', id: 'STATS' }],
     }),
@@ -78,6 +104,7 @@ export const appFeeApi = baseApi.injectEndpoints({
     // parameterised query rather than eight more fields on getAppFeeStats, which every admin
     // page load would otherwise have to pay for.
     getAppFeeBreakdown: builder.query({
+      ...LIVE,
       query: (metric) => ({
         url: '/app-fees/payments/stats/breakdown',
         method: 'GET',
@@ -92,6 +119,7 @@ export const appFeeApi = baseApi.injectEndpoints({
     // Two integers behind the sidebar badges. Separate from the stats query because the nav
     // mounts on every page while the stats page does not.
     getAppFeeBadgeCounts: builder.query({
+      ...LIVE,
       query: () => ({ url: '/app-fees/badge-counts', method: 'GET' }),
       providesTags: [{ type: 'AppFeePayments', id: 'LIST' }, { type: 'AppFeePayments', id: 'BADGES' }],
     }),
@@ -101,6 +129,7 @@ export const appFeeApi = baseApi.injectEndpoints({
     // getAppFeeDue + getAppFeePayments, which were three calls for one screen — and which
     // sent the caretaker's own id as a house-owner id and got 403 for two of the three.
     getMyAppFee: builder.query({
+      ...LIVE,
       query: (houseOwnerId) => ({
         url: '/app-fees/me',
         method: 'GET',
@@ -112,11 +141,13 @@ export const appFeeApi = baseApi.injectEndpoints({
     // A single owner's live subscription state, straight from AppFeeStatusService — the one
     // definition of "expired" that the gate middleware also enforces.
     getAppFeeStatus: builder.query({
+      ...LIVE,
       query: (houseOwnerId) => ({ url: `/app-fees/payments/status/${houseOwnerId}`, method: 'GET' }),
       providesTags: [{ type: 'AppFeePayments', id: 'LIST' }],
     }),
 
     getAppFeeDue: builder.query({
+      ...LIVE,
       query: (houseOwnerId) => ({ url: `/app-fees/payments/calculate-due/${houseOwnerId}`, method: 'GET' }),
       providesTags: [{ type: 'AppFeePayments', id: 'LIST' }],
     }),

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, memo, Suspense } from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ContentLoader } from './common/RouteLoader';
 import { useAuth } from '../hooks';
 import { appLogo } from '../assets';
@@ -9,6 +9,8 @@ import { Menu, X } from 'lucide-react';
 import LanguageSwitcher from './common/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useAdminPendingAppFee } from '../hooks/useAdminPendingAppFee';
+import SubscriptionBlocked from './common/SubscriptionBlocked';
+import { useAppSelector } from '../hooks';
 import { format } from 'date-fns';
 
 /**
@@ -64,8 +66,18 @@ const Layout = () => {
   const { isHouseOwner, isCaretaker } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { showWarning, isBlocked, inGracePeriod, daysRemaining, graceDaysRemaining, loseAccessAt, validThrough } =
+  const { status, showWarning, isBlocked, inGracePeriod, daysRemaining, graceDaysRemaining, loseAccessAt, validThrough } =
     useAdminPendingAppFee();
+  const location = useLocation();
+
+  // Two independent signals, deliberately OR'd. The status query says "this account is
+  // blocked" and is the only one that can also say the block is over; the 402 flag says "the
+  // API just refused a call for this reason" and covers the window before that status has
+  // arrived — on a cold load the paywall would otherwise trail a screen of failing widgets.
+  // Either signal alone leaves a gap.
+  const blockedByApi = useAppSelector((state) => state.ui.subscriptionBlocked);
+  const paywalled =
+    (isHouseOwner || isCaretaker) && (blockedByApi || (isBlocked && !!status?.hasEverPaid));
 
   // Stable identities so the memoized header isn't invalidated on every Layout render.
   const toggleMobileMenu = useCallback(() => setIsMobileMenuOpen((open) => !open), []);
@@ -155,9 +167,20 @@ const Layout = () => {
             renders its loader inside the content column — the sidebar and header stay
             mounted and stop flashing away on every navigation. */}
         <div className="flex-1 p-4 max-w-full overflow-x-clip relative">
-          <Suspense fallback={<ContentLoader />}>
-            <Outlet />
-          </Suspense>
+          {/* The app-fee page stays reachable while blocked — it is the way out, and the
+              server's gate allow-lists it for exactly that reason. Everything else is
+              replaced rather than covered over, so no doomed request fires behind it. */}
+          {paywalled && !location.pathname.startsWith('/app-fee') ? (
+            <SubscriptionBlocked
+              validThrough={validThrough}
+              daysSinceExpiry={status?.daysSinceExpiry ?? 0}
+              isCaretaker={isCaretaker}
+            />
+          ) : (
+            <Suspense fallback={<ContentLoader />}>
+              <Outlet />
+            </Suspense>
+          )}
         </div>
       </main>
 

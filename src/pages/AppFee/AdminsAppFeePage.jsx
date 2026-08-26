@@ -60,6 +60,9 @@ const AdminsAppFeePage = () => {
     end_date: '',
   });
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  // Which owner the create modal should open with already chosen. Set from the
+  // breakdown's per-row button; null when the toolbar's own button opens it.
+  const [createForOwnerId, setCreateForOwnerId] = useState(null);
   const [viewEditId, setViewEditId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   // Set by clicking the "Awaiting your verification" tile. Kept separate from `filters`
@@ -102,8 +105,13 @@ const AdminsAppFeePage = () => {
     awaiting_verification: quickFilter === 'awaiting_verification' ? 1 : undefined,
   };
 
-  const { data: listResponse, isLoading } = useGetAppFeePaymentsQuery(listParams);
-  const { data: statsResponse, isLoading: statsLoading } = useGetAppFeeStatsQuery();
+  // Backstop only. Push invalidation (App.jsx) covers the instant an admin is notified;
+  // this catches the cases push cannot — permission never granted, a lapsed subscription,
+  // or a change made by someone else with no notification attached. Paused while the tab is
+  // in the background so it costs nothing when nobody is looking.
+  const LIVE_POLL = { pollingInterval: 30_000, skipPollingIfUnfocused: true };
+  const { data: listResponse, isLoading } = useGetAppFeePaymentsQuery(listParams, LIVE_POLL);
+  const { data: statsResponse, isLoading: statsLoading } = useGetAppFeeStatsQuery(undefined, LIVE_POLL);
   // Shared picker cache — see useOwnerOptions. This screen and AppFeeCreateModal, which is
   // rendered from it, previously asked for the owner list with two different arguments and
   // so fetched it twice on the same page.
@@ -125,9 +133,12 @@ const AdminsAppFeePage = () => {
   // number, the wallet or the claimed amount in front of the person confirming it. With no
   // payment gateway, that check IS the payment system, so it now goes through a dialog that
   // shows the evidence and offers the two real outcomes.
-  const handleConfirmClaim = async (id) => {
+  const handleConfirmClaim = async (id, { startNextPeriod = false } = {}) => {
     try {
-      await updatePayment({ id, body: { status: 'paid', sendMail: true } }).unwrap();
+      await updatePayment({
+        id,
+        body: { status: 'paid', sendMail: true, start_next_period: startNextPeriod },
+      }).unwrap();
       toast.success(t('payment_confirmed'));
       setVerifyClaimFor(null);
     } catch (err) {
@@ -292,7 +303,7 @@ const AdminsAppFeePage = () => {
         <div className="flex items-center gap-2">
           <Btn
             variant="primary"
-            onClick={() => setCreateModalOpen(true)}
+            onClick={() => { setCreateForOwnerId(null); setCreateModalOpen(true); }}
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
@@ -402,6 +413,11 @@ const AdminsAppFeePage = () => {
         }}
         // Owner rows narrow the table to that owner, which is the natural next step after
         // spotting them in a "who is lapsed" list.
+        onStartAppFee={(houseOwnerId) => {
+          setOpenMetric(null);
+          setCreateForOwnerId(houseOwnerId);
+          setCreateModalOpen(true);
+        }}
         onFilterOwner={(houseOwnerId) => {
           setOpenMetric(null);
           setQuickFilter(null);
@@ -418,13 +434,20 @@ const AdminsAppFeePage = () => {
         isSaving={isUpdating}
       />
 
+      {/* Keyed by the owner it was opened for, so "Start app fee" on a second owner gets a
+          fresh form instead of the previous one's leftovers. */}
       <AppFeeCreateModal
+        key={createForOwnerId ?? 'new'}
         isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSuccess={() => setCreateModalOpen(false)}
+        presetOwnerId={createForOwnerId}
+        onClose={() => { setCreateModalOpen(false); setCreateForOwnerId(null); }}
+        onSuccess={() => { setCreateModalOpen(false); setCreateForOwnerId(null); }}
       />
 
+      {/* Keyed by invoice: opening a second one mounts a fresh dialog rather than carrying
+          the first one's unsaved edits across. */}
       <AppFeeViewEditModal
+        key={viewEditId?.id ?? 'none'}
         paymentId={viewEditId?.id}
         isOpen={!!viewEditId}
         onClose={() => setViewEditId(null)}

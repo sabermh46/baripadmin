@@ -190,13 +190,19 @@ const StatsCardModal = ({ open, onClose, cardFor, value, label, houses = [], ren
         <div className={`relative bg-linear-to-br ${theme.from} ${theme.to} text-white px-5 pt-5 pb-4 shrink-0`}>
           <div
             aria-hidden
-            className="absolute -right-6 -top-8 h-32 w-32 rounded-full bg-white/10"
+            className="pointer-events-none absolute -right-6 -top-8 h-32 w-32 rounded-full bg-white/10"
           />
+          {/* z-10 is load-bearing, not decoration.
+              The headline row below is `position: relative`, so it painted above this
+              button — later positioned sibling, same auto z-index — and its box spans the
+              full width of the band. It therefore covered all but a 4px sliver of the X and
+              swallowed the click, on all four cards. The handler was always wired; nothing
+              could reach it. */}
           <button
             type="button"
             onClick={onClose}
             aria-label={t('close')}
-            className="absolute top-4 right-4 p-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
+            className="absolute top-4 right-4 z-10 p-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>

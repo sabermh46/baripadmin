@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { baseApi } from './store/api/baseApi';
+import { tagsForPush } from './store/notificationTags';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './store';
@@ -158,6 +160,17 @@ const AppContent = () => {
 
             if (type === 'NEW_NOTIFICATION') {
                 window.dispatchEvent(new CustomEvent('notificationReceived', { detail: event.data }));
+                // The notification and the data it is about arrive through different doors.
+                // Refreshing only the notification list is why someone could be told a house
+                // was created and then open Houses to the previous list: the push updated the
+                // bell, and every other cache carried on serving whatever it last fetched.
+                //
+                // This was hardcoded to ['AppFeePayments'] — correct for the one screen it
+                // was written for and silent about every other. The server names what changed
+                // and notificationTags maps that to caches, so a notification about a house
+                // now refreshes houses, one about a caretaker refreshes caretakers, and an
+                // unannotated one falls back to a broad sweep rather than doing nothing.
+                dispatch(baseApi.util.invalidateTags(tagsForPush(event.data?.data)));
                 // Lets other open tabs know without each needing its own push delivery.
                 try {
                     localStorage.setItem('notification_update', Date.now().toString());
@@ -170,8 +183,13 @@ const AppContent = () => {
             }
         };
 
+        // Cross-tab wake-ups carry no payload — the tab that received the push already
+        // invalidated precisely; this one only knows that something changed, so it sweeps.
         const handleStorageChange = (event) => {
-            if (event.key === 'notification_update') triggerRefresh();
+            if (event.key === 'notification_update') {
+                dispatch(baseApi.util.invalidateTags(tagsForPush()));
+                triggerRefresh();
+            }
         };
 
         const handleVisibilityChange = () => {

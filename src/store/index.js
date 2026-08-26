@@ -48,21 +48,41 @@ const authPersistConfig = {
  * would otherwise rehydrate as permanently 'pending' and its component would hang on a
  * spinner that never resolves.
  */
+// App-fee entries are excluded outright. Persisting them means a reload paints figures from
+// IndexedDB that could be hours old, before any request has had a chance to correct them —
+// which defeats the point of taking these endpoints off the cache in the first place.
+const isAppFeeQuery = (key = '') => key.startsWith('getAppFee') || key.startsWith('getMyAppFee');
+
 const apiCacheTransform = createTransform(
   (inbound) => ({
     queries: Object.fromEntries(
-      Object.entries(inbound?.queries ?? {}).filter(([, e]) => e?.status === 'fulfilled')
+      Object.entries(inbound?.queries ?? {}).filter(
+        ([key, e]) => e?.status === 'fulfilled' && !isAppFeeQuery(key)
+      )
     ),
   }),
   (outbound) => ({ ...outbound, mutations: {}, provided: {}, subscriptions: {} }),
   { whitelist: ['api'] }
 );
 
+/**
+ * The ui slice is persisted so layout preferences survive a reload, but
+ * `subscriptionBlocked` must not be: it records what the last API response said, and a
+ * stale `true` restored from IndexedDB would show the paywall to an owner who has since
+ * paid, before any request has had a chance to say otherwise.
+ */
+const uiPersistConfig = {
+  key: 'ui',
+  storage,
+  blacklist: ['subscriptionBlocked'],
+};
+
 const persistConfig = {
   key: 'root',
   version: 1,
   storage,
-  whitelist: ['ui', 'api'],
+  // 'ui' is persisted through uiPersistConfig below, not here, so its blacklist applies.
+  whitelist: ['api'],
   transforms: [apiCacheTransform],
   // Coalesce writes: without this every cache update rewrites the whole slice to
   // IndexedDB, which on a data-heavy page is a lot of serialisation on the main thread.
@@ -71,7 +91,7 @@ const persistConfig = {
 
 const combinedReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authReducer),
-  ui: uiReducer,
+  ui: persistReducer(uiPersistConfig, uiReducer),
   [authApi.reducerPath]: authApi.reducer,
   [notificationApi.reducerPath]: notificationApi.reducer,
 });

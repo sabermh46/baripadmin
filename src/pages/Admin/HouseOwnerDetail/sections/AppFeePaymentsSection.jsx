@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { invoicePeriod } from '../../../../utils/appFeePeriod';
 import { Banknote } from 'lucide-react';
 
 const formatDate = (d) => {
@@ -29,22 +30,22 @@ const AppFeePaymentsSection = ({ appFeePayments = [], onSuccess }) => {
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left py-2 px-3 font-medium text-gray-700">ID</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-700">Period</th>
                   <th className="text-left py-2 px-3 font-medium text-gray-700">Amount</th>
-                  <th className="text-left py-2 px-3 font-medium text-gray-700">Type</th>
                   <th className="text-left py-2 px-3 font-medium text-gray-700">Status</th>
-                  <th className="text-left py-2 px-3 font-medium text-gray-700">Start</th>
                   <th className="text-left py-2 px-3 font-medium text-gray-700">Paid</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {appFeePayments.map((p) => (
                   <tr key={p.id} className="hover:bg-gray-50/50">
-                    <td className="py-2 px-3 text-gray-600">#{p.id}</td>
+                    {/* Period, not the row id. `fee_type` went with it — every row in this
+                        table is 'monthly_subscription', so the column printed the same raw
+                        enum value on every line and identified nothing. */}
+                    <td className="py-2 px-3 text-gray-600 whitespace-nowrap">{invoicePeriod(p) ?? '–'}</td>
                     <td className="py-2 px-3 font-medium">
-                      {p.amount != null ? Number(p.amount).toLocaleString() : '–'}
+                      {p.amount != null ? `৳${Number(p.amount).toLocaleString()}` : '–'}
                     </td>
-                    <td className="py-2 px-3 text-gray-600">{p.fee_type || '–'}</td>
                     <td className="py-2 px-3">
                       <span
                         className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -58,7 +59,6 @@ const AppFeePaymentsSection = ({ appFeePayments = [], onSuccess }) => {
                         {p.status || '–'}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-gray-600">{formatDate(p.start_date)}</td>
                     <td className="py-2 px-3 text-gray-600">{formatDate(p.paid_date)}</td>
                   </tr>
                 ))}

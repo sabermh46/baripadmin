@@ -73,7 +73,7 @@ export const authApi = baseApi.injectEndpoints({
       query: (data) => ({
         url: '/auth/reset-password',
         method: 'POST',
-        data, // Expected: { token, password }
+        data, // Expected: { token, newPassword }
       }),
     }),
 

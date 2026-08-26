@@ -1,85 +1,124 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { apiErrorMessage } from '../../utils/apiError';
+import React, { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
+import {
+  Bell, BellOff, BellRing, Calendar, CheckCircle2, KeyRound, Link2, Mail, Send, ShieldAlert, ShieldCheck, UserCog,
+} from 'lucide-react';
 import { useAuth } from '../../hooks';
-import { useSetPasswordMutation, useLinkGoogleAccountMutation, useUploadAvatarMutation } from '../../store/api/authApi';
+import { useLinkGoogleAccountMutation, useSetPasswordMutation, useUploadAvatarMutation } from '../../store/api/authApi';
 import { setUser } from '../../store/slices/authSlice';
 import push from '../../services/push';
 import Btn from '../../components/common/Button';
 import GoogleButton from '../../components/common/GoogleButton';
-import ProtectedImage from '../../components/common/ProtectedImage';
-import { useTranslation } from 'react-i18next';
-import { Camera, User } from 'lucide-react';
+import { apiErrorMessage } from '../../utils/apiError';
+import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
+import ProfileHero from './ProfileHero';
+import RoleImpact from './RoleImpact';
+
+const Card = ({ icon: Icon, title, subtitle, children }) => (
+  <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="px-4 sm:px-5 py-3 border-b border-gray-100">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+        <Icon className="h-4 w-4 text-primary" />
+        {title}
+      </h2>
+      {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+    </div>
+    <div className="p-4 sm:p-5">{children}</div>
+  </section>
+);
+
+const Row = ({ label, children }) => (
+  <div className="flex items-center justify-between gap-3 py-2.5 border-b border-gray-100 last:border-0 min-w-0">
+    <span className="text-sm text-gray-500 shrink-0">{label}</span>
+    <span className="text-sm font-medium text-gray-900 text-right truncate min-w-0">{children}</span>
+  </div>
+);
+
+const Pill = ({ ok, children }) => (
+  <span
+    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+      ok ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'
+    }`}
+  >
+    {ok ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
+    {children}
+  </span>
+);
+
+const inputClass =
+  'w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none';
 
 const ProfilePage = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const dispatch = useDispatch();
-  const [setPasswordMutation] = useSetPasswordMutation();
-  const [linkGoogleMutation] = useLinkGoogleAccountMutation();
+
+  const [setPasswordMutation, { isLoading: isSettingPassword }] = useSetPasswordMutation();
   const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
+  useLinkGoogleAccountMutation();
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [pushStatus, setPushStatus] = useState('checking');
-  const [testResult, setTestResult] = useState(null);
   const [avatarError, setAvatarError] = useState('');
-  const avatarInputRef = useRef(null);
-  const { t } = useTranslation();
+  const [pushStatus, setPushStatus] = useState('checking');
 
-  const checkPushStatus = async () => {
-    if (!push.isSupported) {
-      setPushStatus('unsupported');
-      return;
-    }
+  // Reads the answer; does not write it. Three of these branches resolve without awaiting
+  // anything, so a version that called setPushStatus inline set state synchronously from
+  // inside the effect body below. Returning the value instead means every write happens in a
+  // callback, and the caller decides whether it is still interested.
+  const readPushStatus = async () => {
+    if (!push.isSupported) return 'unsupported';
+    if (Notification.permission === 'denied') return 'blocked';
+    if (Notification.permission !== 'granted') return 'pending';
 
-    const permission = Notification.permission;
-    if (permission === 'denied') {
-      setPushStatus('blocked');
-    } else if (permission === 'granted') {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      setPushStatus(subscription ? 'subscribed' : 'not_subscribed');
-    } else {
-      setPushStatus('pending');
-    }
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    return subscription ? 'subscribed' : 'not_subscribed';
   };
+
+  useEffect(() => {
+    // navigator.serviceWorker.ready can settle long after a quick visit to this page; the
+    // original had nothing stopping it setting state on an unmounted component.
+    let alive = true;
+    readPushStatus().then((status) => { if (alive) setPushStatus(status); });
+
+    return () => { alive = false; };
+  }, []);
 
   const handleSubscribe = async () => {
     setPushStatus('subscribing');
     await push.subscribeUser();
-    await checkPushStatus();
+    setPushStatus(await readPushStatus());
   };
 
   const handleUnsubscribe = async () => {
     setPushStatus('unsubscribing');
     await push.unsubscribeUser();
-    await checkPushStatus();
+    setPushStatus(await readPushStatus());
   };
 
   const handleTest = async () => {
-    setTestResult(null);
     const result = await push.sendTest();
-    setTestResult(result);
+    if (result?.success === false) toast.error(t('test_notification_failed'));
+    else toast.success(t('test_notification_sent'));
   };
 
   const handleSetPassword = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      setMessage('Passwords do not match');
+      toast.error(t('passwords_do_not_match'));
       return;
     }
     try {
       await setPasswordMutation({ password }).unwrap();
-      setMessage('Password set successfully!');
+      toast.success(t('password_set_successfully'));
       setPassword('');
       setConfirmPassword('');
     } catch (error) {
-      setMessage(apiErrorMessage(error, 'Failed to set password'));
+      toast.error(showMessageInLanguage(apiErrorMessage(error, t('failed_to_set_password'))));
     }
-  };
-
-  const handleLinkGoogle = () => {
-    window.open(`${import.meta.env.VITE_APP_API_URL}/auth/google?link=true`, '_self');
   };
 
   const handleAvatarChange = async (e) => {
@@ -92,187 +131,161 @@ const ProfilePage = () => {
 
     try {
       const result = await uploadAvatar(formData).unwrap();
-      // Update Redux user state so the new avatar appears immediately
-      const updatedMetadata = { ...(user.metadata || {}), avatarPath: result.avatarPath };
-      dispatch(setUser({ ...user, metadata: updatedMetadata }));
+      dispatch(setUser({ ...user, metadata: { ...(user.metadata || {}), avatarPath: result.avatarPath } }));
     } catch (err) {
-      setAvatarError(apiErrorMessage(err, 'Failed to upload avatar'));
+      setAvatarError(showMessageInLanguage(apiErrorMessage(err, t('failed_to_upload_avatar'))));
     }
   };
 
-  useEffect(() => {
-    checkPushStatus();
-  }, []);
-
-  const avatarPath = user?.metadata?.avatarPath;
-  const googleAvatar = user?.avatarUrl;
+  const joined = user?.createdAt ? new Date(user.createdAt) : null;
+  const canSetPassword = user?.needsPasswordSetup;
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-full mx-auto">
-        <h1 className="text-base md:text-xl font-semibold text-slate-600 mb-8 pb-2 inline-block">
-          {t('profile_settings')}
-        </h1>
+    <div className="max-w-4xl mx-auto space-y-4 pb-6">
+      <ProfileHero
+        user={user}
+        avatarPath={user?.metadata?.avatarPath}
+        googleAvatar={user?.avatarUrl}
+        onPickAvatar={handleAvatarChange}
+        isUploading={isUploadingAvatar}
+        error={avatarError}
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <RoleImpact />
 
-          {/* Personal Information + Avatar Card */}
-          <div className="bg-white max-w-full p-3 md:p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 md:col-span-2 lg:col-span-1">
-            <h3 className="text-4base md:text-xl font-bold text-primary-600 mb-4 flex items-center">
-              <span className="mr-2 text-base md:text-2xl">👤</span> {t('personal_information')}
-            </h3>
+      {/* One column on a phone, two from `sm` up. The old page mixed md:col-span-2 and
+          md:col-span-3 inside a two-column grid, so the third card claimed a track that did
+          not exist and the row heights never lined up. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card icon={UserCog} title={t('personal_information')}>
+          <Row label={t('name')}>{user?.name || t('not_set')}</Row>
+          <Row label={t('email')}>{user?.email}</Row>
+          <Row label={t('role')}>{user?.role?.name}</Row>
+          <Row label={t('account_created')}>
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+              {joined && !Number.isNaN(joined.getTime()) ? joined.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+            </span>
+          </Row>
+        </Card>
 
-            {/* Avatar */}
-            <div className="flex items-center gap-4 flex-wrap justify-center mb-6">
-              <div className="relative">
-                <div className="h-20 w-20 md:h-32 md:w-32 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-2 border-gray-200">
-                  {avatarPath ? (
-                    <ProtectedImage
-                      src={avatarPath}
-                      alt="Profile picture"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : googleAvatar ? (
-                    <img src={googleAvatar} alt="Profile picture" className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="h-10 w-10 text-gray-400" />
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => avatarInputRef.current?.click()}
-                  disabled={isUploadingAvatar}
-                  className="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full shadow hover:bg-primary/90 disabled:opacity-50"
-                  title="Change profile picture"
-                >
-                  <Camera className="h-3.5 w-3.5" />
-                </button>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif"
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                />
-              </div>
-              <div>
-                <p className="font-semibold text-gray-800">{user?.name || t('not_set')}</p>
-                <p className="text-sm text-gray-500">{user?.role?.name}</p>
-                {isUploadingAvatar && <p className="text-xs text-blue-500 mt-1">Uploading...</p>}
-                {avatarError && <p className="text-xs text-red-500 mt-1">{avatarError}</p>}
-              </div>
+        <Card icon={KeyRound} title={t('security')}>
+          <Row label={t('password')}>
+            <Pill ok={!user?.needsPasswordSetup}>{user?.needsPasswordSetup ? t('not_set') : t('set')}</Pill>
+          </Row>
+          <Row label={t('google_account')}>
+            <Pill ok={!!user?.googleId}>{user?.googleId ? t('linked') : t('not_linked')}</Pill>
+          </Row>
+
+          {canSetPassword ? (
+            <form onSubmit={handleSetPassword} className="space-y-2.5 mt-4 pt-4 border-t border-gray-100">
+              <p className="text-xs text-gray-500">{t('set_a_password_hint')}</p>
+              <input
+                type="password"
+                placeholder={t('new_password')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className={inputClass}
+              />
+              <input
+                type="password"
+                placeholder={t('confirm_password')}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className={inputClass}
+              />
+              <button
+                type="submit"
+                disabled={isSettingPassword}
+                className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {t('set_password')}
+              </button>
+            </form>
+          ) : (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <Btn href="/change-password">{t('change_password')}</Btn>
             </div>
+          )}
+        </Card>
 
-            <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <strong className="text-gray-600 font-medium">{t('name')}:</strong>
-              <span className="text-gray-800 font-semibold">{user?.name || t('not_set')}</span>
-            </div>
+        <Card icon={Link2} title={t('account_linking')} subtitle={t('connect_external_services_for_fast_secure_login')}>
+          {user?.googleId ? (
+            <p className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-green-200 bg-green-50 text-sm font-medium text-green-800">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              {t('google_account_linked')}
+            </p>
+          ) : (
+            <GoogleButton
+              onClick={() => window.open(`${import.meta.env.VITE_APP_API_URL}/auth/google?link=true`, '_self')}
+            />
+          )}
+        </Card>
 
-            <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <strong className="text-gray-600 font-medium">{t('email')}:</strong>
-              <span className="text-gray-800 font-semibold whitespace-pre-wrap break-all text-right">{user?.email}</span>
-            </div>
+        {/* This whole section existed in the old file as state and handlers — pushStatus,
+            handleSubscribe, handleUnsubscribe, handleTest — and was never rendered anywhere.
+            checkPushStatus() ran on every mount, woke the service worker, and displayed
+            nothing. The controls are the ones that were already written; they simply had no
+            markup to live in. */}
+        <Card icon={Bell} title={t('notifications')} subtitle={t('push_notifications_hint')}>
+          {pushStatus === 'unsupported' ? (
+            <p className="text-sm text-gray-500">{t('push_not_supported')}</p>
+          ) : pushStatus === 'blocked' ? (
+            <p className="flex items-start gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <BellOff className="h-4 w-4 mt-0.5 shrink-0" />
+              {t('push_blocked_in_browser')}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <Row label={t('status')}>
+                <Pill ok={pushStatus === 'subscribed'}>
+                  {pushStatus === 'subscribed' ? t('push_on') : t('push_off')}
+                </Pill>
+              </Row>
 
-            <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <strong className="text-gray-600 font-medium">{t('role')}:</strong>
-              <span className="text-gray-800 font-semibold">{user?.role?.name}</span>
-            </div>
-
-            <div className="flex justify-between items-center py-3 last:border-b-0">
-              <strong className="text-gray-600 font-medium">{t('account_created')}:</strong>
-              <span className="text-gray-800 font-semibold">{new Date(user?.createdAt || '').toLocaleDateString()}</span>
-            </div>
-          </div>
-
-          {/* Security Card */}
-          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 md:col-span-1 lg:col-span-1">
-            <h3 className="text-base md:text-xl font-bold text-primary-600 mb-4 flex items-center">
-              <span className="mr-2 text-base md:text-2xl">🔐</span> {t('security')}
-            </h3>
-
-            <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <strong className="text-gray-600 font-medium">{t('password')}:</strong>
-              {!user?.needsPasswordSetup ? (
-                <span className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full">
-                  ✅ {t('set')}
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full">
-                  ⚠️ {t('not_set')}
-                </span>
-              )}
-            </div>
-
-            <div className="flex justify-between items-center py-3 last:border-b-0">
-              <strong className="text-gray-600 font-medium">Google Account:</strong>
-              {user?.googleId ? (
-                <span className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full">
-                  ✅ {t('linked')}
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full">
-                  ⚠️ {t('not_linked')}
-                </span>
-              )}
-            </div>
-
-            {user?.needsPasswordSetup && (!user.passwordHash || !user.googleId) ? (
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <h4 className="text-lg font-semibold text-gray-700 mb-3">{t('set_password')}</h4>
-                <form onSubmit={handleSetPassword} className="space-y-4">
-                  <input
-                    type="password"
-                    placeholder={t('new_password')}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition duration-150"
-                  />
-                  <input
-                    type="password"
-                    placeholder={t('confirm_password')}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition duration-150"
-                  />
+              <div className="flex flex-col sm:flex-row gap-2">
+                {pushStatus === 'subscribed' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleUnsubscribe}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <BellOff className="h-4 w-4" />
+                      {t('turn_off')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleTest}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <Send className="h-4 w-4" />
+                      {t('send_test')}
+                    </button>
+                  </>
+                ) : (
                   <button
-                    type="submit"
-                    className="w-full bg-primary-600 text-white py-2 rounded-lg font-semibold hover:bg-primary-700 transition duration-300 shadow-md"
+                    type="button"
+                    onClick={handleSubscribe}
+                    disabled={pushStatus === 'subscribing'}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50"
                   >
-                    {t('set_password')}
+                    <BellRing className="h-4 w-4" />
+                    {t('turn_on')}
                   </button>
-                </form>
+                )}
               </div>
-            ) : null}
-
-            {!user?.needsPasswordSetup && (
-              <Btn href={'/change-password'}>{t('change_password')}</Btn>
-            )}
-          </div>
-
-          {/* Account Linking Card */}
-          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 md:col-span-3 lg:col-span-1">
-            <h3 className="text-base md:text-xl font-bold text-primary-600 mb-4 flex items-center">
-              <span className="mr-2 text-base md:text-2xl">🔗</span> {t('account_linking')}
-            </h3>
-            <p className="text-gray-500 mb-6">{t('connect_external_services_for_fast_secure_login')}</p>
-
-            <div className="flex flex-col space-y-4">
-              {!user?.googleId ? (
-                <GoogleButton onClick={handleLinkGoogle} />
-              ) : (
-                <button
-                  className="flex items-center justify-center w-full px-4 py-2 border border-green-400 rounded-lg font-semibold text-green-700 bg-green-50 transition duration-300 cursor-default"
-                  disabled
-                >
-                  ✅ {t('google_account_linked')}
-                </button>
-              )}
             </div>
-          </div>
-        </div>
+          )}
+        </Card>
       </div>
+
+      <p className="flex items-center justify-center gap-1.5 text-[11px] text-gray-400">
+        <Mail className="h-3 w-3" />
+        {t('profile_contact_admin_hint')}
+      </p>
     </div>
   );
 };

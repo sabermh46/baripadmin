@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ArrowRight, Banknote, CalendarDays, Hash, Smartphone, User } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Banknote, CalendarDays, CalendarPlus, Hash, Smartphone, User } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 
 /**
@@ -55,8 +55,19 @@ const VerifyClaimModal = ({ payment, isOpen, onClose, onConfirm, onReject, isSav
   const { t } = useTranslation();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
+  const [startNext, setStartNext] = useState(true);
 
   if (!payment) return null;
+
+  // The day after this invoice's own period. The server recomputes it from the owner's full
+  // coverage — this is only so the admin can see what they are about to create.
+  const nextStart = (() => {
+    if (!payment.start_date) return null;
+    const d = new Date(payment.start_date);
+    if (Number.isNaN(d.getTime())) return null;
+    d.setDate(d.getDate() + (Number(payment.subscription_days) || 30));
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  })();
 
   const claim = payment.metadata?.claim ?? null;
   // Fall back to the invoice's own columns for claims made before the richer claim record
@@ -68,6 +79,7 @@ const VerifyClaimModal = ({ payment, isOpen, onClose, onConfirm, onReject, isSav
   const close = () => {
     setRejecting(false);
     setReason('');
+    setStartNext(true);
     onClose();
   };
 
@@ -130,7 +142,31 @@ const VerifyClaimModal = ({ payment, isOpen, onClose, onConfirm, onReject, isSav
             <p className="text-xs text-gray-500">{t('reject_reason_is_sent_to_owner')}</p>
           </div>
         ) : (
-          <p className="text-sm text-gray-600">{t('confirm_only_after_matching')}</p>
+          <>
+            <p className="text-sm text-gray-600">{t('confirm_only_after_matching')}</p>
+        {/* Confirming a period is the natural moment to raise the one after it — otherwise
+            the subscription lapses silently until somebody remembers to invoice again. The
+            server works out the start from the owner's real coverage, so stacked pre-payments
+            are not billed twice, and it refuses to raise a second invoice for a period that
+            already has one. */}
+        <label className="flex items-start gap-2.5 rounded-xl border border-gray-200 bg-white p-3 cursor-pointer hover:border-gray-300">
+          <input
+            type="checkbox"
+            checked={startNext}
+            onChange={(e) => setStartNext(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary focus:ring-primary/40"
+          />
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+              <CalendarPlus className="h-4 w-4 text-primary shrink-0" />
+              {t('start_next_period')}
+            </span>
+            <span className="block text-xs text-gray-500 mt-0.5">
+              {nextStart ? t('next_period_starts_on', { date: nextStart }) : t('start_next_period_hint')}
+            </span>
+          </span>
+        </label>
+          </>
         )}
 
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
@@ -166,7 +202,7 @@ const VerifyClaimModal = ({ payment, isOpen, onClose, onConfirm, onReject, isSav
           {!rejecting && (
             <button
               type="button"
-              onClick={() => onConfirm(payment.id)}
+              onClick={() => onConfirm(payment.id, { startNextPeriod: startNext })}
               disabled={isSaving}
               className="px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"
             >

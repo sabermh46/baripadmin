@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiErrorMessage } from '../../utils/apiError';
 import { Search } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -31,16 +31,20 @@ const AddCaretakerModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
-  const debouncedSearch = useMemo(() => {
-    let timeout;
-    return (value) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        setOwnerSearchTerm(value);
-        setOwnersPage(1);
-      }, 500);
-    };
+  // The pending timer lives in a ref, not in a variable closed over by a memo. Reassigning a
+  // captured local across renders is what the compiler refuses to optimise around, and it is
+  // fragile besides: any re-creation of the memo would strand the running timer with no
+  // handle to cancel it.
+  const searchTimer = useRef(null);
+  const debouncedSearch = useCallback((value) => {
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setOwnerSearchTerm(value);
+      setOwnersPage(1);
+    }, 500);
   }, []);
+
+  useEffect(() => () => clearTimeout(searchTimer.current), []);
 
   const ownerOptions = managedOwnersResponse?.data?.map(o => ({
     label: `${o.name} (${o.email})`,

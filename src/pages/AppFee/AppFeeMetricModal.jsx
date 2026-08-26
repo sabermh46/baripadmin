@@ -1,7 +1,7 @@
 import React from 'react';
 import { apiErrorMessage } from '../../utils/apiError';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ExternalLink, Filter, Mail, Phone } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Filter, Mail, Phone, Plus } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { useGetAppFeeBreakdownQuery } from '../../store/api/appFeeApi';
 
@@ -143,7 +143,7 @@ const PaymentsTable = ({ rows, onOpenPayment, t }) => (
  * active, grace left while in grace, since-expiry once blocked — so it is rendered from the
  * state rather than from one field, which is exactly the confusion the old page created.
  */
-const OwnersTable = ({ rows, onFilterOwner, t }) => (
+const OwnersTable = ({ rows, onFilterOwner, onStartAppFee, t }) => (
   <table className="w-full text-sm">
     <thead>
       <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b border-gray-200">
@@ -152,7 +152,8 @@ const OwnersTable = ({ rows, onFilterOwner, t }) => (
         <th className="py-2 px-3 font-medium text-right">{t('active_houses')}</th>
         <th className="py-2 px-3 font-medium text-right">{t('monthly')}</th>
         <th className="py-2 px-3 font-medium">{t('valid_through')}</th>
-        <th className="py-2 pl-3 font-medium">{t('last_paid')}</th>
+        <th className="py-2 px-3 font-medium">{t('last_paid')}</th>
+        {onStartAppFee && <th className="py-2 pl-3 font-medium text-right sr-only">{t('actions')}</th>}
       </tr>
     </thead>
     <tbody className="divide-y divide-gray-100">
@@ -199,7 +200,7 @@ const OwnersTable = ({ rows, onFilterOwner, t }) => (
               </p>
             )}
           </td>
-          <td className="py-2 pl-3 text-gray-600 whitespace-nowrap">
+          <td className="py-2 px-3 text-gray-600 whitespace-nowrap">
             {row.lastPaidDate ? (
               <>
                 {formatDate(row.lastPaidDate)}
@@ -209,6 +210,21 @@ const OwnersTable = ({ rows, onFilterOwner, t }) => (
               t('never')
             )}
           </td>
+          {/* Reading that an owner has never been billed and then having to leave, find the
+              create button and search for them again is the gap this closes. stopPropagation
+              because the row itself filters the table — a different, weaker action. */}
+          {onStartAppFee && (
+            <td className="py-2 pl-3 text-right">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onStartAppFee(row.houseOwnerId); }}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-primary text-white text-[11px] font-semibold hover:bg-primary/90 whitespace-nowrap"
+              >
+                <Plus className="h-3 w-3" />
+                {row.state === 'never_started' ? t('start_app_fee') : t('new_invoice')}
+              </button>
+            </td>
+          )}
         </tr>
       ))}
     </tbody>
@@ -229,7 +245,7 @@ const SkeletonRows = () => (
  * `skip` while closed matters: without it every one of the eight tiles would fetch on mount
  * of the page, which is the cost the tiles were split out to avoid.
  */
-const AppFeeMetricModal = ({ metric, isOpen, onClose, onOpenPayment, onApplyQuickFilter, onFilterOwner }) => {
+const AppFeeMetricModal = ({ metric, isOpen, onClose, onOpenPayment, onApplyQuickFilter, onFilterOwner, onStartAppFee }) => {
   const { t } = useTranslation();
   const config = metric ? METRICS[metric] : null;
 
@@ -291,7 +307,7 @@ const AppFeeMetricModal = ({ metric, isOpen, onClose, onOpenPayment, onApplyQuic
             {data.kind === 'payments' ? (
               <PaymentsTable rows={rows} onOpenPayment={onOpenPayment} t={t} />
             ) : (
-              <OwnersTable rows={rows} onFilterOwner={onFilterOwner} t={t} />
+              <OwnersTable rows={rows} onFilterOwner={onFilterOwner} onStartAppFee={onStartAppFee} t={t} />
             )}
           </div>
         )}

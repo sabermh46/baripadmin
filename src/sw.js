@@ -102,9 +102,16 @@ self.addEventListener('push', (event) => {
       .showNotification(title, options)
       .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
       .then((windowClients) => {
-        // Tells any open tab to refetch its notification list. App.jsx listens for this.
+        // Tells any open tab that something happened, and WHAT — `payload.data` carries the
+        // server's notification metadata, including `entity`. It used to be dropped here, so
+        // a tab learned only that "a notification arrived" and had no way to know which of
+        // its caches had just gone stale. See store/notificationTags.js.
         for (const client of windowClients) {
-          client.postMessage({ type: 'NEW_NOTIFICATION', timestamp: Date.now() });
+          client.postMessage({
+            type: 'NEW_NOTIFICATION',
+            timestamp: Date.now(),
+            data: payload.data || {},
+          });
         }
       })
       .catch(() => {

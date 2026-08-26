@@ -1,5 +1,5 @@
 // pages/CaretakerDetails.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ProtectedImage from '../common/ProtectedImage';
 import {
@@ -31,8 +31,11 @@ import { apiErrorMessage } from '../../utils/apiError';
 import { useAuth } from '../../hooks';
 import Btn from '../common/Button';
 import ConfirmationModal from '../common/ConfirmationModal';
+import { useTranslation } from 'react-i18next';
+import AssignHouseModal from './AssignHouseModal';
 
 const CaretakerDetails = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -42,21 +45,19 @@ const CaretakerDetails = () => {
   const [removeFromHouse, { isLoading: isRemoving }] = useRemoveCaretakerFromHouseMutation();
   
   const [editingAssignment, setEditingAssignment] = useState(null);
+  // Only the assignments whose permissions are being edited, keyed by assignmentId. The
+  // fetched assignment IS the baseline, so there is nothing to seed and nothing to re-sync
+  // when a refetch lands — which is what the effect below used to do, setting state
+  // synchronously from inside an effect body on every load.
   const [permissionState, setPermissionState] = useState({});
   const [removeModalOpen, setRemoveModalOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
 
-  useEffect(() => {
-    if (data?.data?.assignments) {
-      const initialState = {};
-      data.data.assignments.forEach(assignment => {
-        initialState[assignment.assignmentId] = assignment.permissions
-          .filter(p => p.assigned)
-          .map(p => p.key);
-      });
-      setPermissionState(initialState);
-    }
-  }, [data]);
+  /** What this assignment currently grants: the local edit if there is one, else the server's. */
+  const permissionsFor = (assignment) =>
+    permissionState[assignment.assignmentId]
+      ?? assignment.permissions.filter((p) => p.assigned).map((p) => p.key);
 
   const handlePermissionChange = (assignmentId, permissionKey, checked) => {
     setPermissionState(prev => {
@@ -77,11 +78,10 @@ const CaretakerDetails = () => {
 
   const handleSavePermissions = async (assignmentId) => {
     try {
-      console.log(assignmentId, permissionState[assignmentId]);
       
       await updatePermissions({
         assignmentId,
-        permissions: permissionState[assignmentId] || [],
+        permissions: permissionState[assignmentId] ?? [],
       }).unwrap();
       
       toast.success('Permissions updated successfully');
@@ -110,6 +110,15 @@ const CaretakerDetails = () => {
     setSelectedAssignment(assignment);
     setRemoveModalOpen(true);
   };
+
+  // Mirrors CaretakerController::assertCanAssign. An owner may place a caretaker on their
+  // own house, which is exactly the case that leaves them stuck otherwise: the account was
+  // created for them and nobody has put it anywhere yet.
+  const canAssign =
+    user?.role?.slug === 'web_owner'
+    || user?.role?.slug === 'developer'
+    || user?.role?.slug === 'house_owner'
+    || (user?.role?.slug === 'staff' && user?.permissions?.includes('caretakers.assign'));
 
   const canEditPermissions = (assignment) => {
     if (user.role.slug === 'web_owner') return true;
@@ -242,19 +251,30 @@ const CaretakerDetails = () => {
         {assignments.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
             <Home className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Assignments</h3>
-            <p className="text-gray-600 mb-4">
-              This caretaker is not assigned to any houses.
-            </p>
-            <Link to={`/caretakers/${caretaker?.id}/assign`}>
-              <Btn>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('no_active_assignments')}</h3>
+            <p className="text-gray-600 mb-4">{t('caretaker_not_assigned_hint')}</p>
+            {/* This was a <Link> to /caretakers/:id/assign — a route with no entry in
+                AppRoutes and no component behind it, so the one action that resolves this
+                empty state fell through to the catch-all. The endpoint and its RTK mutation
+                both existed; only somewhere to press was missing. */}
+            {canAssign && (
+              <Btn onClick={() => setAssignModalOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Assign to House
+                {t('assign_to_a_house')}
               </Btn>
-            </Link>
+            )}
           </div>
         ) : (
-          assignments.map((assignment) => (
+          <>
+          {canAssign && (
+            <div className="flex justify-end">
+              <Btn onClick={() => setAssignModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t('assign_to_a_house')}
+              </Btn>
+            </div>
+          )}
+          {assignments.map((assignment) => (
             <div
               key={assignment.assignmentId}
               className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
@@ -309,8 +329,14 @@ const CaretakerDetails = () => {
                         <Btn
                           variant="outline"
                           onClick={() => {
+                            // Drop the local edit; the fetched assignment is still the
+                            // truth underneath, so there is nothing to re-request.
+                            setPermissionState((prev) => {
+                              const next = { ...prev };
+                              delete next[assignment.assignmentId];
+                              return next;
+                            });
                             setEditingAssignment(null);
-                            refetch();
                           }}
                         >
                           <X className="h-4 w-4 mr-2" />
@@ -321,7 +347,13 @@ const CaretakerDetails = () => {
                       <>
                         {canEditPermissions(assignment) && (
                           <Btn
-                            onClick={() => setEditingAssignment(assignment.assignmentId)}
+                            onClick={() => {
+                              setPermissionState((prev) => ({
+                                ...prev,
+                                [assignment.assignmentId]: permissionsFor(assignment),
+                              }));
+                              setEditingAssignment(assignment.assignmentId);
+                            }}
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Permissions
@@ -377,7 +409,7 @@ const CaretakerDetails = () => {
                             <div className="flex items-center h-5 mr-3">
                               <input
                                 type="checkbox"
-                                checked={permissionState[assignment.assignmentId]?.includes(permission.key) || false}
+                                checked={permissionsFor(assignment).includes(permission.key)}
                                 onChange={(e) =>
                                   handlePermissionChange(
                                     assignment.assignmentId,
@@ -426,9 +458,18 @@ const CaretakerDetails = () => {
                 </div>
               </div>
             </div>
-          ))
+          ))}
+          </>
         )}
       </div>
+
+      <AssignHouseModal
+        caretakerId={caretaker?.id}
+        caretakerName={caretaker?.name}
+        isOpen={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        onSuccess={refetch}
+      />
 
       {/* Remove Assignment Confirmation Modal */}
       <ConfirmationModal

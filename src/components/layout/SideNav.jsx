@@ -1,5 +1,6 @@
 import {
   BellDot,
+  BellRing,
   BookUser,
   CircleUser,
   Wallet,
@@ -11,6 +12,7 @@ import {
   LayoutDashboard,
   SettingsIcon,
   Users,
+  UserCheck,
   UsersRound,
 } from "lucide-react";
 import { useState, memo } from "react";
@@ -44,7 +46,9 @@ const NAV_ITEMS = [
     labelKey: "houses",
     icon: House,
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
-    toMatch: ["houses", "/houses/create", "/flats"],
+    // /flats/:id has no entry of its own and belongs here. The two entries alongside it
+    // were "houses" and "/houses/create", both already covered by the /houses prefix.
+    toMatch: ["/flats"],
   },
   {
     path: "/notification",
@@ -56,10 +60,19 @@ const NAV_ITEMS = [
   { path: "/admin/staff", labelKey: "staffs", icon: Users, roles: ["developer", "web_owner"] },
   { path: "/staff/audit-logs", labelKey: "audit_logs", icon: FileClock, roles: ["developer", "web_owner"] },
   {
+    path: "/staff/user-approvals",
+    labelKey: "caretaker_requests",
+    icon: UserCheck,
+    roles: ["developer", "web_owner", "staff"],
+    // Staff need the same capability the approve endpoint enforces.
+    permission: "caretakers.create",
+  },
+  {
     path: "/caretakers",
     labelKey: "caretakers",
     icon: UsersRound,
-    roles: ["developer", "web_owner", "staff", "house_owner"],
+    // A caretaker belongs here too — it is where they see their own assignments.
+    roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
   },
   {
     path: "/admin/house-owners",
@@ -74,6 +87,9 @@ const NAV_ITEMS = [
     labelKey: "renters",
     icon: Users,
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
+    // Same permission the route and the endpoint require, so the link is not offered to
+    // somebody it would only refuse.
+    permission: "renters.view",
   },
   {
     path: "/expenses",
@@ -99,25 +115,51 @@ const NAV_ITEMS = [
     icon: FileText,
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
   },
+  {
+    path: "/admin/notification-settings",
+    labelKey: "notification_settings",
+    icon: BellRing,
+    roles: ["developer", "web_owner"],
+  },
   { path: "/admin/settings", labelKey: "settings", icon: SettingsIcon, roles: ["developer", "web_owner"] },
   { path: "/admin/landing-editor", labelKey: "landing_editor", icon: Layout, roles: ["web_owner"] },
 ];
 
 /**
- * `/houses/5` should light up the "Houses" entry, so a match on the first path segment
- * counts. Guarded against an empty segment: on "/" the segment is "", and
- * `"houses".includes("")` is true for every entry, which lit up several items at once.
+ * How well an entry claims the current URL: 0 for no claim, higher for a more specific one.
+ *
+ * The previous matcher took the first URL segment and asked `String.includes` of each
+ * `toMatch` string — substring matching between unrelated paths. On /admin/staff the segment
+ * was "admin", and Dashboard's toMatch entry "/admin/generate-token" contains "admin", so
+ * Dashboard lit up next to Staffs; likewise on /admin/settings, /admin/house-owners and
+ * /admin/landing-editor. On /admin/house-owners/62 it inverted: Dashboard was the *only*
+ * entry highlighted, because House Owners has no toMatch and returned false before the URL
+ * was ever really examined. Detail pages under an entry with no toMatch — /caretakers/12/
+ * details — highlighted nothing at all.
+ *
+ * Matching is on whole path segments now: equal to the entry, or below it. So /houses claims
+ * /houses/5/edit, and /admin/generate-token claims nothing else under /admin. An exact hit
+ * outscores a descendant hit by one, so a page owning an entry always beats its ancestor's.
  */
-const isItemActive = (item, currentPath) => {
-  if (currentPath === item.path) return true;
-  if (!item.toMatch) return false;
-  if (item.toMatch.includes(currentPath)) return true;
-
-  const segment = currentPath.split("/")[1];
-  if (!segment) return false;
-
-  return item.toMatch.some((tm) => tm.includes(segment));
+const normalisePath = (path) => {
+  const withSlash = path.startsWith("/") ? path : `/${path}`;
+  // A trailing slash is a real case, not a hypothetical: the dashboard's renters modal links
+  // to "/renters/?view=3", whose pathname is "/renters/".
+  return withSlash.replace(/\/+$/, "") || "/";
 };
+
+const matchScore = (candidate, currentPath) => {
+  const base = normalisePath(candidate);
+  if (currentPath === base) return base.length + 1;
+  if (currentPath.startsWith(`${base}/`)) return base.length;
+  return 0;
+};
+
+const navMatchScore = (item, currentPath) =>
+  [item.path, ...(item.toMatch ?? [])].reduce(
+    (best, candidate) => Math.max(best, matchScore(candidate, currentPath)),
+    0
+  );
 
 /**
  * The two counts an admin has to act on, rendered on the App Fee entry.
@@ -189,7 +231,10 @@ export const SideNav = ({ onClicked }) => {
 
   const { data: appFeeBadges } = useGetAppFeeBadgeCountsQuery(undefined, {
     skip: !canSeeAppFees,
-    pollingInterval: 5 * 60 * 1000,
+    // Was 5 minutes, which is 5 minutes of a badge insisting there is nothing to verify
+    // after an owner has reported a payment.
+    pollingInterval: 60 * 1000,
+    skipPollingIfUnfocused: true,
   });
 
   const handleLogout = async () => {
@@ -215,6 +260,19 @@ export const SideNav = ({ onClicked }) => {
     return true;
   });
 
+  // One winner, chosen across the whole list, instead of asking each entry in isolation
+  // whether it likes the URL. Asking in isolation is what let two entries answer yes at the
+  // same time; a single winner cannot, by construction — which is the point, since the next
+  // entry someone adds would otherwise reopen the same bug. Scored over the *filtered* list
+  // so an entry this user cannot see never takes the highlight from one they can.
+  const activePath = filteredNavItems.reduce(
+    (best, item) => {
+      const score = navMatchScore(item, normalisePath(currentPath));
+      return score > best.score ? { score, path: item.path } : best;
+    },
+    { score: 0, path: null }
+  ).path;
+
   return (
     <>
       <div>
@@ -222,7 +280,7 @@ export const SideNav = ({ onClicked }) => {
       </div>
       <div className="max-h-min overflow-y-auto">
         {filteredNavItems.map((item) => {
-          const isActive = isItemActive(item, currentPath);
+          const isActive = item.path === activePath;
           const Icon = item.icon;
 
           return (
@@ -281,9 +339,16 @@ export const SideNav = ({ onClicked }) => {
               <span className="text-sm">{user?.name?.charAt(0)?.toUpperCase() || '?'}</span>
             )}
           </div>
-          <div className='w-min'>
-            <p className="line-clamp-1 text-ellipsis overflow-hidden font-medium" title={user?.name}>{user?.name || 'User'}</p>
-            <p className="line-clamp-1 text-ellipsis overflow-hidden text-xs text-subdued" title={user?.email}>{user?.email}</p>
+          {/* min-w-0, not w-min. `w-min` is width:min-content, which for a run of text is the
+              width of its longest unbreakable word — and an email address has no break
+              opportunities, so this box grew to fit the whole address and pushed past the
+              sidebar. The overflow rules on the paragraphs never fired because the box was
+              never too small; the panel was. A flex child also defaults to min-width:auto and
+              refuses to shrink below its content, so min-w-0 is what actually permits the
+              truncation, and flex-1 lets it take the space the avatar leaves. */}
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium" title={user?.name}>{user?.name || 'User'}</p>
+            <p className="truncate text-xs text-subdued" title={user?.email}>{user?.email}</p>
           </div>
         </div>
         <button

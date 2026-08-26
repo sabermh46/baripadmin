@@ -1,5 +1,5 @@
 // pages/RenterList.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   useGetRentersQuery, 
   useDeleteRenterMutation 
@@ -19,46 +19,60 @@ import {
 import Btn from '../common/Button';
 import Table from '../common/Table';
 import ConfirmationModal from '../common/ConfirmationModal';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import RenterForm from './RenterForm';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'react-toastify';
+import { useAuth } from '../../hooks';
 import { apiErrorMessage } from '../../utils/apiError';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 
 const RenterList = () => {
+  const { user, hasPermission, isWebOwner, isDeveloper, isHouseOwner, isStaff } = useAuth();
+
+  /**
+   * Mirrors RenterController::destroy exactly, which is NOT simply "holds renters.delete".
+   *
+   *   web_owner / developer  — always
+   *   house_owner            — only renters they created, and no permission is consulted
+   *   staff                  — only with renters.delete
+   *   caretaker              — never, even though renters.delete is in the caretaker
+   *                            catalogue and can be granted on an assignment
+   *
+   * Gating this on hasPermission('renters.delete') alone would keep offering the button to a
+   * caretaker who holds the key and would still be refused by the server.
+   */
+  const canDelete = (renter) =>
+    isWebOwner
+    || isDeveloper
+    || (isHouseOwner && renter?.createdBy === user?.id)
+    || (isStaff && hasPermission('renters.delete'));
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [selectedRenter, setSelectedRenter] = useState(null);
-  const [createRenterFormOpen, setCreateRenterFormOpen] = useState(false);
+  const [selectedRenter, setSelectedRenter] = useState(deepLinkId ? { id: deepLinkId } : null);
   const location = useLocation();
 const queryParams = new URLSearchParams(location.search);
 const { t } = useTranslation();
 const view = queryParams.get('view');
-  console.log(view);
-  const openCreateRenterForm = () => {
-    setCreateRenterFormOpen(true);
-  }
   
   
   
   
+  // `/renters?view=45` is a deep link from the flat overview and the dashboard's renters
+  // modal. Read once, at mount, straight into initial state.
+  //
+  // It used to be an effect that waited 500ms and then set state — presumably to let the list
+  // load, though ViewRenterModal fetches the renter by id itself and never needed the list.
+  // The timer had no cleanup either, so leaving the page within half a second left it to fire
+  // against an unmounted component.
+  const deepLinkId = view && !Number.isNaN(Number(view)) ? Number(view) : null;
+
   // Modal states
-  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(Boolean(deepLinkId));
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   
-  useEffect(() => {
-    //check view is a number and then open the view renter modal
-    setTimeout(() => {
-      if (view && !isNaN(view)) {
-        setSelectedRenter({id: parseInt(view)});
-        setViewModalOpen(true);
-      }
-    }, 500);
-  }, [view]);
   // API hooks
   const { data, isLoading, refetch, error } = useGetRentersQuery({
     page,
@@ -67,10 +81,6 @@ const view = queryParams.get('view');
     status: statusFilter || undefined
   });
 
-  if (error) {
-    console.error('Failed to fetch renters:', error);
-    toast.error(showMessageInLanguage(apiErrorMessage(error, 'Failed to fetch renters')));  
-  }
   
   const [deleteRenter, { isLoading: isDeleting }] = useDeleteRenterMutation();
 
@@ -163,31 +173,35 @@ const view = queryParams.get('view');
               setViewModalOpen(true);
             }}
             className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-            title="View"
+            title={t('view_details')}
           >
             <Eye className="h-4 w-4" />
           </button>
-          <button
-            onClick={() => {
-              setSelectedRenter(renter);
-              setEditModalOpen(true);
-            }}
-            className="p-1 text-green-600 hover:bg-green-50 rounded"
-            title="Edit"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => {
-              setSelectedRenter(renter);
-              setDeleteModalOpen(true);
-            }}
-            className="p-1 text-red-600 hover:bg-red-50 rounded"
-            title="Delete"
-            disabled={renter.status === 'deleted'}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          {hasPermission('renters.edit') && (
+            <button
+              onClick={() => {
+                setSelectedRenter(renter);
+                setEditModalOpen(true);
+              }}
+              className="p-1 text-green-600 hover:bg-green-50 rounded"
+              title={t('edit')}
+            >
+              <Edit className="h-4 w-4" />
+            </button>
+          )}
+          {canDelete(renter) && (
+            <button
+              onClick={() => {
+                setSelectedRenter(renter);
+                setDeleteModalOpen(true);
+              }}
+              className="p-1 text-red-600 hover:bg-red-50 rounded disabled:opacity-40"
+              title={t('delete')}
+              disabled={renter.status === 'deleted'}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       )
     }
@@ -229,18 +243,37 @@ const view = queryParams.get('view');
             </div>
           </div>
           
-          <Btn
-            type="primary"
-            onClick={() => setCreateModalOpen(true)}
-            className="flex items-center"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Renter
-          </Btn>
+          {hasPermission('renters.create') && (
+            <Btn
+              type="primary"
+              onClick={() => setCreateModalOpen(true)}
+              className="flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('add_renter')}
+            </Btn>
+          )}
         </div>
       </div>
 
-      {/* Renter Table */}
+      {/* Shown, not toasted. The toast sat in the render body, so a failed load re-fired it
+          on EVERY re-render — a keystroke in the search box, a page change, any state update
+          at all — stacking notifications for a single failure. And behind them the table
+          said "No renters found", which is a different problem with a different fix. */}
+      {error ? (
+        <div className="bg-white rounded-xl border border-red-200 p-8 text-center">
+          <p className="text-sm text-red-800">
+            {showMessageInLanguage(apiErrorMessage(error, t('failed_to_fetch_renters')))}
+          </p>
+          <button
+            type="button"
+            onClick={refetch}
+            className="mt-3 px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700"
+          >
+            {t('retry')}
+          </button>
+        </div>
+      ) : (
       <Table
         columns={columns}
         data={data?.data || []}
@@ -256,6 +289,7 @@ const view = queryParams.get('view');
         }}
         onPageChange={setPage}
       />
+      )}
 
       {/* Modals */}
       {selectedRenter && (

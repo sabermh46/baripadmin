@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { useAuth } from '.';
-import { useGetAppFeeStatusQuery } from '../store/api/appFeeApi';
+import { useGetMyAppFeeQuery } from '../store/api/appFeeApi';
+import { setSubscriptionBlocked } from '../store/slices/uiSlice';
 
 /**
  * The signed-in house owner's (or caretaker's) live subscription state.
@@ -24,11 +27,33 @@ export const useAdminPendingAppFee = () => {
   const { user, isHouseOwner, isCaretaker } = useAuth();
   const enabled = !!user?.id && (isHouseOwner || isCaretaker);
 
-  const { data, isLoading, isFetching, error } = useGetAppFeeStatusQuery(user?.id, {
+  // GET /app-fees/me, not /payments/status/{id}.
+  //
+  // This hook passed `user.id` as the house-owner id, which is right for an owner and wrong
+  // for a caretaker — a caretaker's own id is not a house_owner id, so assertViewAccess
+  // refused it and the query 403'd. `status` stayed null, `showWarning` stayed false, and
+  // the banner never appeared for a caretaker even once their owner was fully blocked. The
+  // /me endpoint exists precisely to resolve the owner server-side; it was added for the
+  // app-fee page and this hook was never moved across.
+  const { data, isLoading, isFetching, error } = useGetMyAppFeeQuery(undefined, {
     skip: !enabled,
+    // The banner and the paywall both read this, so it has to notice a payment landing
+    // without waiting for a navigation.
+    pollingInterval: 60_000,
+    skipPollingIfUnfocused: true,
   });
 
-  const status = enabled ? (data ?? null) : null;
+  const status = enabled ? (data?.status ?? null) : null;
+
+  // /app-fees/me is on the gate's allow-list, so it answers even while everything else is
+  // being refused — which makes it the one reliable place to learn that a payment has
+  // landed and the block is over. Without this the flag, once raised, would only clear on a
+  // reload.
+  const dispatch = useDispatch();
+  useEffect(() => {
+    if (!enabled || !status) return;
+    dispatch(setSubscriptionBlocked(!!status.isBlocked && !!status.hasEverPaid));
+  }, [dispatch, enabled, status]);
 
   // Warn through the last week of the subscription and for the whole grace period.
   // `hasEverPaid` gates it so a freshly-invited owner who has not been invoiced yet is not

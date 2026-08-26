@@ -115,7 +115,7 @@ const RentBanner = ({ flat, rentState, onRecordPayment, onAssign, t }) => {
 
   return (
     <div className={`relative overflow-hidden rounded-2xl bg-linear-to-br ${tone} text-white p-5`}>
-      <div aria-hidden className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
+      <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
       <div className="relative flex flex-wrap items-center gap-4">
         <div className="h-11 w-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
           <Icon className="h-6 w-6" />

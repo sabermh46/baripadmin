@@ -185,6 +185,14 @@ const axiosBaseQuery = () => async (args, api) => {
       api.dispatch({ type: 'auth/logout' });
     }
 
+    // 402 is the subscription gate. Without this the code came back to whichever component
+    // happened to make the call, which showed it as an ordinary failure — so a lapsed owner
+    // saw "Subscription expired" toasted over a dashboard of zeroes, once per widget, and
+    // nothing telling them what to do about it.
+    if (err.response?.status === 402 && err.response?.data?.code === 'SUBSCRIPTION_EXPIRED') {
+      api.dispatch({ type: 'ui/setSubscriptionBlocked', payload: true });
+    }
+
     // A 403 means the server disagrees with what this client thinks it may do — which is
     // precisely when the cached permission list is worth re-reading. See permissionSync.js.
     // Fire-and-forget: the original error is still returned to the caller unchanged.
@@ -242,7 +250,7 @@ export const baseApi = createApi({
     'Caretaker', 'CaretakerAssignment',
     'AppFeePayments', 'AppFeeBreakdown',
     'ManagedOwners', 'ManagedUsers',
-    'Notification',
+    'Notification', 'UserApproval', 'NotificationSettings', 'SmsProvider',
     'Analytics', 'HouseOwnerAnalytics', 'Report', 'EmailStats', 'WorkerStats',
   ],
 

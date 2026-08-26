@@ -86,28 +86,25 @@ export const staffApi = baseApi.injectEndpoints({
       ],
     }),
 
-    // POST /staff/:staffId/permissions
-    grantPermission: builder.mutation({
-      query: ({ staffId, permissionSlug }) => ({
+    // PUT /staff/:staffId/permissions — the whole desired state, one call.
+    //
+    // Replaces a `grantPermission`/`revokePermission` pair that pointed at routes which do
+    // not exist (routes/api/admin.php has only the /bulk pair). Nothing imported them, so
+    // they never 404'd in anger, but they were a trap for whoever reached for the
+    // obvious-looking hook next.
+    //
+    // The permission editor needs both directions at once: tick two boxes, untick a third,
+    // press Save. Doing that with bulkGrant + bulkRevoke is two requests, and a failure
+    // between them leaves the staff member holding a set nobody chose.
+    syncStaffPermissions: builder.mutation({
+      query: ({ staffId, permissionIds }) => ({
         url: `/admin/permissions/staff/${staffId}/permissions`,
-        method: "POST",
-        data: { permissionSlug },
+        method: "PUT",
+        data: { permissionIds },
       }),
       invalidatesTags: (result, error, { staffId }) => [
         { type: "Staff", id: staffId },
-        { type: "PermissionHistory", id: staffId },
-      ],
-    }),
-
-    // DELETE /staff/:staffId/permissions/:permissionId
-    revokePermission: builder.mutation({
-      query: ({ staffId, permissionId }) => ({
-        url: `/admin/permissions/staff/${staffId}/permissions/${permissionId}`,
-        method: "DELETE",
-      }),
-      // Invalidates specific staff details
-      invalidatesTags: (result, error, { staffId }) => [
-        { type: "Staff", id: staffId },
+        { type: "Staff", id: "LIST" },
         { type: "PermissionHistory", id: staffId },
       ],
     }),
@@ -162,8 +159,7 @@ export const {
   useGetPermissionHistoryQuery,
   useGetAvailablePermissionsQuery,
   useUpdateStaffStatusMutation,
-  useGrantPermissionMutation,
-  useRevokePermissionMutation,
+  useSyncStaffPermissionsMutation,
   useBulkGrantPermissionsMutation,
   useBulkRevokePermissionsMutation,
   useCopyPermissionsMutation,

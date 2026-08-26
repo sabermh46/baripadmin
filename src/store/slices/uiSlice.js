@@ -20,6 +20,20 @@ const initialState = {
    * 'comfortable' = wide cards, 'compact' = dense cards, 'list' = one row each.
    */
   flatViewMode: 'comfortable',
+
+  /**
+   * Set when the API answers 402 SUBSCRIPTION_EXPIRED.
+   *
+   * The gate has always returned that code and the client had no idea what it meant, so a
+   * blocked owner got a red toast on every screen they opened and a page of empty widgets
+   * behind it — the app looked broken rather than locked. Recording it once, centrally,
+   * lets the layout say so plainly and point at the way out.
+   *
+   * Deliberately NOT persisted (see the whitelist in store/index.js): it is a fact about
+   * the last response, not a preference, and a stale `true` in localStorage would lock a
+   * paid-up owner out of their own app until something happened to clear it.
+   */
+  subscriptionBlocked: false,
 };
 
 const uiSlice = createSlice({
@@ -28,6 +42,10 @@ const uiSlice = createSlice({
   reducers: {
     setFlatViewMode: (state, action) => {
       state.flatViewMode = action.payload;
+    },
+
+    setSubscriptionBlocked: (state, action) => {
+      state.subscriptionBlocked = !!action.payload;
     },
 
     addNotification: (state, action) => {
@@ -89,6 +107,7 @@ const uiSlice = createSlice({
 
 export const {
   setFlatViewMode,
+  setSubscriptionBlocked,
   addNotification,
   markNotificationAsRead,
   setOnlineStatus,

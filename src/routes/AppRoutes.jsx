@@ -18,6 +18,9 @@ const ComingSoonPage       = lazy(() => import('../pages/utility/ComingSoonPage'
 const AccessDeniedPage     = lazy(() => import('../pages/utility/AccessDeniedPage'));
 const GenerateToken        = lazy(() => import('../pages/Admin/userBased/GenerateToken'));
 const ViewAllStaff         = lazy(() => import('../pages/Admin/staff/ViewAllStaff'));
+const UserApprovals        = lazy(() => import('../pages/Admin/UserApprovals'));
+const NotificationSettings = lazy(() => import('../pages/Admin/NotificationSettings'));
+const StaffDetail          = lazy(() => import('../pages/Admin/staff/StaffDetail'));
 const AuditLogs            = lazy(() => import('../pages/Admin/audit/AuditLogs'));
 const SystemSettings       = lazy(() => import('../pages/Admin/SystemSettings'));
 const HouseOwnersPage      = lazy(() => import('../pages/Admin/HouseOwnersPage'));
@@ -243,8 +246,11 @@ const AppRoutes = () => {
                 redirect so existing links, bookmarks and the sidebar's toMatch entry still
                 land somewhere sensible instead of 404ing. */}
             <Route path="/houses/:houseId/flats" element={<FlatsRedirect />} />
+            {/* GET /renters requires renters.view of staff and caretakers. The route
+                allowed every role through, so anyone without it reached the page and met a
+                403 toast over an empty table instead of a boundary. */}
             <Route path="/renters" element={
-              <RoleGuard roles={ALL_ROLES}>
+              <RoleGuard roles={ALL_ROLES} permissions={['renters.view']}>
                 <RenterList />
               </RoleGuard>
             } />
@@ -259,8 +265,11 @@ const AppRoutes = () => {
               </RoleGuard>
             } />
 
+            {/* 'caretaker' was missing from both of these, so a caretaker clicking their
+                own area landed on Access Denied — while the API had been scoped to serve
+                them their own record. The page decides what to render for them. */}
             <Route path="/caretakers" element={
-              <RoleGuard roles={['developer', 'web_owner', 'staff', 'house_owner']}>
+              <RoleGuard roles={['developer', 'web_owner', 'staff', 'house_owner', 'caretaker']}>
                 <CareTakerPage />
               </RoleGuard>
             } />
@@ -271,7 +280,7 @@ const AppRoutes = () => {
             } />
 
             <Route path="/caretakers/:id/details" element={
-              <RoleGuard roles={['developer', 'web_owner', 'staff', 'house_owner']}>
+              <RoleGuard roles={['developer', 'web_owner', 'staff', 'house_owner', 'caretaker']}>
                 <CaretakerDetails />
               </RoleGuard>
             } />
@@ -282,13 +291,22 @@ const AppRoutes = () => {
                 <AuditLogs />
               </RoleGuard>
             } />
+            {/* Was a ComingSoonPage. The owner-facing half of this did not exist either,
+                so a house owner's only route to a caretaker was a button that 403'd. */}
             <Route path="staff/user-approvals" element={
               <RoleGuard roles={['developer', 'staff', 'web_owner']}>
-                <ComingSoonPage />
+                <UserApprovals />
               </RoleGuard>
             } />
 
             {/* ===== ADMIN-SPECIFIC ROUTES ===== */}
+            {/* web_owner + developer only: this decides whether whole roles can be
+                contacted, and holds SMS gateway credentials. */}
+            <Route path="admin/notification-settings" element={
+              <RoleGuard roles={['developer', 'web_owner']}>
+                <NotificationSettings />
+              </RoleGuard>
+            } />
             <Route path="admin/settings" element={
               <RoleGuard roles={['developer', 'web_owner']}>
                 <SystemSettings />
@@ -303,6 +321,14 @@ const AppRoutes = () => {
             <Route path="admin/staff" element={
               <RoleGuard roles={['developer', 'web_owner']}>
                 <ViewAllStaff />
+              </RoleGuard>
+            } />
+            {/* Same guard as the list: everything behind /admin/permissions is
+                role:web_owner on the server, so this cannot be opened to staff here
+                without the API being opened first. */}
+            <Route path="admin/staff/:staffId" element={
+              <RoleGuard roles={['developer', 'web_owner']}>
+                <StaffDetail />
               </RoleGuard>
             } />
             {/* Staff belong here, but on users.view — the endpoint returns a directory of

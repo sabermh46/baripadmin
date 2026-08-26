@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useGetMyAppFeeQuery } from '../../store/api/appFeeApi';
 import AppFeeViewEditModal from './AppFeeViewEditModal';
+import AppFeeCreateModal from './AppFeeCreateModal';
+import ReportPaymentModal from './ReportPaymentModal';
 import { ContentLoader } from '../../components/common/RouteLoader';
-import { AlertTriangle, BadgeCheck, CalendarClock, Clock, Home, Receipt } from 'lucide-react';
+import { AlertTriangle, BadgeCheck, CalendarClock, Clock, Home, Receipt, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { invoicePeriod } from '../../utils/appFeePeriod';
 
 const money = (n) => (n == null ? '—' : `৳${Number(n).toLocaleString()}`);
 
@@ -108,11 +111,23 @@ const StatusPanel = ({ status, due }) => {
 const CustomersAppFeePage = () => {
   const { t } = useTranslation();
   const [viewEditId, setViewEditId] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  // The invoice being claimed against, or null. Holds the row itself rather than an id:
+  // /app-fees/me already returned it, so re-fetching it to fill a four-field form would
+  // be a round trip for data we are looking at.
+  const [claimFor, setClaimFor] = useState(null);
 
   // One request instead of three. The house owner is resolved server-side, which is also
   // what fixes this page for caretakers — it used to send the caretaker's own user id as a
   // house-owner id, so status and due both came back 403 and the panel silently vanished.
-  const { data, isLoading } = useGetMyAppFeeQuery();
+  // Backstop only. Push invalidation (App.jsx) covers the instant an admin is notified;
+  // this catches the cases push cannot — permission never granted, a lapsed subscription,
+  // or a change made by someone else with no notification attached. Paused while the tab is
+  // in the background so it costs nothing when nobody is looking.
+  const { data, isLoading } = useGetMyAppFeeQuery(undefined, {
+    pollingInterval: 20_000,
+    skipPollingIfUnfocused: true,
+  });
 
   const status = data?.status;
   const due = data?.due;
@@ -145,14 +160,11 @@ const CustomersAppFeePage = () => {
             )}
             <p className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
               <Receipt className="h-4 w-4 text-primary" />
-              {t('invoice_awaiting_payment', { id: actionable.id })}
+              {t('invoice_awaiting_payment')}
             </p>
             <p className="text-2xl font-semibold text-gray-900 mt-1">{money(actionable.amount)}</p>
             <p className="text-xs text-gray-600 mt-1">
-              {t('covers_days_from', {
-                days: actionable.subscription_days ?? 30,
-                date: fmt(actionable.start_date) ?? '—',
-              })}
+              {t('covers_period_short', { period: invoicePeriod(actionable) ?? '—' })}
               {actionable.house_count
                 ? ` · ${t('active_houses_count', { count: actionable.house_count })}`
                 : ''}
@@ -165,12 +177,44 @@ const CustomersAppFeePage = () => {
           </div>
           <button
             type="button"
-            onClick={() =>
-              setViewEditId({ id: actionable.id, forceEditable: true, defaultStatus: 'paid' })
-            }
+            onClick={() => setClaimFor(actionable)}
             className="shrink-0 px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90"
           >
             {actionable.metadata?.waiting_for_confirm ? t('update_payment_details') : t('i_have_paid_this')}
+          </button>
+        </div>
+      )}
+
+      {/* No pending invoice raised for them, and nothing covering today.
+          Until now this page simply had no button in that state: the "I have paid this"
+          action hangs off `actionable`, which only exists once an admin has raised an
+          invoice. So an owner who was never invoiced — or whose subscription had lapsed
+          without a fresh invoice — arrived here with no way to pay anything, which is a dead
+          end at the exact moment the banner and the paywall are both telling them to pay.
+          The API has always allowed a house owner to submit their own payment. */}
+      {!actionable && status && !status.isActive && (
+        <div className="border border-primary/30 bg-primary/5 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
+              <Wallet className="h-4 w-4 text-primary" />
+              {status.hasEverPaid ? t('renew_your_subscription') : t('start_your_subscription')}
+            </p>
+            {due && (
+              <p className="text-2xl font-semibold text-gray-900 mt-1">
+                {money(due.totalDue)}
+                <span className="ml-2 text-xs font-normal text-gray-500">
+                  {t('active_houses_count', { count: due.activeHouseCount })}
+                </span>
+              </p>
+            )}
+            <p className="text-xs text-gray-600 mt-1">{t('submit_payment_for_verification')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReportOpen(true)}
+            className="shrink-0 px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90"
+          >
+            {t('report_payment')}
           </button>
         </div>
       )}
@@ -194,15 +238,12 @@ const CustomersAppFeePage = () => {
                 className="border border-gray-200 rounded-lg p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">
-                    {money(p.amount)}
-                    <span className="ml-2 text-xs font-normal text-gray-500">#{p.id}</span>
-                  </p>
+                  <p className="text-sm font-semibold text-gray-900">{money(p.amount)}</p>
+                  {/* The period identifies the invoice now — the raw row id used to sit here,
+                      and it told this owner more about the platform's other customers than
+                      about their own bill. */}
                   <p className="text-xs text-gray-600 mt-0.5">
-                    {/* The period this invoice buys — start plus its own day count. Was
-                        previously printed as "Due <start + days>", which labelled the END of
-                        the paid period as though it were a payment deadline. */}
-                    {p.start_date ? `${fmt(p.start_date)} · ${t('days_count', { count: p.subscription_days ?? 30 })}` : '—'}
+                    {invoicePeriod(p) ?? '—'}
                     {p.paid_date ? ` · ${t('paid')} ${fmt(p.paid_date)}` : ''}
                   </p>
                 </div>
@@ -241,13 +282,34 @@ const CustomersAppFeePage = () => {
         )}
       </div>
 
+      {reportOpen && (
+        <AppFeeCreateModal
+          isOpen
+          onClose={() => setReportOpen(false)}
+          onSuccess={() => setReportOpen(false)}
+        />
+      )}
+
+      {/* Keyed and conditionally mounted, so each claim gets a component seeded from its own
+          invoice rather than one long-lived form kept in step by an effect. */}
+      {claimFor && (
+        <ReportPaymentModal
+          key={claimFor.id}
+          payment={claimFor}
+          isOpen
+          onClose={() => setClaimFor(null)}
+          onSuccess={() => setClaimFor(null)}
+        />
+      )}
+
+      {/* Read-only from here. The owner's "Details" is a look at the invoice, not an edit of
+          it — the edit form belongs to whoever verifies the claim. */}
       <AppFeeViewEditModal
+        key={viewEditId?.id ?? 'none'}
         paymentId={viewEditId?.id}
         isOpen={!!viewEditId}
         onClose={() => setViewEditId(null)}
         onSuccess={() => setViewEditId(null)}
-        forceEditable={!!viewEditId?.forceEditable}
-        defaultStatus={viewEditId?.defaultStatus}
       />
     </div>
   );

@@ -21,7 +21,11 @@ const ResetPassword = () => {
     if (!token) return toast.error("Missing reset token.");
 
     try {
-      await resetPassword({ token, password }).unwrap();
+      // `newPassword`, not `password`: POST /auth/reset-password validates newPassword, so
+      // this call answered 422 "The new password field is required" for every reset that got
+      // as far as being attempted. changePassword and this endpoint both speak newPassword;
+      // it was only the client that disagreed.
+      await resetPassword({ token, newPassword: password }).unwrap();
       toast.success("Password reset successful! Please login.");
       navigate('/login');
     } catch (err) {
