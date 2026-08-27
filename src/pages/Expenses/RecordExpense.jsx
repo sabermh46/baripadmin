@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -16,10 +16,12 @@ import {
   Check,
   ChevronDown
 } from 'lucide-react';
-import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions, Listbox } from '@headlessui/react';
+import { Listbox } from '@headlessui/react';
 import { z } from 'zod';
 import { useRecordExpenseMutation } from '../../store/api/reportApi';
-import { useGetHousesQuery } from '../../store/api/houseApi';
+import HouseSelector from '../../components/common/HouseSelector';
+import useDefaultHouse from '../../hooks/useDefaultHouse';
+import TkSymbol from '../../components/common/TkSymbol';
 
 // Define categories and payment methods
 const expenseCategories = [
@@ -56,21 +58,9 @@ const expenseSchema = z.object({
   receipt_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 });
 
-const RecordExpenseForm = ({ onSuccess = () => {} }) => {
-  const [houseSearch, setHouseSearch] = useState('');
-  const [selectedHouse, setSelectedHouse] = useState(null);
+const RecordExpenseFormFields = ({ onSuccess = () => {}, defaultHouseId }) => {
   const [selectedCategory, setSelectedCategory] = useState(expenseCategories[0]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0]);
-  // Fetch houses
-  const { data: housesData, isLoading: housesLoading } = useGetHousesQuery({
-    page: 1,
-    limit: 50,
-    ...(houseSearch ? { search: houseSearch } : {}),
-  });
-
-  const houses = housesData?.data || [];
-  console.log(houses);
-  
 
   // Record expense mutation
   const [recordExpense, { isLoading }] = useRecordExpenseMutation();
@@ -85,13 +75,20 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
   } = useForm({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
+      // Seeded at mount, which is why the wrapper below waits for the houses query and then
+      // mounts this keyed on the result. Setting it from an effect once the query resolved
+      // would leave a window where the picker showed a house that the form had not
+      // registered — and zod would refuse to submit with "House selection is required"
+      // while a house was plainly selected on screen.
+      house_id: defaultHouseId ? Number(defaultHouseId) : undefined,
       expense_date: format(new Date(), 'yyyy-MM-dd'),
       amount: 0,
       category: 'maintenance',
       payment_method: 'cash',
     },
   });
-  
+
+  const houseId = watch('house_id');
 
   const onSubmit = async (formData) => {
     try {
@@ -104,15 +101,21 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
       const expenseData = {
         ...formData,
         amount: finalAmount,
-        house_id: selectedHouse?.id || formData.house_id,
       };
 
       await recordExpense(expenseData).unwrap();
-      
+
       toast.success('Expense recorded successfully!');
-      reset();
+      // Keeps the house — recording several expenses against one property in a row is the
+      // normal case, and reset() would otherwise drop it back to nothing.
+      reset({
+        house_id: formData.house_id,
+        expense_date: format(new Date(), 'yyyy-MM-dd'),
+        amount: 0,
+        category: 'maintenance',
+        payment_method: 'cash',
+      });
       onSuccess();
-      setSelectedHouse(null);
       setSelectedCategory(expenseCategories[0]);
       setSelectedPaymentMethod(paymentMethods[0]);
     } catch (error) {
@@ -133,73 +136,28 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* House Selection */}
-        {
-          houses && (
-            <div className="space-y-2">
+        {/* House Selection.
+            Was a bespoke search-as-you-type combobox that fed every keystroke straight into
+            GET /houses with no debounce — a request and a loading spinner per letter — and
+            that offered an owner with two properties a search box to find them in. Worse for
+            an admin: it searched every house on the platform with no way to narrow by owner,
+            so "Block A" returned Block A from four different customers, indistinguishable.
+
+            HouseSelector is the component that already solves both: a plain dropdown for an
+            owner, and a debounced owner filter + house search for an admin. */}
+        <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">
             <Building className="inline-block w-4 h-4 mr-2 text-orange-500" />
             Select Property
           </label>
-          
-          <Combobox
-            value={selectedHouse}
-            onChange={(house) => {
-              setSelectedHouse(house);
-              setValue('house_id', house?.id);
-            }}
-          >
-            <div className="relative">
-              <div className="relative w-full">
-                <ComboboxInput
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none transition"
-                  placeholder="Type to search properties..."
-                  // This is crucial for the display
-                  displayValue={(house) => house?.name || ''} 
-                  onChange={(e) => setHouseSearch(e.target.value)}
-                />
-                <ComboboxButton className="absolute right-3 top-3.5">
-                  <ChevronDown className="h-5 w-5 text-gray-400" />
-                </ComboboxButton>
-              </div>
-              
-              {/* 3. SHOW OPTIONS IMMEDIATELY */}
-              <ComboboxOptions className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-auto">
-                {housesLoading ? (
-                  <div className="px-4 py-6 text-center text-gray-500">
-                    <Loader2 className="animate-spin h-5 w-5 mx-auto mb-2" />
-                    Loading...
-                  </div>
-                ) : houses.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-gray-500">No properties found</div>
-                ) : (
-                  houses.map((house) => (
-                    <ComboboxOption
-                      key={house.id}
-                      value={house}
-                      className={({ active }) =>
-                        `px-4 py-3 cursor-pointer ${active ? 'bg-orange-50 text-orange-700' : 'text-gray-900'}`
-                      }
-                    >
-                      {({ selected }) => (
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className={`font-medium ${selected ? 'text-orange-600' : ''}`}>{house.name}</div>
-                            <div className="text-xs opacity-70">{house.address}</div>
-                          </div>
-                          {selected && <Check className="h-4 w-4 text-orange-600" />}
-                        </div>
-                      )}
-                    </ComboboxOption>
-                  ))
-                )}
-              </ComboboxOptions>
-            </div>
-          </Combobox>
+
+          <HouseSelector
+            label={null}
+            value={houseId ? String(houseId) : ''}
+            onChange={(id) => setValue('house_id', id ? Number(id) : undefined, { shouldValidate: true })}
+          />
           {errors.house_id && <p className="text-xs text-red-500 font-medium">{errors.house_id.message}</p>}
         </div>
-          )
-        }
 
         {/* Amount and Date Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -209,8 +167,10 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
               Amount
             </label>
             <div className="relative">
+              {/* Taka, not a dollar sign. Every other amount in the app renders through
+                  TkSymbol; this form was the one place asking for expenses in dollars. */}
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
-                $
+                <TkSymbol />
               </span>
               <input
                 type="number"
@@ -402,6 +362,28 @@ const RecordExpenseForm = ({ onSuccess = () => {} }) => {
       </form>
     </div>
   );
+};
+
+/**
+ * Mount gate, so the form's defaultValues can carry the owner's house.
+ *
+ * react-hook-form reads defaultValues once at mount and the house list arrives from a query,
+ * so the form has to be mounted after the answer is known and remounted if it changes. Same
+ * shape as RenterForm's gate.
+ */
+const RecordExpenseForm = (props) => {
+  const { defaultHouseId, isReady } = useDefaultHouse();
+
+  if (!isReady) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 md:p-6 flex items-center justify-center h-64 text-gray-400">
+        <Loader2 className="animate-spin h-5 w-5 mr-2" />
+        Loading properties...
+      </div>
+    );
+  }
+
+  return <RecordExpenseFormFields key={defaultHouseId || 'none'} defaultHouseId={defaultHouseId} {...props} />;
 };
 
 export default RecordExpenseForm;

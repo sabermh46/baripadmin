@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Landmark, Plus, CreditCard, Pencil, Trash2, History } from 'lucide-react';
-import HouseSelector from '../../components/loans/HouseSelector';
+import { Landmark, Plus, Pencil } from 'lucide-react';
+import HouseSelector from '../../components/common/HouseSelector';
 import {
   useGetLoansByHouseQuery,
   useCreateLoanMutation,
@@ -9,13 +9,14 @@ import {
   useDeleteLoanMutation,
   useUpdateLoanPaymentMutation,
 } from '../../store/api/loanApi';
-import Table from '../../components/common/Table';
+import LoanCard from './LoanCard';
 import Modal, { useModal } from '../../components/common/Modal';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import { apiErrorMessage } from '../../utils/apiError';
-import TkSymbol from '../../components/common/TkSymbol';
+import { useAuth } from '../../hooks';
+import { useGetHousesQuery } from '../../store/api/houseApi';
 
 const formatDate = (d) => {
   if (!d) return '–';
@@ -622,7 +623,24 @@ const ViewPaymentsModal = ({ isOpen, onClose, loan, onEditPayment }) => {
 
 const LoansPage = () => {
   const { t } = useTranslation();
+  const { isHouseOwner } = useAuth();
   const [selectedHouseId, setSelectedHouseId] = useState('');
+
+  /**
+   * A house owner lands on their own houses, so leaving the picker empty made the page open
+   * on an empty state and asked them to choose from a list of one or two — every visit.
+   *
+   * Derived rather than pushed into state by an effect: `selectedHouseId` stays the record of
+   * what the user chose, and an explicit choice always wins over the default. Setting state
+   * from an effect would also fight the user for a frame on first paint.
+   *
+   * Same query arguments as HouseSelector's own, so RTK Query serves both from one cache
+   * entry and this costs no extra request. Admins are untouched — they pick an owner first,
+   * and there is no sensible default among every owner on the platform.
+   */
+  const { data: myHouses } = useGetHousesQuery({ page: 1, limit: 100 }, { skip: !isHouseOwner });
+  const defaultHouseId = isHouseOwner ? String(myHouses?.data?.[0]?.id ?? '') : '';
+  const effectiveHouseId = selectedHouseId || defaultHouseId;
   const createModal = useModal(false);
   const editLoanModal = useModal(false);
   const paymentModal = useModal(false);
@@ -632,8 +650,8 @@ const LoansPage = () => {
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [selectedPayment, setSelectedPayment] = useState(null);
 
-  const { data: loansResponse, isLoading: loansLoading } = useGetLoansByHouseQuery(selectedHouseId, {
-    skip: !selectedHouseId,
+  const { data: loansResponse, isLoading: loansLoading } = useGetLoansByHouseQuery(effectiveHouseId, {
+    skip: !effectiveHouseId,
   });
   const loans = (Array.isArray(loansResponse?.data) ? loansResponse.data : loansResponse?.data?.data) ?? [];
 
@@ -703,86 +721,43 @@ const LoansPage = () => {
       <div className="bg-surface rounded-xl border border-subdued/20 p-4">
         <div className="mb-4">
           <HouseSelector
-            value={selectedHouseId}
+            value={effectiveHouseId}
             onChange={setSelectedHouseId}
             label={t('select_house') || 'Select House'}
           />
         </div>
 
-        {selectedHouseId ? (
-          <Table
-            columns={[
-              { key: 'provider', title: t('provider') || 'Provider', render: (r) => r.provider_name || '–' },
-              { key: 'amount', title: t('amount'), render: (r) => <>{formatAmount(r.amount)} <TkSymbol /></> },
-              { key: 'paid', title: t('paid'), render: (r) => <>{formatAmount(r.paid_amount)} <TkSymbol /></> },
-              {
-                key: 'status',
-                title: t('status'),
-                render: (r) => (
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}
-                  >
-                    {r.status || 'active'}
-                  </span>
-                ),
-              },
-              { key: 'start', title: t('start_date') || 'Start', render: (r) => formatDate(r.start_date) },
-              {
-                key: 'action',
-                title: t('action'),
-                className: 'text-center!',
-                render: (r) => (
-                  <div className="flex flex-wrap items-center gap-3 " onClick={(e) => e.stopPropagation()}>
-                    <div className="flex-1 flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleViewPayments(r)}
-                        className="cursor-pointer p-1.5 text-subdued bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                        title={t('payment_history') || 'Payment history'}
-                      >
-                        <History size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEditLoan(r)}
-                        className="cursor-pointer p-1.5 text-subdued bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                        title={t('edit_loan') || 'Edit loan'}
-                      >
-                        <Pencil size={16} />
-                      </button>
-                    </div>
-                    <div className="flex-1 flex gap-3">
-                      {r.status !== 'paid' && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (r?.id) handleRecordPayment(r);
-                          }}
-                          className="cursor-pointer p-1.5 text-primary bg-primary/10 hover:bg-primary/40 rounded-lg transition-colors"
-                          title={t('record_payment') || 'Record payment'}
-                        >
-                          <CreditCard size={16} />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => openDeleteConfirm(r)}
-                        className="cursor-pointer p-1.5 text-red-600 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
-                        title={t('delete_loan') || 'Delete loan'}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ),
-              },
-            ]}
-            data={loans}
-            loading={loansLoading}
-            emptyMessage={t('no_loans') || 'No loans for this house'}
-            rowKey="id"
-          />
+        {effectiveHouseId ? (
+          loansLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[0, 1].map((i) => (
+                <div key={i} className="h-48 rounded-xl bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          ) : loans.length === 0 ? (
+            <div className="py-12 text-center text-subdued">
+              <Landmark className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>{t('no_loans') || 'No loans for this house'}</p>
+            </div>
+          ) : (
+            /* Cards, not rows. A loan is a balance moving against a deadline, and a table of
+               amount / paid / start date printed the three numbers without ever relating them —
+               whether repayment was keeping pace with the term was left to the reader to work
+               out. Two columns from sm up; one on a phone, where a row of six columns was
+               unreadable anyway. */
+            <div className="grid gap-4 sm:grid-cols-2">
+              {loans.map((loan) => (
+                <LoanCard
+                  key={loan.id}
+                  loan={loan}
+                  onRecordPayment={handleRecordPayment}
+                  onViewPayments={handleViewPayments}
+                  onEdit={handleEditLoan}
+                  onDelete={openDeleteConfirm}
+                />
+              ))}
+            </div>
+          )
         ) : (
           <div className="py-12 text-center text-subdued">
             <Landmark className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -794,7 +769,7 @@ const LoansPage = () => {
       <CreateLoanModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
-        selectedHouseId={selectedHouseId || undefined}
+        selectedHouseId={effectiveHouseId || undefined}
         onSuccess={() => {}}
       />
 

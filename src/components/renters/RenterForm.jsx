@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks';
 import { useTranslation } from 'react-i18next';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 import useOwnerOptions from '../../hooks/useOwnerOptions';
+import ProtectedImage from '../common/ProtectedImage';
 
 const renterSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -26,7 +27,69 @@ const renterSchema = z.object({
   houseOwnerId: z.preprocess((val) => String(val), z.string().min(1, 'Owner ID is required')),
 });
 
-const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
+/**
+ * One NID image: a freshly picked file, or the one already on the renter, or an upload area.
+ *
+ * The stored image goes through ProtectedImage. It used to be a plain <img src>, and the two
+ * are not interchangeable: `/uploads/nids/x.png` is a relative path, so the browser resolved
+ * it against the app's own origin rather than the API's, and the route behind it requires a
+ * bearer token — so even pointed at the right host it answers 401. Every stored NID would
+ * have rendered as a broken image here. (UpdateRenterModal already did this correctly; this
+ * form, which HouseDetails uses to edit renters, did not.)
+ */
+const NidImageSlot = ({ label, inputName, newPreview, storedUrl, onSelect, onClear }) => (
+  <div>
+    <label className="block text-sm font-medium text-text mb-2">{label}</label>
+    <div className="space-y-4">
+      {newPreview || storedUrl ? (
+        <div className="relative">
+          {newPreview ? (
+            <img
+              src={newPreview}
+              alt={label}
+              className="w-full h-48 object-cover rounded-lg border border-subdued/30"
+            />
+          ) : (
+            <ProtectedImage
+              src={storedUrl}
+              alt={label}
+              className="w-full h-48 object-contain rounded-lg border border-subdued/30"
+            />
+          )}
+
+          {newPreview ? (
+            <button
+              type="button"
+              onClick={onClear}
+              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+              title="Remove"
+            >
+              <X size={16} />
+            </button>
+          ) : (
+            // Nothing to "remove" — the file is already saved, and the API has no way to
+            // clear one. Replacing it is the action that exists, so that is what is offered.
+            <label className="absolute bottom-2 right-2 px-2 py-1 bg-white text-xs text-gray-600 rounded shadow cursor-pointer hover:bg-gray-100">
+              Replace
+              <input type="file" name={inputName} accept="image/*" className="hidden" onChange={onSelect} />
+            </label>
+          )}
+        </div>
+      ) : (
+        <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-subdued/30 rounded-lg cursor-pointer bg-background hover:bg-subdued/5 transition-colors">
+          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+            <Upload className="w-8 h-8 mb-2 text-subdued" />
+            <p className="text-sm text-subdued">Upload {label}</p>
+            <p className="text-xs text-subdued mt-1">PNG, JPG up to 5MB</p>
+          </div>
+          <input type="file" name={inputName} accept="image/*" className="hidden" onChange={onSelect} />
+        </label>
+      )}
+    </div>
+  </div>
+);
+
+const RenterFormFields = ({ onClose, renter, houseOwnerId }) => {
   const isEdit = !!renter;
   const [nidFrontImage, setNidFrontImage] = useState(null);
   const [nidBackImage, setNidBackImage] = useState(null);
@@ -53,49 +116,27 @@ const RenterForm = ({ open, onClose, renter, houseOwnerId }) => {
     formState: { errors, isSubmitting }
   } = useForm({
     resolver: zodResolver(renterSchema),
+    // Seeded directly from the renter being edited. This used to be a blank set of defaults
+    // followed by an effect that reset() them once the prop arrived — which is where the
+    // set-state-in-effect warning came from, and which only worked because the effect
+    // happened to re-run. The wrapper below remounts this component per renter, so mount-time
+    // defaults are now the whole story and there is nothing left to synchronise.
     defaultValues: {
-      name: '',
-      phone: '',
-      alternativePhone: '',
-      email: '',
-      nid: '',
-      status: 'active',
-      metadata: '',
-      houseOwnerId: isHouseOwner ? user.id : houseOwnerId || ''
-    }
+      name: renter?.name || '',
+      phone: renter?.phone || '',
+      alternativePhone: renter?.alternativePhone || '',
+      email: renter?.email || '',
+      nid: renter?.nid || '',
+      status: renter?.status || 'active',
+      metadata: renter?.metadata || '',
+      houseOwnerId: renter
+        ? renter.houseOwnerId || renter.createdBy || houseOwnerId || ''
+        : (isHouseOwner ? user.id : houseOwnerId || ''),
+    },
   });
 
   const [createRenter] = useCreateRenterMutation();
   const [updateRenter] = useUpdateRenterMutation();
-
-  useEffect(() => {
-    if (renter) {
-      reset({
-        name: renter.name || '',
-        phone: renter.phone || '',
-        alternativePhone: renter.alternativePhone || '',
-        email: renter.email || '',
-        nid: renter.nid || '',
-        status: renter.status || 'active',
-        metadata: renter.metadata || '',
-        houseOwnerId: renter.houseOwnerId || '',
-      });
-      
-      // Set previews for existing images
-      if (renter.nidFrontImageUrl) {
-        setNidFrontPreview(renter.nidFrontImageUrl);
-      }
-      if (renter.nidBackImageUrl) {
-        setNidBackPreview(renter.nidBackImageUrl);
-      }
-    } else {
-      reset();
-      setNidFrontImage(null);
-      setNidBackImage(null);
-      setNidFrontPreview(null);
-      setNidBackPreview(null);
-    }
-  }, [renter, reset]);
 
   const handleFileChange = (e, setImage, setPreview) => {
   const file = e.target.files[0];
@@ -186,12 +227,6 @@ const removeFile = (setImage, setPreview, inputName) => {
       console.error('Failed to save renter:', error);
     }
   };
-
-  // console.log("Form Errors:", errors);
-
-  if (!open) return null;
-
-
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -345,83 +380,22 @@ const removeFile = (setImage, setPreview, inputName) => {
 
           {/* NID Images Upload */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-text mb-2">
-                NID Front Image
-              </label>
-              <div className="space-y-4">
-                {nidFrontPreview ? (
-                  <div className="relative">
-                    <img
-                      src={nidFrontPreview}
-                      alt="NID Front Preview"
-                      className="w-full h-48 object-cover rounded-lg border border-subdued/30"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeFile(setNidFrontImage, setNidFrontPreview, 'nidFrontImage')}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-subdued/30 rounded-lg cursor-pointer bg-background hover:bg-subdued/5 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-8 h-8 mb-2 text-subdued" />
-                      <p className="text-sm text-subdued">Upload NID Front Image</p>
-                      <p className="text-xs text-subdued mt-1">PNG, JPG up to 5MB</p>
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      name="nidFrontImage"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, setNidFrontImage, setNidFrontPreview)}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text mb-2">
-                NID Back Image
-              </label>
-              <div className="space-y-4">
-                {nidBackPreview ? (
-                  <div className="relative">
-                    <img
-                      src={nidBackPreview}
-                      alt="NID Back Preview"
-                      className="w-full h-48 object-cover rounded-lg border border-subdued/30"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeFile(setNidBackImage, setNidBackPreview, 'nidBackImage')}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-subdued/30 rounded-lg cursor-pointer bg-background hover:bg-subdued/5 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-8 h-8 mb-2 text-subdued" />
-                      <p className="text-sm text-subdued">Upload NID Back Image</p>
-                      <p className="text-xs text-subdued mt-1">PNG, JPG up to 5MB</p>
-                    </div>
-                    <input
-                      type="file"
-                      name="nidBackImage"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, setNidBackImage, setNidBackPreview)}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
+            <NidImageSlot
+              label="NID Front Image"
+              inputName="nidFrontImage"
+              newPreview={nidFrontPreview}
+              storedUrl={renter?.nidFrontImageUrl}
+              onSelect={(e) => handleFileChange(e, setNidFrontImage, setNidFrontPreview)}
+              onClear={() => removeFile(setNidFrontImage, setNidFrontPreview, 'nidFrontImage')}
+            />
+            <NidImageSlot
+              label="NID Back Image"
+              inputName="nidBackImage"
+              newPreview={nidBackPreview}
+              storedUrl={renter?.nidBackImageUrl}
+              onSelect={(e) => handleFileChange(e, setNidBackImage, setNidBackPreview)}
+              onClear={() => removeFile(setNidBackImage, setNidBackPreview, 'nidBackImage')}
+            />
           </div>
 
           <div>
@@ -466,6 +440,21 @@ const removeFile = (setImage, setPreview, inputName) => {
       </div>
     </div>
   );
+};
+
+/**
+ * Mount gate. Three screens keep this form permanently rendered and toggle `open`, so the
+ * fields have to be remounted per renter — otherwise react-hook-form's defaultValues, read
+ * once at mount, would still hold whoever was edited first.
+ *
+ * `renter?.id` in the key covers the case that prompted this: open the form for renter A,
+ * close it, open it for renter B, and B's details have to appear. 'new' keeps the create form
+ * a distinct mount from any edit.
+ */
+const RenterForm = ({ open, ...props }) => {
+  if (!open) return null;
+
+  return <RenterFormFields key={props.renter?.id ?? 'new'} {...props} />;
 };
 
 export default RenterForm;

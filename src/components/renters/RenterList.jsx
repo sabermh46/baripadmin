@@ -6,7 +6,6 @@ import {
 } from '../../store/api/renterApi';
 import ViewRenterModal from './ViewRenterModal';
 import UpdateRenterModal from './UpdateRenterModal';
-import CreateRenterModal from './CreateRenterModal';
 import { 
   Plus, 
   Eye, 
@@ -46,18 +45,9 @@ const RenterList = () => {
     || isDeveloper
     || (isHouseOwner && renter?.createdBy === user?.id)
     || (isStaff && hasPermission('renters.delete'));
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [selectedRenter, setSelectedRenter] = useState(deepLinkId ? { id: deepLinkId } : null);
+  const { t } = useTranslation();
   const location = useLocation();
-const queryParams = new URLSearchParams(location.search);
-const { t } = useTranslation();
-const view = queryParams.get('view');
-  
-  
-  
-  
+
   // `/renters?view=45` is a deep link from the flat overview and the dashboard's renters
   // modal. Read once, at mount, straight into initial state.
   //
@@ -65,7 +55,17 @@ const view = queryParams.get('view');
   // load, though ViewRenterModal fetches the renter by id itself and never needed the list.
   // The timer had no cleanup either, so leaving the page within half a second left it to fire
   // against an unmounted component.
+  //
+  // This block has to stay ABOVE the state declarations that read `deepLinkId`: `const` is
+  // hoisted but not initialised, so referencing it earlier in the same scope is a TDZ
+  // ReferenceError at render, not a lint error and not a build failure.
+  const view = new URLSearchParams(location.search).get('view');
   const deepLinkId = view && !Number.isNaN(Number(view)) ? Number(view) : null;
+
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [selectedRenter, setSelectedRenter] = useState(deepLinkId ? { id: deepLinkId } : null);
 
   // Modal states
   const [viewModalOpen, setViewModalOpen] = useState(Boolean(deepLinkId));
@@ -291,32 +291,39 @@ const view = queryParams.get('view');
       />
       )}
 
-      {/* Modals */}
-      {selectedRenter && (
-        <>
-          <ViewRenterModal
-            isOpen={viewModalOpen}
-            onClose={() => {
-              setViewModalOpen(false);
-              setSelectedRenter(null);
-            }}
-            renterId={selectedRenter.id}
-          />
-          
-          <UpdateRenterModal
-            isOpen={editModalOpen}
-            onClose={() => {
-              setEditModalOpen(false);
-              setSelectedRenter(null);
-            }}
-            renter={selectedRenter}
-            onSuccess={() => {
-              refetch();
-              setEditModalOpen(false);
-              setSelectedRenter(null);
-            }}
-          />
-        </>
+      {/* Modals.
+          Mounted per-dialog rather than as one subtree gated on `selectedRenter`. The edit
+          form seeds react-hook-form from defaultValues, which are read once at mount and
+          never again — so arriving via `/renters?view=45` mounted it against the deep link's
+          stub `{ id: 45 }`, and every field was blank when the form was later opened for a
+          real row. Mounting it only while it is open means it always mounts against the full
+          record. */}
+      {selectedRenter && viewModalOpen && (
+        <ViewRenterModal
+          isOpen
+          onClose={() => {
+            setViewModalOpen(false);
+            setSelectedRenter(null);
+          }}
+          renterId={selectedRenter.id}
+        />
+      )}
+
+      {selectedRenter && editModalOpen && (
+        <UpdateRenterModal
+          key={selectedRenter.id}
+          isOpen
+          onClose={() => {
+            setEditModalOpen(false);
+            setSelectedRenter(null);
+          }}
+          renter={selectedRenter}
+          onSuccess={() => {
+            refetch();
+            setEditModalOpen(false);
+            setSelectedRenter(null);
+          }}
+        />
       )}
 
       <RenterForm 

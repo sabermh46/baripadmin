@@ -37,12 +37,27 @@ export const renterApi = baseApi.injectEndpoints({
 
     // Update renter (with file upload)
     updateRenter: builder.mutation({
-      query: ({ id, formData }) => ({
-        url: `/renters/${id}`,
-        method: 'PUT',
-        body: formData,
-        // Note: No Content-Type header for FormData
-      }),
+      query: ({ id, formData }) => {
+        // POST carrying _method=PUT, not a real PUT.
+        //
+        // PHP only parses multipart/form-data for POST — $_POST and $_FILES are left empty
+        // for every other method, so a PUT with a FormData body arrived at Laravel with no
+        // fields and no files at all. update() then ran array_filter([]) → $renter->update([])
+        // → a no-op, and returned 200 with the unchanged record. The modal closed, the
+        // success toast fired, and nothing had been saved. Confirmed against the running API:
+        // name, phone, nid and status were all unchanged after a 200.
+        //
+        // Laravel unwraps _method back to PUT before routing, so the route and the controller
+        // are untouched; only the wire format changes.
+        formData.append('_method', 'PUT');
+
+        return {
+          url: `/renters/${id}`,
+          method: 'POST',
+          body: formData,
+          // Note: No Content-Type header for FormData
+        };
+      },
       invalidatesTags: (result, error, { id }) => [
         'Renter',
         { type: 'Renter', id },

@@ -12,12 +12,14 @@ import {
 import useOwnerOptions from '../../hooks/useOwnerOptions';
 import AppFeeCreateModal from './AppFeeCreateModal';
 import AppFeeViewEditModal from './AppFeeViewEditModal';
+import AppFeeDetailsModal from './AppFeeDetailsModal';
 import AppFeeOverview from './AppFeeOverview';
 import AppFeeMetricModal from './AppFeeMetricModal';
 import VerifyClaimModal from './VerifyClaimModal';
 import { toast } from 'react-toastify';
 import { apiErrorMessage } from '../../utils/apiError';
 import { useTranslation } from 'react-i18next';
+import { invoicePeriod } from '../../utils/appFeePeriod';
 
 // Built from `t` inside the component rather than at module scope, so switching language
 // re-labels the dropdowns instead of leaving them in the language loaded at import time.
@@ -37,15 +39,6 @@ const buildPaymentMethodOptions = (t) => [
   { value: 'other', label: t('other') },
 ];
 
-const formatDate = (d) => {
-  if (!d) return '–';
-  try {
-    return new Date(d).toLocaleDateString();
-  } catch {
-    return d;
-  }
-};
-
 const AdminsAppFeePage = () => {
   const { t } = useTranslation();
   const STATUS_OPTIONS = buildStatusOptions(t);
@@ -64,6 +57,8 @@ const AdminsAppFeePage = () => {
   // breakdown's per-row button; null when the toolbar's own button opens it.
   const [createForOwnerId, setCreateForOwnerId] = useState(null);
   const [viewEditId, setViewEditId] = useState(null);
+  // Read-only. Kept separate from viewEditId so opening details never risks saving anything.
+  const [detailsId, setDetailsId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   // Set by clicking the "Awaiting your verification" tile. Kept separate from `filters`
   // because it is not a plain column filter — it narrows to pending invoices the owner has
@@ -156,45 +151,25 @@ const AdminsAppFeePage = () => {
     }
   };
 
+  // Column order is deliberate: who owes it, then the two things an admin scans for
+  // (verification, then status), then the way into everything else.
+  //
+  // `fee_type` is gone from here — it held one of two values, "monthly_subscription" for
+  // effectively every row, so it cost a column's width to say nothing. It is in the details
+  // panel with the rest of the billing terms.
   const columns = [
-    { key: 'id', title: t('id'), dataIndex: 'id', cellClassName: 'font-mono text-gray-600' },
-    { key: 'house_owner_name', title: t('house_owner'), dataIndex: 'house_owner_name' },
     {
-      key: 'amount',
-      title: t('amount'),
-      dataIndex: 'amount',
+      key: 'invoice',
+      title: t('invoice'),
+      dataIndex: 'id',
       render: (row) => (
-        <span className="font-medium">
-          {row.amount != null ? Number(row.amount).toLocaleString() : '–'}
-        </span>
+        <div className="min-w-0">
+          <p className="font-medium text-gray-900">{row.house_owner_name ?? '–'}</p>
+          {/* The period, not the row id. #2 / #21 / #23 in one owner's history announced how
+              many invoices belong to other customers and read as records gone missing. */}
+          <p className="text-xs text-gray-500">{invoicePeriod(row) ?? '–'}</p>
+        </div>
       ),
-    },
-    { key: 'fee_type', title: t('fee_type'), dataIndex: 'fee_type' },
-    {
-      key: 'start_date',
-      title: t('start_date'),
-      dataIndex: 'start_date',
-      render: (row) => formatDate(row.start_date),
-    },
-    {
-      key: 'paid_date',
-      title: t('paid_date'),
-      dataIndex: 'paid_date',
-      render: (row) => formatDate(row.paid_date),
-    },
-    { key: 'payment_method', title: t('method'), dataIndex: 'payment_method', render: (row) => row.payment_method || '–' },
-    {
-      // The reference an admin has to match against their bKash / Nagad / bank statement.
-      // It was not shown anywhere on this page, which made verifying from the table
-      // impossible — the number simply was not on screen.
-      key: 'transaction_id',
-      title: t('transaction_number'),
-      dataIndex: 'transaction_id',
-      render: (row) => {
-        const ref = row.metadata?.claim?.transactionId ?? row.transaction_id;
-        if (!ref) return <span className="text-xs text-gray-400">—</span>;
-        return <span className="font-mono text-xs text-gray-700 break-all">{ref}</span>;
-      },
     },
     {
       key: 'closed',
@@ -250,20 +225,46 @@ const AdminsAppFeePage = () => {
       ),
     },
     {
+      // The way into everything the columns no longer carry: start and paid dates, method,
+      // transaction reference, house count, the claim and who refused it, and the timeline.
+      key: 'details',
+      title: t('details'),
+      dataIndex: 'id',
+      cellClassName: 'whitespace-nowrap',
+      render: (row) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDetailsId(row.id);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          {t('view_details')}
+        </button>
+      ),
+    },
+    {
+      key: 'amount',
+      title: t('amount'),
+      dataIndex: 'amount',
+      render: (row) => (
+        <span className="font-medium">
+          {row.amount != null ? `৳${Number(row.amount).toLocaleString()}` : '–'}
+        </span>
+      ),
+    },
+    {
       key: 'actions',
       title: t('actions'),
       dataIndex: 'id',
       cellClassName: 'whitespace-nowrap',
       render: (row) => (
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={() => setViewEditId({ id: row.id })}
-            className="p-1.5 text-gray-600 hover:bg-gray-100 rounded"
-            title={t('view')}
-          >
-            <Eye className="h-4 w-4" />
-          </button>
+          {/* The eye and the pencil both called setViewEditId — two buttons, one behaviour,
+              and no way to simply look at an invoice. The eye is now the Details column and
+              this one is the editor it always was. */}
           <button
             type="button"
             onClick={() => setViewEditId({ id: row.id })}
@@ -423,6 +424,20 @@ const AdminsAppFeePage = () => {
           setQuickFilter(null);
           setFilter('house_owner_id', String(houseOwnerId));
         }}
+      />
+
+      {/* Keyed by invoice so each one mounts fresh rather than showing the previous row's
+          data for a frame while the new fetch resolves. */}
+      <AppFeeDetailsModal
+        key={detailsId ?? 'no-details'}
+        paymentId={detailsId}
+        isOpen={!!detailsId}
+        onClose={() => setDetailsId(null)}
+        onEdit={(id) => { setDetailsId(null); setViewEditId({ id }); }}
+        // Hands the claim straight to the same dialog the table's Verification column uses,
+        // so an admin who opened details to check the reference does not have to close it,
+        // find the row again and click a different button.
+        onVerify={(payment) => { setDetailsId(null); setVerifyClaimFor(payment); }}
       />
 
       <VerifyClaimModal

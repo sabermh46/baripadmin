@@ -75,7 +75,10 @@ const HouseSelector = ({ value, onChange, label, className = '', placeholder }) 
     return owners.find((o) => String(o.id) === adminOwnerId) || null;
   }, [adminOwnerId, owners]);
 
-  const displayLabel = label ?? t('select_house') ?? 'Select House';
+  // `label={null}` means "the caller draws its own heading" — distinct from omitting the
+  // prop, which means "use the default". ?? alone conflated the two and printed the default
+  // label underneath the caller's.
+  const displayLabel = label === null ? null : (label ?? t('select_house') ?? 'Select House');
 
   // —— House owner: simple dropdown
   if (isHouseOwner) {
@@ -89,7 +92,10 @@ const HouseSelector = ({ value, onChange, label, className = '', placeholder }) 
           onChange={(e) => onChange(e.target.value)}
           className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 bg-white"
         >
-          <option value="">{t('select_house') || 'Select house'}</option>
+          {/* Only while nothing is chosen. Callers that default to the owner's first house
+              treat "" as "use the default", so an always-present blank option would be a
+              control that visibly does nothing when picked. */}
+          {!selectedHouseId && <option value="">{t('select_house') || 'Select house'}</option>}
           {ownerHouses.map((h) => (
             <option key={h.id} value={h.id}>
               {h.name || h.address || `House #${h.id}`}

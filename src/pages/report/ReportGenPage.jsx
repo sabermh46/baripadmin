@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
 import { useGetProfitReportQuery } from '../../store/api/reportApi';
@@ -36,34 +36,39 @@ export const ReportGenPage = () => {
     
     const ownersList = managedOwnersResponse?.data || [];
 
-    // Sync selectedOwner state with filters (especially for initial load or HouseOwner role)
-    useEffect(() => {
-        if (isHouseOwner && user) {
-            setFilters(prev => ({ ...prev, ownerId: user.id }));
-            setSelectedOwner(user);
-        }
-    }, [isHouseOwner, user]);
+    // A house owner is always reporting on themselves — derived, not copied into state by an
+    // effect. The effect that used to do it ran on every render where `user` changed
+    // identity, and needed the owner filter to already be populated before the houses query
+    // could start, which cost a render for no reason.
+    const effectiveOwnerId = isHouseOwner ? user?.id ?? '' : filters.ownerId;
+    const effectiveOwner = isHouseOwner ? user : selectedOwner;
 
     // 2. FETCH HOUSES based on selected Owner
     const { data: housesResponse, isFetching: housesLoading } = useGetHousesQuery(
-        { ownerId: filters.ownerId, limit: 100 }, 
-        { skip: !filters.ownerId }
+        { ownerId: effectiveOwnerId, limit: 100 },
+        { skip: !effectiveOwnerId }
     );
     const houses = housesResponse?.data || [];
 
+    // An owner has one or two houses and the report is blank until one is picked, so open on
+    // the first rather than on an empty state. Derived from the houses this page already
+    // fetched, so whatever the user picks wins and nothing is written behind their back.
+    // Admins get no default — they choose an owner first and could be looking at any of them.
+    const effectiveHouseId = filters.houseId || (isHouseOwner ? String(houses[0]?.id ?? '') : '');
+
     // 3. FETCH REPORT DATA
     const { data, isLoading, refetch } = useGetProfitReportQuery({
-        houseId: filters.houseId,
+        houseId: effectiveHouseId,
         startDate: filters.startDate,
         endDate: filters.endDate
-    }, { skip: !filters.houseId });
+    }, { skip: !effectiveHouseId });
 
     const reportData = data?.data;
 
     // 4. HELPERS
     const selectedHouseName = useMemo(() => {
-        return houses.find(h => String(h.id) === String(filters.houseId))?.name || 'Property';
-    }, [houses, filters.houseId]);
+        return houses.find(h => String(h.id) === String(effectiveHouseId))?.name || 'Property';
+    }, [houses, effectiveHouseId]);
 
     const primaryColorRGB = [249, 135, 60]; 
     const primaryColorHex = '#f9873c';
@@ -117,7 +122,7 @@ export const ReportGenPage = () => {
         doc.text("HOUSE OWNER:", 20, 45);
         doc.setFont("helvetica", "normal");
         doc.text(`${selectedHouseName || 'N/A'}`, 55, 45);
-        doc.text(`Email: ${selectedOwner?.email || 'N/A'}`, 55, 50);
+        doc.text(`Email: ${effectiveOwner?.email || 'N/A'}`, 55, 50);
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.text("FINANCIAL PROFIT REPORT", 130, 20);
@@ -227,7 +232,7 @@ export const ReportGenPage = () => {
                         <div className="space-y-2">
                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">House Owner</label>
                             <Combobox
-                                value={selectedOwner}
+                                value={effectiveOwner}
                                 onChange={(owner) => {
                                     setSelectedOwner(owner);
                                     setFilters(prev => ({ ...prev, ownerId: owner?.id || '', houseId: '' }));
@@ -288,11 +293,14 @@ export const ReportGenPage = () => {
                         <div className="relative">
                             <select 
                                 className="w-full p-2.5 bg-gray-100 rounded-lg outline-none disabled:opacity-50 appearance-none text-sm"
-                                disabled={!filters.ownerId || housesLoading}
-                                value={filters.houseId}
+                                disabled={!effectiveOwnerId || housesLoading}
+                                value={effectiveHouseId}
                                 onChange={(e) => setFilters(prev => ({ ...prev, houseId: e.target.value }))}
                             >
-                                <option value="">{housesLoading ? 'Loading...' : 'Select a House'}</option>
+                                {/* Only while nothing is chosen: with a default in place, "" means
+                                    "use the default", so a permanent blank option would be a control
+                                    that visibly does nothing when picked. */}
+                                {!effectiveHouseId && <option value="">{housesLoading ? 'Loading...' : 'Select a House'}</option>}
                                 {houses.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
                             </select>
                             {housesLoading && <Loader2 className="absolute right-3 top-3 animate-spin text-gray-400" size={16} />}
@@ -313,7 +321,7 @@ export const ReportGenPage = () => {
                         onClick={refetch} 
                         className="w-full py-3 flex items-center justify-center gap-2" 
                         style={{ backgroundColor: primaryColorHex }} 
-                        disabled={isLoading || !filters.houseId}
+                        disabled={isLoading || !effectiveHouseId}
                     >
                         {isLoading && <Loader2 className="animate-spin" size={18} />}
                         Generate
@@ -335,7 +343,7 @@ export const ReportGenPage = () => {
                         <div className="px-6 py-4 flex justify-between items-center bg-white">
                             <h3 className="font-bold text-gray-700">Monthly Breakdown</h3>
                             <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                                <User size={14}/> {selectedOwner?.name || user?.name}
+                                <User size={14}/> {effectiveOwner?.name || user?.name}
                             </span>
                         </div>
                         <Table className='mt-0' columns={columns} data={reportData.monthly_breakdown} hoverable={true} />

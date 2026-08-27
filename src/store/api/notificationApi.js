@@ -26,6 +26,11 @@ import { baseApi } from './baseApi';
  * defaults, an unread-only view…). A mutation has to touch all of them, or the badge and the
  * list disagree until something refetches. Patching by cached args covers every live entry.
  */
+// The reference to `notificationApi` below is genuinely circular and cannot be ordered away:
+// these helpers are called from inside the endpoint lifecycles that *define* notificationApi,
+// so whichever half is written first refers forward to the other. It is safe because nothing
+// here runs until a query or mutation fires, long after the module has finished evaluating.
+/* eslint-disable no-use-before-define */
 const patchEveryList = (dispatch, getState, recipe) => {
   const cachedArgs = notificationApi.util.selectCachedArgsForQuery(getState(), 'getNotifications');
 
@@ -36,6 +41,7 @@ const patchEveryList = (dispatch, getState, recipe) => {
 
 const patchUnreadCount = (dispatch, recipe) =>
   dispatch(notificationApi.util.updateQueryData('getUnreadCount', undefined, recipe));
+/* eslint-enable no-use-before-define */
 
 /** Runs the patches, fires the request, and undoes everything if the server rejects it. */
 const optimistically = async ({ dispatch, getState, queryFulfilled }, listRecipe, countRecipe) => {

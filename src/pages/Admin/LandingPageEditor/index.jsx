@@ -7,6 +7,7 @@ import {
 } from '../../../store/api/landingApi';
 import { toast } from 'react-toastify';
 import {
+  ChevronLeft,
   ChevronRight,
   Save,
   RotateCcw,
@@ -94,10 +95,14 @@ const LinkListEditor = ({ label, items = [], onChange }) => {
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
       {items.map((item, idx) => (
-        <div key={idx} className="flex items-center gap-2 mb-2">
-          <input type="text" placeholder="Label" className="w-1/3 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.label ?? ''} onChange={(e) => update(idx, 'label', e.target.value)} />
-          <input type="text" placeholder="href" className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.href ?? ''} onChange={(e) => update(idx, 'href', e.target.value)} />
-          <button onClick={() => remove(idx)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
+        // Label and href stack on a phone. Side by side they were w-1/3 and the remainder of
+        // a ~300px column — roughly 90px and 160px — which is not enough of a URL to read.
+        <div key={idx} className="flex items-start gap-2 mb-2">
+          <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input type="text" placeholder="Label" className="sm:col-span-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.label ?? ''} onChange={(e) => update(idx, 'label', e.target.value)} />
+            <input type="text" placeholder="href" className="sm:col-span-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.href ?? ''} onChange={(e) => update(idx, 'href', e.target.value)} />
+          </div>
+          <button onClick={() => remove(idx)} className="shrink-0 p-1.5 mt-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -142,9 +147,9 @@ const HeroEditor = ({ data, onChange }) => {
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">Stats</label>
         {(data.stats || []).map((stat, idx) => (
-          <div key={idx} className="flex gap-2 mb-2">
-            <input type="text" placeholder="Value (e.g. 100+)" className="w-1/3 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={stat.value ?? ''} onChange={(e) => updateStat(idx, 'value', e.target.value)} />
-            <input type="text" placeholder="Label" className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={stat.label ?? ''} onChange={(e) => updateStat(idx, 'label', e.target.value)} />
+          <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+            <input type="text" placeholder="Value (e.g. 100+)" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={stat.value ?? ''} onChange={(e) => updateStat(idx, 'value', e.target.value)} />
+            <input type="text" placeholder="Label" className="sm:col-span-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={stat.label ?? ''} onChange={(e) => updateStat(idx, 'label', e.target.value)} />
           </div>
         ))}
       </div>
@@ -434,9 +439,9 @@ const TestimonialsEditor = ({ data, onChange }) => {
               </button>
             </div>
             <textarea placeholder="Quote text" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-y min-h-[80px] mb-2 focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.quote ?? ''} onChange={(e) => updateItem(idx, 'quote', e.target.value)} />
-            <div className="flex gap-2">
-              <input type="text" placeholder="Name" className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.name ?? ''} onChange={(e) => updateItem(idx, 'name', e.target.value)} />
-              <input type="text" placeholder="Role / Location" className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.role ?? ''} onChange={(e) => updateItem(idx, 'role', e.target.value)} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input type="text" placeholder="Name" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.name ?? ''} onChange={(e) => updateItem(idx, 'name', e.target.value)} />
+              <input type="text" placeholder="Role / Location" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.role ?? ''} onChange={(e) => updateItem(idx, 'role', e.target.value)} />
               <input type="number" min="1" max="5" placeholder="Rating" className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={item.rating ?? 5} onChange={(e) => updateItem(idx, 'rating', Number(e.target.value))} />
             </div>
           </div>
@@ -491,6 +496,21 @@ const SECTION_EDITORS = {
 
 const SECTION_ORDER = ['nav', 'hero', 'why', 'features', 'personas', 'how_it_works', 'pricing', 'demo_slider', 'testimonials', 'cta', 'footer'];
 
+/** Kept out of the strip's own overflow so it stays pinned while the tabs move under it. */
+const ScrollArrow = ({ direction, disabled, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    aria-label={direction === 'left' ? 'Scroll sections left' : 'Scroll sections right'}
+    className={`lg:hidden shrink-0 px-1.5 flex items-center text-gray-400 bg-white transition-opacity ${
+      direction === 'left' ? 'border-r' : 'border-l'
+    } border-gray-100 ${disabled ? 'opacity-25 cursor-default' : 'hover:text-gray-700'}`}
+  >
+    {direction === 'left' ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+  </button>
+);
+
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 const LandingPageEditor = () => {
@@ -499,6 +519,31 @@ const LandingPageEditor = () => {
   const [resetSection, { isLoading: isResetting }] = useResetLandingSectionMutation();
 
   const [activeSection, setActiveSection] = useState('hero');
+
+  /**
+   * Whether the mobile tab strip has anything left to scroll to, in each direction.
+   *
+   * Measured from a ref callback rather than an effect, so the arrows are already correct on
+   * the first paint — and so a strip that happens to fit (a wide tablet) shows two dead
+   * arrows for a frame. The state update bails out when nothing changed; without that, the
+   * inline ref callback re-runs on every render and a fresh object each time would loop.
+   */
+  const tabStripRef = useRef(null);
+  const [canScroll, setCanScroll] = useState({ left: false, right: false });
+
+  const measureTabs = (el) => {
+    if (!el) return;
+    // 4px of slack: sub-pixel widths mean scrollLeft rarely reaches an exact end.
+    const left = el.scrollLeft > 4;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+    setCanScroll((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
+  };
+
+  // Roughly a screenful less a tab, so the tab at the edge stays visible as an anchor.
+  const scrollTabs = (dir) => {
+    const el = tabStripRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: 'smooth' });
+  };
   // edits: only stores sections the user has modified locally (overrides server data)
   const [edits, setEdits] = useState({});
 
@@ -537,68 +582,95 @@ const LandingPageEditor = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-white border-r border-gray-200 flex flex-col">
-        <div className="px-4 py-5 border-b border-gray-200">
+    /* One pane below lg, two panes at lg and up.
+       The height is the editor's own scrollport so the Save button never scrolls away —
+       100dvh, not 100vh, because on a phone 100vh is the height with the browser chrome
+       hidden, which puts the bottom of the form under the address bar until you scroll.
+       8rem covers the app's fixed 64px header plus Layout's p-4 above and below. */
+    <div className="flex flex-col lg:flex-row h-[calc(100dvh-8rem)] bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+      {/* Section picker: a rail on desktop, a scrolling strip of tabs on mobile. */}
+      <aside className="lg:w-56 shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col">
+        {/* The top bar already names the section being edited, and vertical space is the
+            scarce thing on a phone — so this heading is desktop-only. */}
+        <div className="hidden lg:block px-4 py-5 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Layout className="w-5 h-5 text-primary" />
             <h2 className="font-bold text-gray-800 text-sm">Landing Page</h2>
           </div>
           <p className="text-xs text-gray-400 mt-1">Edit page sections</p>
         </div>
-        <nav className="flex-1 overflow-y-auto py-2">
-          {SECTION_ORDER.map((key) => {
-            const { label } = SECTION_EDITORS[key];
-            const isActive = activeSection === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setActiveSection(key)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
-                  isActive
-                    ? 'bg-primary-50 text-primary font-semibold border-r-2 border-primary'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                {label}
-                {isActive && <ChevronRight className="w-4 h-4" />}
-              </button>
-            );
-          })}
-        </nav>
+        {/* Arrows flank the strip on mobile. Without them the only clue that eight more
+            sections exist off-screen is a swipe nobody knows to try — a scrollbar is not
+            drawn on touch until you are already scrolling. Hidden at lg, where the rail is
+            a plain vertical list. */}
+        <div className="flex items-stretch lg:flex-1 lg:min-h-0">
+          <ScrollArrow direction="left" disabled={!canScroll.left} onClick={() => scrollTabs(-1)} />
+
+          <nav
+            ref={(el) => { tabStripRef.current = el; measureTabs(el); }}
+            onScroll={(e) => measureTabs(e.currentTarget)}
+            className="flex-1 min-w-0 flex lg:flex-col lg:h-full overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto lg:py-2"
+          >
+            {SECTION_ORDER.map((key) => {
+              const { label } = SECTION_EDITORS[key];
+              const isActive = activeSection === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActiveSection(key)}
+                  // Eleven sections do not fit across a phone, so the strip scrolls:
+                  // shrink-0 + whitespace-nowrap keep each tab at its natural width instead
+                  // of letting flex squeeze eleven labels into 360px.
+                  className={`shrink-0 whitespace-nowrap flex items-center justify-between gap-1 px-4 py-2.5 text-sm transition-colors border-b-2 lg:border-b-0 lg:border-r-2 lg:w-full ${
+                    isActive
+                      ? 'bg-primary-50 text-primary font-semibold border-primary'
+                      : 'text-gray-600 border-transparent hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  {label}
+                  {isActive && <ChevronRight className="hidden lg:block w-4 h-4" />}
+                </button>
+              );
+            })}
+          </nav>
+
+          <ScrollArrow direction="right" disabled={!canScroll.right} onClick={() => scrollTabs(1)} />
+        </div>
       </aside>
 
       {/* Editor area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* min-w-0: a flex child defaults to min-width:auto, so without this the widest input
+          inside would push the column past the viewport rather than letting it shrink. */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-          <div>
+        <div className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+          <div className="min-w-0">
             <h1 className="font-bold text-gray-900 text-base">{SECTION_EDITORS[activeSection]?.label}</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Changes apply to the public landing page immediately after saving</p>
+            {/* Explanatory, not essential — it would take two lines of a phone screen. */}
+            <p className="hidden sm:block text-xs text-gray-400 mt-0.5">Changes apply to the public landing page immediately after saving</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={handleReset}
               disabled={isResetting}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
-              <RotateCcw className="w-4 h-4" />
-              Reset to defaults
+              <RotateCcw className="w-4 h-4 shrink-0" />
+              Reset<span className="hidden md:inline">&nbsp;to defaults</span>
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50 shadow-sm"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50 shadow-sm"
             >
-              <Save className="w-4 h-4" />
-              {isSaving ? 'Saving...' : 'Save changes'}
+              <Save className="w-4 h-4 shrink-0" />
+              {isSaving ? 'Saving...' : <>Save<span className="hidden md:inline">&nbsp;changes</span></>}
             </button>
           </div>
         </div>
 
         {/* Scrollable form area */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
           {isLoading ? (
             <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading section data...</div>
           ) : Editor ? (

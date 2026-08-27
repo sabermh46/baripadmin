@@ -172,6 +172,9 @@ const OwnersWithoutHouse = ({ data, t }) => {
 };
 
 const SystemDashboard = () => {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+
   const { data, error, isLoading, isFetching, refetch } = useGetDashboardDataQuery(undefined, {
     // Always fetch on mount, follow the tab back when it regains focus, and poll while it is
     // actually being looked at. skipPollingIfUnfocused means a dashboard left open in a
@@ -309,9 +312,6 @@ const SystemDashboard = () => {
 
     doc.save(`System_Dashboard_Report_${new Date().getTime()}.pdf`);
 };
-
-  const { t } = useTranslation();
-  const { user } = useAuth();
 
   const ops = data?.operations ?? {};
   const platform = data?.platform ?? {};

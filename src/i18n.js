@@ -1168,6 +1168,51 @@ const resources = {
       "badge_no_active_subscription": "{{count}} house owners with no active subscription (never started or lapsed past grace)",
       "badge_awaiting_verification": "{{count}} payments marked paid by the owner, awaiting your verification",
 
+      // Loan cards
+      "on_track": "On track",
+      "slightly_behind": "Slightly behind",
+      "behind_schedule": "Behind schedule",
+      "term_elapsed": "Term elapsed",
+      "loan_fully_repaid": "Fully repaid",
+      "no_end_date": "no end date",
+      "month": "month",
+      "of": "of",
+      // {{n}}, not {{count}}: i18next treats `count` as a plural selector and looks for
+      // payments_recorded_one / _other, which Bengali does not split the same way.
+      "payments_recorded": "{{n}} payments",
+
+      // App fee details + timeline
+      "invoice": "Invoice",
+      "app_fee_details": "App fee details",
+      "billing": "Billing",
+      "billing_period": "Billing period",
+      "houses_billed": "Houses billed",
+      "expected_amount": "Expected amount",
+      "subscription_length": "Subscription length",
+      "grace_offset": "Offset",
+      // Interpolated rather than pluralised with `count`: i18next would look for n_days_one /
+      // n_days_other and Bengali does not split the same way, so a plain placeholder is both
+      // correct and one fewer key per language.
+      "n_days": "{{days}} days",
+      "claimed_amount": "Claimed amount",
+      "verified_by": "Verified by",
+      "verified_at": "Verified at",
+      "raised_by": "Raised by",
+      "payment_proof": "Payment proof",
+      "open_invoice_file": "Open invoice file",
+      "not_recorded": "Not recorded",
+      "invoice_timeline": "Timeline",
+      "invoice_raised": "Invoice raised",
+      "coverage_begins": "Coverage begins",
+      "coverage_ends": "Coverage ends",
+      "owner_reported_payment": "Owner reported payment",
+      "awaiting_admin_verification": "Waiting for an admin to verify",
+      "claim_sent_back": "Claim sent back",
+      "money_received": "Recorded as received",
+      "in_progress": "In progress",
+      "upcoming": "Upcoming",
+      "nothing_recorded_yet": "Nothing recorded yet",
+
     }
   },
   bn: {
@@ -2333,6 +2378,46 @@ const resources = {
       "view_app_fee": "অ্যাপ ফি দেখুন",
       "badge_no_active_subscription": "{{count}} জন বাড়িওয়ালার কোনো সক্রিয় সাবসক্রিপশন নেই",
       "badge_awaiting_verification": "{{count}}টি পেমেন্ট বাড়িওয়ালা পরিশোধিত বলেছেন, আপনার যাচাইয়ের অপেক্ষায়",
+
+      // Loan cards
+      "on_track": "ঠিক আছে",
+      "slightly_behind": "কিছুটা পিছিয়ে",
+      "behind_schedule": "পিছিয়ে আছে",
+      "term_elapsed": "মেয়াদ অতিক্রান্ত",
+      "loan_fully_repaid": "সম্পূর্ণ পরিশোধিত",
+      "no_end_date": "শেষ তারিখ নেই",
+      "month": "মাস",
+      "of": "এর মধ্যে",
+      "payments_recorded": "{{n}}টি পেমেন্ট",
+
+      // App fee details + timeline
+      "invoice": "চালান",
+      "app_fee_details": "অ্যাপ ফি বিবরণ",
+      "billing": "বিলিং",
+      "billing_period": "বিলিং সময়কাল",
+      "houses_billed": "বিলে অন্তর্ভুক্ত বাড়ি",
+      "expected_amount": "প্রত্যাশিত পরিমাণ",
+      "subscription_length": "সাবস্ক্রিপশনের মেয়াদ",
+      "grace_offset": "অফসেট",
+      "n_days": "{{days}} দিন",
+      "claimed_amount": "দাবিকৃত পরিমাণ",
+      "verified_by": "যাচাই করেছেন",
+      "verified_at": "যাচাইয়ের সময়",
+      "raised_by": "তৈরি করেছেন",
+      "payment_proof": "পেমেন্টের প্রমাণ",
+      "open_invoice_file": "চালান ফাইল খুলুন",
+      "not_recorded": "রেকর্ড করা হয়নি",
+      "invoice_timeline": "সময়রেখা",
+      "invoice_raised": "চালান তৈরি হয়েছে",
+      "coverage_begins": "মেয়াদ শুরু",
+      "coverage_ends": "মেয়াদ শেষ",
+      "owner_reported_payment": "বাড়িওয়ালা পেমেন্ট জানিয়েছেন",
+      "awaiting_admin_verification": "অ্যাডমিনের যাচাইয়ের অপেক্ষায়",
+      "claim_sent_back": "দাবি ফেরত পাঠানো হয়েছে",
+      "money_received": "প্রাপ্তি হিসেবে রেকর্ড হয়েছে",
+      "in_progress": "চলমান",
+      "upcoming": "আসন্ন",
+      "nothing_recorded_yet": "এখনো কিছু রেকর্ড হয়নি",
 
     }
   }

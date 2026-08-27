@@ -140,6 +140,11 @@ const EnhancedMetadataInput = ({
     notifyChange(newFixedValues, structure);
   };
 
+  const getParentType = (path) => {
+    const parent = structure.find(item => item.path === path);
+    return parent ? parent.type : 'object';
+  };
+
   const addField = (parentPath = '', type = 'primitive') => {
     const newItem = {
       path: parentPath ? `${parentPath}.newField` : 'newField',
@@ -168,11 +173,6 @@ const EnhancedMetadataInput = ({
     setStructure([...structure, newItem]);
     setEditingPath(newItem.path);
     setEditValue('');
-  };
-
-  const getParentType = (path) => {
-    const parent = structure.find(item => item.path === path);
-    return parent ? parent.type : 'object';
   };
 
   const handleEditStart = (path, currentValue) => {

@@ -103,7 +103,15 @@ const ViewRenterModal = ({ isOpen, onClose, renterId }) => {
                   </div>
                 </div>
                 
-                {/* NID Images */}
+                {/* NID Images.
+                    These rendered nothing for every renter in the system, because the two
+                    columns behind them were never written: both renter forms posted the files
+                    as multipart and the API discarded them silently. The upload is stored
+                    now, so this branch is finally reachable. */}
+                {!renter.nidFrontImageUrl && !renter.nidBackImageUrl && (
+                  <p className="text-xs text-gray-400 italic">No NID images uploaded</p>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {renter.nidFrontImageUrl && (
                   <div className="border rounded-lg p-3 bg-white">
