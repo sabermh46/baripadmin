@@ -25,6 +25,7 @@ import push from "../../services/push";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../common/LanguageSwitcher";
 import ProtectedImage from "../common/ProtectedImage";
+import { clearOffline } from '../../utils/offlineCache';
 
 /**
  * Hoisted to module scope, and `icon` holds the component *reference* rather than a
@@ -241,6 +242,9 @@ export const SideNav = ({ onClicked }) => {
     try {
       await push.unsubscribeUser();
       await logoutMutation().unwrap();
+      // A saved dashboard is one household's finances. The next person to sign in on a
+      // shared phone must not be shown it.
+      clearOffline();
       dispatch(logoutAction());
       navigate('/login');
     } catch (error) {

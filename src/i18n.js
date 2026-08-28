@@ -1168,7 +1168,34 @@ const resources = {
       "badge_no_active_subscription": "{{count}} house owners with no active subscription (never started or lapsed past grace)",
       "badge_awaiting_verification": "{{count}} payments marked paid by the owner, awaiting your verification",
 
-      // Dashboard quick actions
+      "amount_received": "Amount received",
+      // Offline fallback
+      "offline_showing_saved": "You are offline — showing your saved copy",
+      "could_not_refresh_showing_saved": "Could not reach the server — showing your saved copy",
+      "last_updated_at": "Last updated {{when}}",
+      "offline_no_saved_data": "You are offline, and there is nothing saved for this screen yet.",
+      "could_not_load_dashboard": "The dashboard could not be loaded.",
+      "try_again": "Try again",
+
+      // Dashboard figures that were English inside a fully Bengali screen
+      "n_active_inactive": "{{active}} active, {{inactive}} inactive",
+      "n_occupied_vacant": "{{occupied}} occupied, {{vacant}} vacant",
+      "assigned_to_your_houses": "Assigned to your houses",
+      "occupancy_percent": "Occupancy: {{percent}}%",
+      "percent_collected": "{{percent}}% collected",
+      "percent_remaining": "{{percent}}% remaining",
+
+      // Text size
+      "text_size": "Text size",
+      "text_size_hint": "Makes everything larger or smaller, not just the words",
+      "text_size_small": "Small",
+      "text_size_normal": "Normal",
+      "text_size_large": "Large",
+      "text_size_larger": "Larger",
+
+      // Billing month picker
+      "billing_for_month": "Billing for",
+      "no_bill_yet_for_month": "There is no bill for that month yet — one will be created.",
       "quick_actions": "Quick actions",
       "record_loan_payment": "Loan paid?",
       "or_add_a_loan": "Record a payment, or add a loan",
@@ -2399,7 +2426,34 @@ const resources = {
       "badge_no_active_subscription": "{{count}} জন বাড়িওয়ালার কোনো সক্রিয় সাবসক্রিপশন নেই",
       "badge_awaiting_verification": "{{count}}টি পেমেন্ট বাড়িওয়ালা পরিশোধিত বলেছেন, আপনার যাচাইয়ের অপেক্ষায়",
 
-      // Dashboard quick actions
+      "amount_received": "যত টাকা পাওয়া গেছে",
+      // Offline fallback
+      "offline_showing_saved": "আপনি অফলাইন — সংরক্ষিত কপি দেখানো হচ্ছে",
+      "could_not_refresh_showing_saved": "সার্ভারে পৌঁছানো যায়নি — সংরক্ষিত কপি দেখানো হচ্ছে",
+      "last_updated_at": "সর্বশেষ হালনাগাদ {{when}}",
+      "offline_no_saved_data": "আপনি অফলাইন, আর এই পাতার কোনো সংরক্ষিত কপি এখনো নেই।",
+      "could_not_load_dashboard": "ড্যাশবোর্ড লোড করা যায়নি।",
+      "try_again": "আবার চেষ্টা করুন",
+
+      // Dashboard figures that were English inside a fully Bengali screen
+      "n_active_inactive": "{{active}}টি সক্রিয়, {{inactive}}টি নিষ্ক্রিয়",
+      "n_occupied_vacant": "{{occupied}}টি ভাড়ায়, {{vacant}}টি খালি",
+      "assigned_to_your_houses": "আপনার বাড়িগুলোতে নিয়োজিত",
+      "occupancy_percent": "ভাড়ায় আছে: {{percent}}%",
+      "percent_collected": "{{percent}}% আদায়",
+      "percent_remaining": "{{percent}}% বাকি",
+
+      // Text size
+      "text_size": "লেখার আকার",
+      "text_size_hint": "শুধু লেখা নয়, পুরো স্ক্রিনই ছোট-বড় হবে",
+      "text_size_small": "ছোট",
+      "text_size_normal": "স্বাভাবিক",
+      "text_size_large": "বড়",
+      "text_size_larger": "আরো বড়",
+
+      // Billing month picker
+      "billing_for_month": "যে মাসের বিল",
+      "no_bill_yet_for_month": "ওই মাসের কোনো বিল এখনো নেই — নতুন বিল তৈরি হবে।",
       "quick_actions": "দ্রুত কাজ",
       "record_loan_payment": "ঋণ পরিশোধ?",
       "or_add_a_loan": "পেমেন্ট লিখুন, বা নতুন ঋণ যোগ করুন",

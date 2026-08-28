@@ -10,6 +10,9 @@ import Layout from '../components/Layout';
 const LoginPage            = lazy(() => import('../pages/Login'));
 const SignupPage           = lazy(() => import('../pages/Signup'));
 const Dashboard            = lazy(() => import('../pages/Dashboard'));
+// Eager on purpose — it IS the fallback while the lazy chunk above downloads, so it
+// cannot live inside that chunk.
+import DashboardSkeleton from '../components/houseowner/DashboardSkeleton';
 const ProfilePage          = lazy(() => import('../pages/Profile'));
 const AuthSuccess          = lazy(() => import('../pages/AuthSuccess'));
 const PublicHome           = lazy(() => import('../pages/PublicHome'));
@@ -202,7 +205,19 @@ const AppRoutes = () => {
             <Layout />
           </ProtectedRoute>
         }>
-          <Route path="dashboard" element={<Dashboard />} />
+          {/* Its own Suspense, with a skeleton instead of Layout's generic spinner.
+              Dashboard is lazy, so on a cold load the chunk downloads BEFORE any component
+              of ours renders — and until that finishes the only thing on screen is the
+              fallback. Leaving it as ContentLoader meant a spinner was guaranteed to be the
+              first thing you saw, whatever the page itself did afterwards. */}
+          <Route
+            path="dashboard"
+            element={
+              <Suspense fallback={<DashboardSkeleton />}>
+                <Dashboard />
+              </Suspense>
+            }
+          />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="notification" element={<NotificationPage />} />
           <Route path="access-denied" element={<AccessDeniedPage />} />

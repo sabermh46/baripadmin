@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { setCredentials, logout, setLoading } from '../../store/slices/authSlice';
+import { clearOffline } from '../../utils/offlineCache';
 
 // Renew this long before the token actually expires, so a request is never sent with a
 // token that dies in flight.
@@ -80,6 +81,7 @@ export function AuthInitializer() {
           const status = err?.response?.status;
           if (status === 401 || status === 403) {
             clearTimers();
+            clearOffline();
             dispatch(logout());
             return;
           }

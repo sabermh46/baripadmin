@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, Info, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function RentCollectionProgress({
   month = new Date().getMonth() + 1,
@@ -7,6 +8,8 @@ export default function RentCollectionProgress({
   onMonthChange = () => {},
   maxDate = { month: new Date().getMonth() + 1, year: new Date().getFullYear() }
 }) {
+  const { t } = useTranslation();
+
   const monthName = new Date(year, month - 1).toLocaleString("default", {
     month: "long",
   });
@@ -97,10 +100,16 @@ export default function RentCollectionProgress({
           return (
             <div key={house.houseId || idx} className="relative flex gap-2 items-center">
               {/* House Name */}
-              <div className="text-[var(--color-text)] font-medium line-clamp-1 mb-1 max-w-[100px] w-[80px] md:max-w-[250px] lg:max-w-[300px] font-poppins text-sm md:text-base">
-                {house.name && house.name.length > 10 
-                  ? house.name.slice(0, 8) + "..." 
-                  : house.name || `House ${idx + 1}`}
+              {/* Truncated in CSS only. It used to be cut twice: slice(0, 8) threw the
+                  characters away in JavaScript before CSS ever got a say, so "Sabers Kutir"
+                  read "Sabers..." however much room the row had — and the row had plenty,
+                  because w-[80px] pinned the width and no breakpoint lifted it (only max-w
+                  grew, and max-width cannot widen an element fixed at 80px). */}
+              <div
+                className="text-[var(--color-text)] font-medium truncate mb-1 w-20 md:w-40 lg:w-56 font-poppins text-sm md:text-base"
+                title={house.name || undefined}
+              >
+                {house.name || `House ${idx + 1}`}
               </div>
 
               {/* Progress Bar */}
@@ -112,7 +121,7 @@ export default function RentCollectionProgress({
                   style={{ width: `${collectedPercent}%` }}
                 >
                   {collectedPercent > 50
-                    ? `${collectedPercent}% Collected`
+                    ? t('percent_collected', { percent: collectedPercent })
                     : collectedPercent > 0 && collectedPercent !== 50
                     ? `${collectedPercent}%`
                     : ""}
@@ -126,7 +135,7 @@ export default function RentCollectionProgress({
                     style={{ width: `${remainingPercent}%` }}
                   >
                     {collectedPercent < 50
-                      ? `${remainingPercent}% Remaining`
+                      ? t('percent_remaining', { percent: remainingPercent })
                       : remainingPercent > 0 && collectedPercent !== 50
                       ? `${remainingPercent}%`
                       : ""}

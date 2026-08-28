@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import {
-  Bell, BellOff, BellRing, Calendar, CheckCircle2, KeyRound, Link2, Mail, Send, ShieldAlert, ShieldCheck, UserCog,
+  Bell, BellOff, BellRing, Calendar, CheckCircle2, KeyRound, Link2, Mail, Send, ShieldAlert, ShieldCheck, Type, UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../hooks';
 import { useLinkGoogleAccountMutation, useSetPasswordMutation, useUploadAvatarMutation } from '../../store/api/authApi';
@@ -15,6 +15,7 @@ import { apiErrorMessage } from '../../utils/apiError';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 import ProfileHero from './ProfileHero';
 import RoleImpact from './RoleImpact';
+import { FONT_SCALES, readFontScale, writeFontScale } from '../../utils/fontScale';
 
 const Card = ({ icon: Icon, title, subtitle, children }) => (
   <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -53,6 +54,7 @@ const inputClass =
 const ProfilePage = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const [fontScale, setFontScale] = useState(readFontScale);
   const dispatch = useDispatch();
 
   const [setPasswordMutation, { isLoading: isSettingPassword }] = useSetPasswordMutation();
@@ -229,6 +231,33 @@ const ProfilePage = () => {
             checkPushStatus() ran on every mount, woke the service worker, and displayed
             nothing. The controls are the ones that were already written; they simply had no
             markup to live in. */}
+        {/* Applied by scaling the root font size, so the boxes move with the words —
+            see utils/fontScale.js. Written on click rather than behind a save button:
+            the effect is the page you are looking at, so a preview IS the confirmation. */}
+        <Card icon={Type} title={t('text_size')} subtitle={t('text_size_hint')}>
+          <div className="grid grid-cols-4 gap-2">
+            {Object.keys(FONT_SCALES).map((key) => {
+              const active = fontScale === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setFontScale(writeFontScale(key))}
+                  aria-pressed={active}
+                  className={`rounded-lg border py-3 transition-colors ${
+                    active
+                      ? 'border-primary bg-primary/5 text-primary font-semibold'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {/* Each button previews its own size — the label is the sample. */}
+                  <span style={{ fontSize: `${FONT_SCALES[key].px}px` }}>{t(`text_size_${key}`)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
         <Card icon={Bell} title={t('notifications')} subtitle={t('push_notifications_hint')}>
           {pushStatus === 'unsupported' ? (
             <p className="text-sm text-gray-500">{t('push_not_supported')}</p>

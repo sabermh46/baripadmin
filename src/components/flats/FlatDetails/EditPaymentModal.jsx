@@ -46,14 +46,50 @@ const EditPaymentModal = ({ open, payment, onClose, onSave, isSaving }) => {
 
   if (!open || !payment) return null;
 
+  const invoiceTotal = Number(payment.amount) || 0;
+
+  /**
+   * The status drives the amount, because those two fields can contradict each other and the
+   * status is the one the user deliberately chose from a dropdown.
+   *
+   * This form used to post both fields untouched on every save, so flipping the dropdown to
+   * Pending while the box still read 20,000 sent "unpaid, and here is the 20,000" — and the
+   * row stored exactly that. The flat Overview then reported it as collected, because it
+   * was, according to the row.
+   *
+   *   pending / cancelled  nothing has been paid -> 0, and the box is disabled to say so
+   *   paid                 settled in full       -> the invoice total
+   *   partial              the amount IS the question, so it stays editable
+   */
+  const amountForStatus = (status, current) => {
+    if (status === 'pending' || status === 'cancelled') return 0;
+    if (status === 'paid') return invoiceTotal;
+    return current;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+
+    setForm((prev) => {
+      if (name !== 'status') return { ...prev, [name]: value };
+
+      return {
+        ...prev,
+        status: value,
+        paid_amount: amountForStatus(value, prev.paid_amount),
+        // A payment date on an unpaid invoice reads as "unpaid, paid on the 4th".
+        paid_date: value === 'pending' || value === 'cancelled' ? '' : prev.paid_date,
+      };
+    });
   };
+
+  const amountLocked = form.status === 'pending' || form.status === 'cancelled' || form.status === 'paid';
 
   const handleSave = () => {
     onSave({
-      paid_amount: parseFloat(form.paid_amount) || 0,
+      // Derived at the last moment as well, so the request can never carry a figure the
+      // chosen status contradicts.
+      paid_amount: amountForStatus(form.status, parseFloat(form.paid_amount) || 0) || 0,
       payment_method: form.payment_method,
       transaction_id: form.transaction_id || undefined,
       notes: form.notes || undefined,
@@ -85,7 +121,7 @@ const EditPaymentModal = ({ open, payment, onClose, onSave, isSaving }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-subdued mb-1">
-                {t('amount') || 'Amount'} *
+                {t('amount_received')} *
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-subdued font-google-sans-code">৳</span>
@@ -96,7 +132,10 @@ const EditPaymentModal = ({ open, payment, onClose, onSave, isSaving }) => {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="w-full pl-8 pr-3 py-2 border border-subdued/30 rounded-lg bg-white text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  disabled={amountLocked}
+                  className={`w-full pl-8 pr-3 py-2 border border-subdued/30 rounded-lg text-text focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                    amountLocked ? 'bg-gray-100 text-subdued cursor-not-allowed' : 'bg-white'
+                  }`}
                 />
               </div>
             </div>
@@ -183,9 +222,12 @@ const EditPaymentModal = ({ open, payment, onClose, onSave, isSaving }) => {
           >
             {t('cancel') || 'Cancel'}
           </button>
+          {/* The guard is `=== ''`, not `!form.paid_amount`: zero is a legitimate value now —
+              it is what Pending and Cancelled mean — and a falsy check made those two
+              statuses impossible to save. */}
           <button
             onClick={handleSave}
-            disabled={isSaving || !form.paid_amount}
+            disabled={isSaving || form.paid_amount === '' || Number.isNaN(Number(form.paid_amount))}
             className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             <Save size={16} />

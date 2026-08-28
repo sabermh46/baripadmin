@@ -108,6 +108,49 @@ const paymentSchema = z.object({
   send_pdf_attachment: z.boolean().default(true),
 });
 
+/**
+ * Which month is being billed. Always visible, always overridable.
+ *
+ * Defaulted rather than blank: on the ordinary "the renter paid me" path the right answer is
+ * the one already computed, and making the owner choose it every time would be a new way to
+ * get it wrong. It is editable because the default cannot serve the case it was never built
+ * for — recording a month from before the owner started using the app, while a later bill is
+ * already open.
+ */
+const BillingMonthPicker = ({ value, onChange, t }) => {
+  const [y, m] = (value || '').split('-');
+  const year = Number(y) || new Date().getFullYear();
+  const month = Number(m) || new Date().getMonth() + 1;
+
+  // Wide enough for history and for billing ahead, which is what the December case was.
+  const thisYear = new Date().getFullYear();
+  const years = [];
+  for (let i = thisYear - 5; i <= thisYear + 1; i += 1) years.push(i);
+
+  const set = (nextMonth, nextYear) =>
+    onChange(`${nextYear}-${String(nextMonth).padStart(2, '0')}`);
+
+  const cls = 'px-3 py-2 border border-gray-300 rounded-lg bg-white text-base focus:ring-2 focus:ring-primary outline-none';
+
+  return (
+    <div className="mt-3">
+      <span className="block text-sm font-medium text-gray-700 mb-1">{t('billing_for_month')}</span>
+      <div className="flex gap-2">
+        <select className={cls} value={month} onChange={(e) => set(Number(e.target.value), year)}>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((mm) => (
+            <option key={mm} value={mm}>
+              {new Date(2000, mm - 1, 1).toLocaleString(undefined, { month: 'long' })}
+            </option>
+          ))}
+        </select>
+        <select className={cls} value={year} onChange={(e) => set(month, Number(e.target.value))}>
+          {years.map((yy) => <option key={yy} value={yy}>{yy}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+};
+
 const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePayments = [], rentState = {} }) => {
   const { t } = useTranslation();
   const [lateFee, setLateFee] = useState(0);
@@ -116,6 +159,16 @@ const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePa
   const [useAdvancePayment, setUseAdvancePayment] = useState(false);
   const [availableAdvance, setAvailableAdvance] = useState(0);
   const [renterPaidRemaining, setRenterPaidRemaining] = useState(0);
+  /**
+   * Which month this call is about. null = "whatever the default rule picks", which is the
+   * oldest bill still open, or the payment date's month when nothing is open.
+   *
+   * It is a choice now because the default rule could not be overridden. Any open bill
+   * captured every payment: an owner with a bill already raised for December could not
+   * record July at all, and was not told — the date picker still said July, the request
+   * still returned 200, and the money landed on December.
+   */
+  const [billingMonth, setBillingMonth] = useState(null);
 
   // Invoice preview state
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -211,6 +264,14 @@ const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePa
   const plan = useMemo(() => {
     const owed = Number(rentState?.outstanding ?? 0);
 
+    // An explicitly chosen month overrides the default. The client knows the outstanding
+    // bill's month but not every other month's state, so it can only say for certain that
+    // the chosen month IS the open one; anything else is described as a new bill, and the
+    // server refuses by name if that month turns out to be settled already.
+    if (billingMonth && billingMonth !== rentState?.forMonth) {
+      return { mode: 'creates-new', month: billingMonth, owed: 0, overdueDays: 0, chosen: true };
+    }
+
     if (owed > 0 && rentState?.forMonth) {
       return {
         mode: 'settles-existing',
@@ -226,8 +287,8 @@ const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePa
       ? null
       : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
-    return { mode: 'creates-new', month, owed: 0, overdueDays: 0 };
-  }, [rentState?.outstanding, rentState?.forMonth, rentState?.daysOverdue, paidDate]);
+    return { mode: 'creates-new', month, owed: 0, overdueDays: 0, chosen: false };
+  }, [billingMonth, rentState?.outstanding, rentState?.forMonth, rentState?.daysOverdue, paidDate]);
 
   const planMonthLabel = useMemo(() => monthNameOf(plan.month), [plan.month]);
 
@@ -329,6 +390,12 @@ const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePa
         use_advance_payment: useAdvancePayment,
         renter_paid_remaining: useAdvancePayment ? parseFloat(renterPaidRemaining || 0) : 0,
         send_pdf_attachment: formData.send_pdf_attachment,
+        // Numeric month/year, the shape the recorder has always accepted. Sent from
+        // plan.month rather than only when the owner touches the picker, so what the banner
+        // says and what the server bills are the same thing by construction.
+        ...(plan.month
+          ? { for_month: Number(plan.month.slice(5, 7)), for_year: Number(plan.month.slice(0, 4)) }
+          : {}),
       };
 
       const response = await recordPayment({ flatId: flat.id, ...paymentData }).unwrap();
@@ -479,15 +546,17 @@ const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePa
                     ? t('still_owed_for_month_late', { amount: `৳${plan.owed.toLocaleString()}`, days: plan.overdueDays })
                     : t('still_owed_for_month', { amount: `৳${plan.owed.toLocaleString()}` })}
                 </p>
+                <BillingMonthPicker value={plan.month} onChange={setBillingMonth} t={t} />
               </div>
             ) : (
               <div className="rounded-lg border-2 border-sky-300 bg-sky-50 px-4 py-3">
                 <p className="text-base font-semibold text-sky-900">
                   {t('nothing_owed_new_bill', { month: planMonthLabel })}
                 </p>
-                <p className="text-base text-sky-800 mt-1">
-                  {t('change_date_to_bill_other_month')}
-                </p>
+                {plan.chosen && (
+                  <p className="text-base text-sky-800 mt-1">{t('no_bill_yet_for_month')}</p>
+                )}
+                <BillingMonthPicker value={plan.month} onChange={setBillingMonth} t={t} />
 
                 {/* The one genuine decision at this point, asked plainly rather than left to
                     a status dropdown labelled in accounting terms. */}

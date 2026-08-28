@@ -6,6 +6,9 @@ import RentCollectionProgress from "./RentCollectionProgress";
 import UpcomingPayments from "./UpcomingPayment.jsx";
 import OverduePayments from "./OverduePayments.jsx";
 import QuickActions from "./QuickActions.jsx";
+import DashboardSkeleton from "./DashboardSkeleton.jsx";
+import StaleDataNotice from "../common/StaleDataNotice";
+import useOfflineFallback from "../../hooks/useOfflineFallback";
 import { UPCOMING_MODES, readUpcomingMode } from "../../utils/upcomingMode";
 import MonthlyChart from "./charts/MonthlyChart";
 import OccupancyChart from "./charts/OccupancyChart";
@@ -33,13 +36,22 @@ const HouseOwnerComponent = () => {
   const { t, i18n } = useTranslation();
   const isBengali = i18n.language?.startsWith('bn');
   // Use RTK Query hooks
-  const { 
-    data: dashboardData, 
-    isLoading, 
-    refetch 
-  } = useGetHouseOwnerDashboardDataQuery(undefined, {
+  const dashboardQuery = useGetHouseOwnerDashboardDataQuery(undefined, {
     pollingInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
   });
+
+  /**
+   * Keyed per user: a saved dashboard is one household's finances, and the next person
+   * to sign in on a shared phone must not be shown it.
+   */
+  const {
+    data: dashboardData,
+    isStale,
+    isOffline,
+    savedAt,
+    showSkeleton,
+  } = useOfflineFallback(`ho-dashboard:${user?.id ?? 'anon'}`, dashboardQuery);
+
 
   const [refreshDashboard, { isLoading: isRefreshing }] = useRefreshDashboardDataMutation();
 
@@ -98,10 +110,28 @@ const HouseOwnerComponent = () => {
     setSelectedYear(year);
   };
 
-  if (isLoading) {
+  // `|| !dashboardData`, not `isLoading` alone.
+  //
+  // The RTK Query cache is persisted (store/index.js whitelists 'api'), so on any reload
+  // where the persisted entry survives, isLoading is FALSE — a revalidation sets isFetching,
+  // not isLoading. Gating on isLoading alone made this skeleton unreachable for every
+  // returning visitor, which is most of them.
+  // showSkeleton comes from useOfflineFallback, which knows the difference between "still
+  // waiting" and "nothing is coming". Gating on isLoading alone was wrong twice over: the RTK
+  // cache is persisted, so isLoading is false for every returning visitor; and a request that
+  // hangs while offline never resolves, so the skeleton would have stayed up indefinitely
+  // with a perfectly good saved copy sitting unused.
+  if (showSkeleton) {
+    return <DashboardSkeleton />;
+  }
+
+  // Reached only when there is nothing live AND nothing saved — a first visit with no
+  // connection. An explanation and a retry, rather than an empty page.
+  if (!dashboardData) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="py-16 text-center">
+        <p className="text-subdued">{isOffline ? t('offline_no_saved_data') : t('could_not_load_dashboard')}</p>
+        <Btn onClick={handleRefresh} className="mt-3">{t('try_again')}</Btn>
       </div>
     );
   }
@@ -128,7 +158,7 @@ const HouseOwnerComponent = () => {
       label: t('total_properties'), 
       value: summary?.totalHouses ?? 0, 
       icon: HomeIcon,
-      subtext: `${summary?.activeHouses ?? 0} active, ${summary?.inactiveHouses ?? 0} inactive`,
+      subtext: t('n_active_inactive', { active: summary?.activeHouses ?? 0, inactive: summary?.inactiveHouses ?? 0 }),
       // Every card hands the modal the same three collections; `cardFor` decides which of
       // them it renders and how. Houses carry their flats, so the flats card needs them too.
       hover: { cardFor: "houses", houses }
@@ -137,7 +167,7 @@ const HouseOwnerComponent = () => {
       label: t('total_flats'), 
       value: summary?.totalFlats ?? 0, 
       icon: Flats,
-      subtext: `${summary?.occupiedFlats ?? 0} occupied, ${summary?.vacantFlats ?? 0} vacant`,
+      subtext: t('n_occupied_vacant', { occupied: summary?.occupiedFlats ?? 0, vacant: summary?.vacantFlats ?? 0 }),
       
       hover: { cardFor: "flats", houses }
     },
@@ -145,14 +175,14 @@ const HouseOwnerComponent = () => {
       label: t('active_renters'), 
       value: summary?.totalRenters ?? 0, 
       icon: Renters,
-      subtext: `${summary?.activeRenters ?? 0} active, ${summary?.inactiveRenters ?? 0} inactive`,
+      subtext: t('n_active_inactive', { active: summary?.activeRenters ?? 0, inactive: summary?.inactiveRenters ?? 0 }),
       hover: { cardFor: "renters", renters }
     },
     { 
       label: t('active_caretakers'), 
       value: summary?.assignedCaretakers ?? 0, 
       icon: CareTaker,
-      subtext: "Assigned to your houses",
+      subtext: t('assigned_to_your_houses'),
       hover: { cardFor: "caretakers", caretakers }
     },
   ];
@@ -163,24 +193,26 @@ const HouseOwnerComponent = () => {
       label: t('monthly_rent'),
       value: `৳ ${(summary?.monthlyRentCollection ?? 0).toLocaleString()}`,
       trend: (summary?.monthlyRentCollection ?? 0) > 0 ? 'up' : 'neutral',
-      change: "Current month"
+      change: t('current_month')
     },
     {
       label: t('monthly_expenses'),
       value: `৳ ${(summary?.monthlyExpenses ?? 0).toLocaleString()}`,
       trend: (summary?.monthlyExpenses ?? 0) > 0 ? 'down' : 'neutral',
-      change: "Current month"
+      change: t('current_month')
     },
     {
       label: t('monthly_profit'),
       value: `৳ ${(summary?.monthlyProfit ?? 0).toLocaleString()}`,
       trend: (summary?.monthlyProfit ?? 0) > 0 ? 'up' : (summary?.monthlyProfit ?? 0) < 0 ? 'down' : 'neutral',
-      change: `Occupancy: ${summary?.occupancyRate ?? 0}%`
+      change: t('occupancy_percent', { percent: summary?.occupancyRate ?? 0 })
     }
   ];
 
   return (
     <div className="">
+      {isStale && <StaleDataNotice isOffline={isOffline} savedAt={savedAt} />}
+
       {/* Welcome Header with Refresh */}
       <div className="flex justify-between items-center">
         <div className="">

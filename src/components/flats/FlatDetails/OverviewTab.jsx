@@ -11,7 +11,6 @@ import {
   Mail,
   Percent,
   Phone,
-  PiggyBank,
   Receipt,
   Sparkles,
   UserPlus,
@@ -214,7 +213,7 @@ const OverviewTab = ({
           sub={t('lifetime_total', { amount: num(stats.totalPaid) })}
         />
         <Kpi
-          icon={PiggyBank}
+          icon={Wallet}
           label={t('advance_available')}
           value={<><TkSymbol />{num(availableAdvance)}</>}
           sub={
@@ -383,7 +382,7 @@ const OverviewTab = ({
       {availableAdvance > 0 && (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
           <div className="flex flex-wrap items-center gap-4">
-            <PiggyBank className="h-8 w-8 text-emerald-600 shrink-0" />
+            <Wallet className="h-8 w-8 text-emerald-600 shrink-0" />
             <div>
               <p className="text-sm font-semibold text-emerald-900">{t('advance_payments_available')}</p>
               <p className="text-xs text-emerald-700 mt-0.5">
