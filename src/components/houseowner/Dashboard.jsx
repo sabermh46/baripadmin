@@ -5,6 +5,8 @@ import StatsCardGrid from "./StatsCardGrid";
 import RentCollectionProgress from "./RentCollectionProgress";
 import UpcomingPayments from "./UpcomingPayment.jsx";
 import OverduePayments from "./OverduePayments.jsx";
+import QuickActions from "./QuickActions.jsx";
+import { UPCOMING_MODES, readUpcomingMode } from "../../utils/upcomingMode";
 import MonthlyChart from "./charts/MonthlyChart";
 import OccupancyChart from "./charts/OccupancyChart";
 import ExpenseChart from "./charts/ExpenseChart";
@@ -108,12 +110,17 @@ const HouseOwnerComponent = () => {
   const {
     summary = {},
     upcomingPayments = [],
+    upcomingPaymentsThisMonth: upcomingThisMonth = [],
     overduePayments = [],
     charts = {},
     houses = [],
     renters = [],
     caretakers = []
   } = dashboardData || {};
+
+  // Which list the owner has the Upcoming section set to decides the section order below,
+  // so the rule follows what is actually on their screen rather than the default definition.
+  const hasUpcoming = (readUpcomingMode() === UPCOMING_MODES.MONTH ? upcomingThisMonth : upcomingPayments).length > 0;
 
   // Format stats for StatsCardGrid with fallbacks
   const stats = [
@@ -226,7 +233,25 @@ const HouseOwnerComponent = () => {
       </div>
 
 
-      <UpcomingPayments payments={upcomingPayments} />
+      {/* Order depends on whether there is anything to act on.
+          Rent that is actually coming in outranks a row of shortcuts, so when the upcoming
+          list has entries it goes first and the shortcuts sit under it. With nothing due,
+          an empty "no upcoming payments" panel at the top of the dashboard is dead space —
+          the shortcuts take that position instead.
+
+          Evaluated against whichever list the owner has the section set to, so the rule
+          follows what they are actually looking at rather than the default definition. */}
+      {hasUpcoming ? (
+        <>
+          <UpcomingPayments payments={upcomingPayments} paymentsThisMonth={upcomingThisMonth} />
+          <QuickActions houses={houses} />
+        </>
+      ) : (
+        <>
+          <QuickActions houses={houses} />
+          <UpcomingPayments payments={upcomingPayments} paymentsThisMonth={upcomingThisMonth} />
+        </>
+      )}
       <OverduePayments payments={overduePayments} />
       
       {/* Recent Houses */}

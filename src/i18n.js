@@ -1168,6 +1168,26 @@ const resources = {
       "badge_no_active_subscription": "{{count}} house owners with no active subscription (never started or lapsed past grace)",
       "badge_awaiting_verification": "{{count}} payments marked paid by the owner, awaiting your verification",
 
+      // Dashboard quick actions
+      "quick_actions": "Quick actions",
+      "record_loan_payment": "Loan paid?",
+      "or_add_a_loan": "Record a payment, or add a loan",
+      "add_expense": "Add expense",
+      "repairs_bills_salaries": "Repairs, bills, salaries",
+      "to_one_of_your_houses": "To one of your houses",
+      "and_assign_a_flat": "And assign them a flat",
+
+      // Upcoming payments — the two definitions
+      "due_today": "Due today",
+      "next_30_days": "Next 30 days",
+      "this_month": "This month",
+      "due_within_30_days": "Unsettled and due in the next 30 days",
+      "unsettled_for_this_month": "Everything unsettled for this month",
+
+      // Loan payment removal
+      "delete_loan_payment": "Delete this payment",
+      "delete_loan_payment_confirm": "Remove the ৳{{amount}} payment recorded on {{date}}? The loan balance goes back up by that amount.",
+
       // Loan cards
       "on_track": "On track",
       "slightly_behind": "Slightly behind",
@@ -2378,6 +2398,26 @@ const resources = {
       "view_app_fee": "অ্যাপ ফি দেখুন",
       "badge_no_active_subscription": "{{count}} জন বাড়িওয়ালার কোনো সক্রিয় সাবসক্রিপশন নেই",
       "badge_awaiting_verification": "{{count}}টি পেমেন্ট বাড়িওয়ালা পরিশোধিত বলেছেন, আপনার যাচাইয়ের অপেক্ষায়",
+
+      // Dashboard quick actions
+      "quick_actions": "দ্রুত কাজ",
+      "record_loan_payment": "ঋণ পরিশোধ?",
+      "or_add_a_loan": "পেমেন্ট লিখুন, বা নতুন ঋণ যোগ করুন",
+      "add_expense": "খরচ যোগ করুন",
+      "repairs_bills_salaries": "মেরামত, বিল, বেতন",
+      "to_one_of_your_houses": "আপনার একটি বাড়িতে",
+      "and_assign_a_flat": "এবং একটি ফ্ল্যাট দিন",
+
+      // Upcoming payments — the two definitions
+      "due_today": "আজ দেয়",
+      "next_30_days": "পরবর্তী ৩০ দিন",
+      "this_month": "এই মাস",
+      "due_within_30_days": "অপরিশোধিত এবং পরবর্তী ৩০ দিনের মধ্যে দেয়",
+      "unsettled_for_this_month": "এই মাসের সব অপরিশোধিত",
+
+      // Loan payment removal
+      "delete_loan_payment": "এই পেমেন্ট মুছে ফেলুন",
+      "delete_loan_payment_confirm": "{{date}} তারিখে লেখা ৳{{amount}} পেমেন্টটি মুছে ফেলবেন? ঋণের বকেয়া ওই পরিমাণ বেড়ে যাবে।",
 
       // Loan cards
       "on_track": "ঠিক আছে",

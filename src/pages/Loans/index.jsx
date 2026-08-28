@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Landmark, Plus, Pencil } from 'lucide-react';
+import { Landmark, Plus, Pencil, Trash2 } from 'lucide-react';
 import HouseSelector from '../../components/common/HouseSelector';
 import {
   useGetLoansByHouseQuery,
@@ -8,6 +8,7 @@ import {
   useUpdateLoanMutation,
   useDeleteLoanMutation,
   useUpdateLoanPaymentMutation,
+  useDeleteLoanPaymentMutation,
 } from '../../store/api/loanApi';
 import LoanCard from './LoanCard';
 import Modal, { useModal } from '../../components/common/Modal';
@@ -566,7 +567,7 @@ const EditLoanPaymentModal = ({ isOpen, onClose, payment, loan, onSuccess }) => 
 };
 
 // View Payments Modal (list payments for a loan, with Edit per row)
-const ViewPaymentsModal = ({ isOpen, onClose, loan, onEditPayment }) => {
+const ViewPaymentsModal = ({ isOpen, onClose, loan, onEditPayment, onDeletePayment }) => {
   const { t } = useTranslation();
   const payments = loan?.payments ?? [];
 
@@ -602,14 +603,28 @@ const ViewPaymentsModal = ({ isOpen, onClose, loan, onEditPayment }) => {
                   <td className="py-2 px-3 text-gray-600">{p.transaction_id || '–'}</td>
                   <td className="py-2 px-3 text-gray-600">{p.notes || '–'}</td>
                   <td className="py-2 px-3">
-                    <button
-                      type="button"
-                      onClick={() => onEditPayment(p)}
-                      className="text-primary hover:underline flex items-center gap-1"
-                    >
-                      <Pencil size={14} />
-                      {t('edit') || 'Edit'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onEditPayment(p)}
+                        className="text-primary hover:underline flex items-center gap-1"
+                      >
+                        <Pencil size={14} />
+                        {t('edit')}
+                      </button>
+                      {/* Until now a payment could only be edited, so one entered against the
+                          wrong loan or entered twice could only be papered over by setting its
+                          amount to zero — which leaves a row that still reads as a payment
+                          that happened. */}
+                      <button
+                        type="button"
+                        onClick={() => onDeletePayment(p)}
+                        className="text-red-600 hover:underline flex items-center gap-1"
+                      >
+                        <Trash2 size={14} />
+                        {t('delete')}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -649,6 +664,7 @@ const LoansPage = () => {
   const deleteConfirmModal = useModal(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [paymentToDelete, setPaymentToDelete] = useState(null);
 
   const { data: loansResponse, isLoading: loansLoading } = useGetLoansByHouseQuery(effectiveHouseId, {
     skip: !effectiveHouseId,
@@ -656,6 +672,7 @@ const LoansPage = () => {
   const loans = (Array.isArray(loansResponse?.data) ? loansResponse.data : loansResponse?.data?.data) ?? [];
 
   const [deleteLoan, { isLoading: isDeleting }] = useDeleteLoanMutation();
+  const [deleteLoanPayment, { isLoading: isDeletingPayment }] = useDeleteLoanPaymentMutation();
 
   const handleRecordPayment = (loan) => {
     setSelectedLoan(loan);
@@ -689,6 +706,24 @@ const LoansPage = () => {
       setSelectedLoan(null);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to delete loan'));
+    }
+  };
+
+  const openDeletePaymentConfirm = (payment) => {
+    setPaymentToDelete(payment);
+    viewPaymentsModal.close();
+  };
+
+  const handleConfirmDeletePayment = async () => {
+    if (!paymentToDelete?.id) return;
+    try {
+      // loanId travels with the request only so the mutation can invalidate that loan's
+      // cache entry — the balance the server puts back lives on the loan, not the payment.
+      await deleteLoanPayment({ loanPaymentId: paymentToDelete.id, loanId: selectedLoan?.id }).unwrap();
+      toast.success(t('payment_deleted_successfully'));
+      setPaymentToDelete(null);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete payment'));
     }
   };
 
@@ -792,6 +827,7 @@ const LoansPage = () => {
         onClose={() => { viewPaymentsModal.close(); setSelectedLoan(null); }}
         loan={selectedLoan}
         onEditPayment={handleEditPayment}
+        onDeletePayment={openDeletePaymentConfirm}
       />
 
       <EditLoanPaymentModal
@@ -800,6 +836,20 @@ const LoansPage = () => {
         payment={selectedPayment}
         loan={selectedLoan}
         onSuccess={() => {}}
+      />
+
+      <ConfirmationModal
+        isOpen={!!paymentToDelete}
+        onClose={() => setPaymentToDelete(null)}
+        onConfirm={handleConfirmDeletePayment}
+        title={t('delete_loan_payment')}
+        message={t('delete_loan_payment_confirm', {
+          amount: formatAmount(paymentToDelete?.amount),
+          date: formatDate(paymentToDelete?.payment_date),
+        })}
+        confirmText={t('delete')}
+        isLoading={isDeletingPayment}
+        variant="danger"
       />
 
       <ConfirmationModal
