@@ -13,6 +13,7 @@ import Btn from '../../components/common/Button';
 import GoogleButton from '../../components/common/GoogleButton';
 import { apiErrorMessage } from '../../utils/apiError';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
+import { optimizeImage, optimizeErrorMessage } from '../../utils/imageOptimizer';
 import ProfileHero from './ProfileHero';
 import RoleImpact from './RoleImpact';
 import { FONT_SCALES, readFontScale, writeFontScale } from '../../utils/fontScale';
@@ -59,6 +60,7 @@ const ProfilePage = () => {
 
   const [setPasswordMutation, { isLoading: isSettingPassword }] = useSetPasswordMutation();
   const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
+  const [avatarOptimizing, setAvatarOptimizing] = useState(false);
   useLinkGoogleAccountMutation();
 
   const [password, setPassword] = useState('');
@@ -125,11 +127,29 @@ const ProfilePage = () => {
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
+    // Cleared immediately so re-picking the same file after a failure still fires a change.
+    e.target.value = '';
     if (!file) return;
     setAvatarError('');
 
+    // Shrink on this device before it goes anywhere. An unmodified phone photo is 3-8MB and
+    // this avatar is never rendered above 128px, so the upload was spending a tenant's mobile
+    // data on ~40x more image than the app can display — and carrying the EXIF GPS tag from
+    // wherever the photo was taken along with it.
+    let upload = file;
+    try {
+      setAvatarOptimizing(true);
+      const optimized = await optimizeImage(file, 'avatar');
+      upload = optimized.file;
+    } catch (err) {
+      setAvatarOptimizing(false);
+      setAvatarError(optimizeErrorMessage(err));
+      return;
+    }
+    setAvatarOptimizing(false);
+
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append('avatar', upload);
 
     try {
       const result = await uploadAvatar(formData).unwrap();
@@ -149,7 +169,7 @@ const ProfilePage = () => {
         avatarPath={user?.metadata?.avatarPath}
         googleAvatar={user?.avatarUrl}
         onPickAvatar={handleAvatarChange}
-        isUploading={isUploadingAvatar}
+        isUploading={isUploadingAvatar || avatarOptimizing}
         error={avatarError}
       />
 

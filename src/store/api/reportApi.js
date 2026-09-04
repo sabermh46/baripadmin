@@ -1,16 +1,28 @@
-///financial/profit-report
-
-// api/renterApi.js - Updated with proper Content-Type handling
 import { baseApi } from './baseApi';
+
+/**
+ * Financial reporting.
+ *
+ * `houseId` is optional on the profit report: omitting it reports across every house the
+ * signed-in role may see, which is how an owner gets a portfolio total and how an admin
+ * gets a platform total. It used to be required server-side, so neither question could be
+ * asked at all. `ownerId` narrows an admin's view to one owner without picking a house.
+ *
+ * Empty values are stripped rather than sent as `?houseId=`, so the server's `nullable`
+ * rules see an absent parameter instead of relying on empty-string-to-null coercion.
+ */
+const clean = (obj) =>
+  Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== ''),
+  );
 
 export const reportApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    // Get profit report with filters
     getProfitReport: builder.query({
-      query: ({ houseId, startDate, endDate }) => ({
+      query: ({ houseId, ownerId, startDate, endDate }) => ({
         url: '/financial/profit-report',
         method: 'GET',
-        params: { houseId, startDate, endDate },
+        params: clean({ houseId, ownerId, startDate, endDate }),
       }),
       providesTags: ['Report'],
     }),
@@ -28,12 +40,10 @@ export const reportApi = baseApi.injectEndpoints({
       query: ({ houseOwnerId, houseId }) => ({
         url: `/houses/${houseOwnerId}/expenses`,
         method: 'GET',
-        params: { houseId },
+        params: clean({ houseId }),
       }),
       providesTags: ['Report'],
     }),
-
-    
   }),
 });
 

@@ -1,6 +1,8 @@
 # Bari Porichalona — React SPA on Apache / cPanel
 #
 # Vite copies everything in public/ into dist/, so this ships with every build.
+# Directives are wrapped in <IfModule> wherever a missing module would 500 rather
+# than degrade — there is no shell on the cPanel box to undo a bad paste.
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -22,22 +24,58 @@
   RewriteRule ^ index.html [L]
 </IfModule>
 
-# ─── Caching ─────────────────────────────────────────────────────────────────
+# MultiViews content-negotiates /dashboard to any dashboard.* file *before* the
+# rewrite above runs, which quietly defeats the SPA fallback. Indexes matters
+# because that rewrite deliberately skips real directories (!-d), leaving
+# /assets/, /ios/, /android/ and /windows11/ to mod_autoindex as open listings.
+Options -Indexes
+<IfModule mod_negotiation.c>
+  Options -MultiViews
+</IfModule>
+
+# Sourcemaps. `sourcemap: 'hidden'` in vite.config.js only drops the
+# //# sourceMappingURL comment — the .map files are still built, still uploaded
+# (sw.js.map alone is 209 KB), and still fetchable at a guessable URL, which
+# hands over the unminified source to anyone who guesses one.
+<FilesMatch "\.map$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# ─── Caching ────────────────────────────────────────────────────────
+# Only /assets/ is content-hashed. Vite hashes what it bundles out of src/ but
+# copies public/ through verbatim, so every icon, favicon and notification.mp3
+# at the web root keeps a STABLE name across builds. `immutable` on those is what
+# pins a user to last year's app icon with no reload that can shake it loose.
+<IfModule mod_setenvif.c>
+  SetEnvIf Request_URI "(^|/)assets/" HASHED_ASSET=1
+</IfModule>
+
 <IfModule mod_headers.c>
-  # Hashed asset filenames change on every build, so they can be cached hard.
-  <FilesMatch "\.(js|css|woff2|png|jpg|jpeg|svg|webp|ico)$">
-    Header set Cache-Control "public, max-age=31536000, immutable"
+  Header set Cache-Control "public, max-age=31536000, immutable" env=HASHED_ASSET
+
+  # Unhashed, stable-named files out of public/. A day is short enough that a new
+  # icon reaches everyone tomorrow, long enough to avoid refetch churn.
+  <FilesMatch "\.(png|jpg|jpeg|svg|webp|ico|mp3|woff2)$">
+    Header set Cache-Control "public, max-age=86400, must-revalidate" env=!HASHED_ASSET
   </FilesMatch>
 
-  # These three must never be cached, or users stay pinned to an old release:
-  # index.html carries the asset hashes, and the service worker + manifest are
-  # how an update reaches an already-installed PWA.
-  <FilesMatch "^(index\.html|sw\.js|manifest\.webmanifest)$">
-    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  # These must never be cached, or users stay pinned to an old release: index.html
+  # carries the asset hashes, and the service worker, its registration bootstrap
+  # and the manifest are how an update reaches an already-installed PWA.
+  # registerSW.js is in this list because index.html references it with no hash —
+  # under the old blanket .js rule it was pinned for a year like a hashed chunk.
+  <FilesMatch "^(index\.html|sw\.js|registerSW\.js|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 
   # The service worker must be allowed to control the whole origin.
-  <FilesMatch "sw\.js$">
+  <FilesMatch "^sw\.js$">
     Header set Service-Worker-Allowed "/"
   </FilesMatch>
 
@@ -47,7 +85,7 @@
 </IfModule>
 
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/manifest+json image/svg+xml
 </IfModule>
 
 <IfModule mod_mime.c>

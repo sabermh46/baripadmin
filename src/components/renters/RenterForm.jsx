@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Upload, User, Phone, Mail, IdCard, Form, Search } from 'lucide-react';
+import { X, User, Phone, Mail, IdCard, Search } from 'lucide-react';
 import {
   useCreateRenterMutation,
   useUpdateRenterMutation
@@ -14,7 +14,7 @@ import { useAuth } from '../../hooks';
 import { useTranslation } from 'react-i18next';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 import useOwnerOptions from '../../hooks/useOwnerOptions';
-import ProtectedImage from '../common/ProtectedImage';
+import ImageUploadField from '../common/ImageUploadField';
 
 const renterSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -28,73 +28,20 @@ const renterSchema = z.object({
 });
 
 /**
- * One NID image: a freshly picked file, or the one already on the renter, or an upload area.
+ * The NID slots are ImageUploadField now, which owns the preview, the drag target and the
+ * on-device optimisation, and renders a stored image through ProtectedImage — necessary
+ * because `/uploads/nids/x.png` is a relative path behind a token-guarded route, so a plain
+ * <img src> resolves against the app's origin and then answers 401 even when pointed at the
+ * right host.
  *
- * The stored image goes through ProtectedImage. It used to be a plain <img src>, and the two
- * are not interchangeable: `/uploads/nids/x.png` is a relative path, so the browser resolved
- * it against the app's own origin rather than the API's, and the route behind it requires a
- * bearer token — so even pointed at the right host it answers 401. Every stored NID would
- * have rendered as a broken image here. (UpdateRenterModal already did this correctly; this
- * form, which HouseDetails uses to edit renters, did not.)
+ * What that replaced also read the picked file into a base64 data URL via FileReader purely
+ * to show a thumbnail, which for a 6MB phone photo meant an ~8MB string held in state for
+ * the life of the form. The field uses an object URL and revokes it.
  */
-const NidImageSlot = ({ label, inputName, newPreview, storedUrl, onSelect, onClear }) => (
-  <div>
-    <label className="block text-sm font-medium text-text mb-2">{label}</label>
-    <div className="space-y-4">
-      {newPreview || storedUrl ? (
-        <div className="relative">
-          {newPreview ? (
-            <img
-              src={newPreview}
-              alt={label}
-              className="w-full h-48 object-cover rounded-lg border border-subdued/30"
-            />
-          ) : (
-            <ProtectedImage
-              src={storedUrl}
-              alt={label}
-              className="w-full h-48 object-contain rounded-lg border border-subdued/30"
-            />
-          )}
-
-          {newPreview ? (
-            <button
-              type="button"
-              onClick={onClear}
-              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-              title="Remove"
-            >
-              <X size={16} />
-            </button>
-          ) : (
-            // Nothing to "remove" — the file is already saved, and the API has no way to
-            // clear one. Replacing it is the action that exists, so that is what is offered.
-            <label className="absolute bottom-2 right-2 px-2 py-1 bg-white text-xs text-gray-600 rounded shadow cursor-pointer hover:bg-gray-100">
-              Replace
-              <input type="file" name={inputName} accept="image/*" className="hidden" onChange={onSelect} />
-            </label>
-          )}
-        </div>
-      ) : (
-        <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-subdued/30 rounded-lg cursor-pointer bg-background hover:bg-subdued/5 transition-colors">
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <Upload className="w-8 h-8 mb-2 text-subdued" />
-            <p className="text-sm text-subdued">Upload {label}</p>
-            <p className="text-xs text-subdued mt-1">PNG, JPG up to 5MB</p>
-          </div>
-          <input type="file" name={inputName} accept="image/*" className="hidden" onChange={onSelect} />
-        </label>
-      )}
-    </div>
-  </div>
-);
-
 const RenterFormFields = ({ onClose, renter, houseOwnerId }) => {
   const isEdit = !!renter;
   const [nidFrontImage, setNidFrontImage] = useState(null);
   const [nidBackImage, setNidBackImage] = useState(null);
-  const [nidFrontPreview, setNidFrontPreview] = useState(null);
-  const [nidBackPreview, setNidBackPreview] = useState(null);
   const [ownerSearch, setOwnerSearch] = useState('');
   
   const { isHouseOwner, isStaff, isWebOwner, user } = useAuth();
@@ -138,32 +85,6 @@ const RenterFormFields = ({ onClose, renter, houseOwnerId }) => {
   const [createRenter] = useCreateRenterMutation();
   const [updateRenter] = useUpdateRenterMutation();
 
-  const handleFileChange = (e, setImage, setPreview) => {
-  const file = e.target.files[0];
-  if (file) {
-    console.log('File selected:', file.name, file.type, file.size);
-    setImage(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-  } else {
-    console.log('No file selected');
-  }
-};
-
-// Also update the removeFile function to clear file input
-const removeFile = (setImage, setPreview, inputName) => {
-  setImage(null);
-  setPreview(null);
-  // Clear the file input
-  const fileInput = document.querySelector(`input[name="${inputName}"]`);
-  if (fileInput) {
-    fileInput.value = '';
-  }
-};
-
   const onSubmit = async (data) => {
     try {
       const formData = new FormData();
@@ -201,8 +122,6 @@ const removeFile = (setImage, setPreview, inputName) => {
           reset();
           setNidFrontImage(null);
           setNidBackImage(null);
-          setNidFrontPreview(null);
-          setNidBackPreview(null);
         } catch (error) {
           toast.error(apiErrorMessage(error, 'Could not update the renter.'));
           console.error('Failed to update renter:', error);
@@ -215,8 +134,6 @@ const removeFile = (setImage, setPreview, inputName) => {
           reset();
           setNidFrontImage(null);
           setNidBackImage(null);
-          setNidFrontPreview(null);
-          setNidBackPreview(null);
         } catch (error) {
           toast.error(apiErrorMessage(error));
           console.error('Failed to create renter:', error);
@@ -380,21 +297,24 @@ const removeFile = (setImage, setPreview, inputName) => {
 
           {/* NID Images Upload */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <NidImageSlot
+            {/* 'document', not 'avatar': an NID has to stay readable, so it keeps a much
+                larger long edge and a higher quality floor. The field hands back the
+                already-optimised File, which is what onSubmit appends to FormData. */}
+            <ImageUploadField
               label="NID Front Image"
-              inputName="nidFrontImage"
-              newPreview={nidFrontPreview}
+              name="nidFrontImage"
+              preset="document"
               storedUrl={renter?.nidFrontImageUrl}
-              onSelect={(e) => handleFileChange(e, setNidFrontImage, setNidFrontPreview)}
-              onClear={() => removeFile(setNidFrontImage, setNidFrontPreview, 'nidFrontImage')}
+              onChange={setNidFrontImage}
+              hint="Drag a photo here, or click to choose. It is shrunk on your device before upload."
             />
-            <NidImageSlot
+            <ImageUploadField
               label="NID Back Image"
-              inputName="nidBackImage"
-              newPreview={nidBackPreview}
+              name="nidBackImage"
+              preset="document"
               storedUrl={renter?.nidBackImageUrl}
-              onSelect={(e) => handleFileChange(e, setNidBackImage, setNidBackPreview)}
-              onClear={() => removeFile(setNidBackImage, setNidBackPreview, 'nidBackImage')}
+              onChange={setNidBackImage}
+              hint="Drag a photo here, or click to choose. It is shrunk on your device before upload."
             />
           </div>
 

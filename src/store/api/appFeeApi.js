@@ -138,6 +138,28 @@ export const appFeeApi = baseApi.injectEndpoints({
       providesTags: [{ type: 'AppFeePayments', id: 'LIST' }, { type: 'AppFeePayments', id: 'ME' }],
     }),
 
+    /**
+     * The subscription state on its own, for the banner and the paywall.
+     *
+     * useAdminPendingAppFee lives in Layout, so it runs on every page for every house owner
+     * and caretaker and polls on top of that. It reads `data.status` and nothing else, but
+     * it was calling the full /app-fees/me, which also assembles a 50-row payment list with
+     * two eager-loaded relations plus a due-amount calculation on every single call.
+     *
+     * Separate endpoint rather than a parameter on the existing one so the app-fee page
+     * keeps its own full-shape cache entry untouched. It carries the same `ME` tag, so the
+     * push-driven invalidation in App.jsx still refreshes both.
+     */
+    getMyAppFeeStatus: builder.query({
+      ...LIVE,
+      query: (houseOwnerId) => ({
+        url: '/app-fees/me',
+        method: 'GET',
+        params: { view: 'status', ...(houseOwnerId ? { house_owner_id: houseOwnerId } : {}) },
+      }),
+      providesTags: [{ type: 'AppFeePayments', id: 'ME' }],
+    }),
+
     // A single owner's live subscription state, straight from AppFeeStatusService — the one
     // definition of "expired" that the gate middleware also enforces.
     getAppFeeStatus: builder.query({
@@ -163,6 +185,7 @@ export const {
   useGetAppFeeStatsQuery,
   useGetAppFeeBreakdownQuery,
   useGetMyAppFeeQuery,
+  useGetMyAppFeeStatusQuery,
   useGetAppFeeBadgeCountsQuery,
   useGetAppFeeStatusQuery,
   useGetAppFeeDueQuery,

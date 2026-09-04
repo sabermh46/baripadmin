@@ -100,7 +100,7 @@ const Layout = () => {
     <div className="flex min-h-screen max-w-full overflow-x-clip">
       {/* Sidebar */}
       <div className="hidden md:flex md:sticky top-0 w-64 bg-surface border-r border-gray-200 flex-col h-screen!">
-        <nav className="flex-1 h-full grid grid-rows-[64px_1fr_auto]">
+        <nav className="flex-1 h-full grid grid-rows-[4rem_1fr_auto]">
           <SideNav onClicked={closeMobileMenu} />
         </nav>
       </div>
@@ -195,7 +195,7 @@ const Layout = () => {
           onClick={(e) => e.stopPropagation()}
           className={`md:hidden max-w-80 w-[80%] !min-w-[250px] bg-surface z-50 ${
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          } fixed top-0 left-0 w-full duration-300 transition-transform flex-1 h-full grid grid-rows-[64px_1fr_auto]`}
+          } fixed top-0 left-0 w-full duration-300 transition-transform flex-1 h-full grid grid-rows-[4rem_1fr_auto]`}
         >
           <SideNav isMobileMenuOpen={isMobileMenuOpen} onClicked={setIsMobileMenuOpen} />
         </div>

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useAuth } from '.';
-import { useGetMyAppFeeQuery } from '../store/api/appFeeApi';
+import { useGetMyAppFeeStatusQuery } from '../store/api/appFeeApi';
 import { setSubscriptionBlocked } from '../store/slices/uiSlice';
 
 /**
@@ -35,11 +35,32 @@ export const useAdminPendingAppFee = () => {
   // the banner never appeared for a caretaker even once their owner was fully blocked. The
   // /me endpoint exists precisely to resolve the owner server-side; it was added for the
   // app-fee page and this hook was never moved across.
-  const { data, isLoading, isFetching, error } = useGetMyAppFeeQuery(undefined, {
+  const { data, isLoading, isFetching, error } = useGetMyAppFeeStatusQuery(undefined, {
     skip: !enabled,
-    // The banner and the paywall both read this, so it has to notice a payment landing
-    // without waiting for a navigation.
-    pollingInterval: 60_000,
+    /**
+     * A backstop, not the primary signal.
+     *
+     * This hook is mounted by Layout, so it runs on every page for every house owner and
+     * caretaker. At 60s that was a request a minute, per open tab, all day, to catch an
+     * event that happens a few times a year.
+     *
+     * The server now announces the change instead: app:app-fee-reminders (daily) sends an
+     * in-app notification AND a push whenever the subscription crosses into due / expiring /
+     * grace / blocked. The notification row is written before push is attempted and the
+     * attempt is wrapped in its own try/catch, so it survives a device being offline, a
+     * lapsed subscription, or the push landing on the user's other device — the warning is
+     * waiting in the bell either way.
+     *
+     * A delivered push also carries `entity: 'app_fee'`, which notificationTags maps to the
+     * AppFeePayments tag, so App.jsx invalidates this very cache entry and the banner
+     * updates immediately — no poll involved.
+     *
+     * So this interval only has to cover the case where push was never granted, was
+     * revoked, or fired while the tab was closed. Ten minutes is ample for that, and it also
+     * still refetches on mount and on tab focus (appFeeApi's LIVE policy), which is when a
+     * returning user actually looks.
+     */
+    pollingInterval: 600_000,
     skipPollingIfUnfocused: true,
   });
 

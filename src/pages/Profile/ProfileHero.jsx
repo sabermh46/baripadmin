@@ -67,7 +67,10 @@ const ProfileHero = ({ user, avatarPath, googleAvatar, onPickAvatar, isUploading
             <input
               ref={inputRef}
               type="file"
-              accept="image/jpeg,image/jpg,image/png,image/gif"
+              // Anything the browser can decode: it is re-encoded to WebP on this
+              // device before upload, so the source format no longer has to match
+              // what the server accepts.
+              accept="image/*"
               onChange={onPickAvatar}
               className="hidden"
             />

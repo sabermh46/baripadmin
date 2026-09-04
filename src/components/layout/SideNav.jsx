@@ -280,7 +280,8 @@ export const SideNav = ({ onClicked }) => {
   return (
     <>
       <div>
-        {/* for escaping the spacing of header */}
+        {/* Clears the fixed header. Its height is the grid's first row in Layout, kept in
+            rem so it tracks the header's h-16 when the root font scale changes. */}
       </div>
       <div className="max-h-min overflow-y-auto">
         {filteredNavItems.map((item) => {
