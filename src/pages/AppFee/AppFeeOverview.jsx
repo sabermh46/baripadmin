@@ -22,12 +22,15 @@ const money = (n) =>
  * amber/red tiles are the ones with work behind them.
  */
 const Tile = ({ icon: Icon, label, value, sub, tone = 'neutral', onClick, active, hint }) => {
+  // Border lives here with the text and background so a tone can never be half-applied —
+  // it was a flat `border-black/15`, which read as a grey outline on a coloured chip and
+  // muddied the accent the tone exists to carry.
   const tones = {
-    neutral: 'text-gray-600 bg-gray-100',
-    positive: 'text-emerald-700 bg-emerald-100',
-    warning: 'text-amber-700 bg-amber-100',
-    danger: 'text-red-700 bg-red-100',
-    info: 'text-blue-700 bg-blue-100',
+    neutral: 'text-gray-600 bg-gray-100 border-gray-300',
+    positive: 'text-emerald-700 bg-emerald-100 border-emerald-300',
+    warning: 'text-amber-700 bg-amber-100 border-amber-300',
+    danger: 'text-red-700 bg-red-100 border-red-300',
+    info: 'text-blue-700 bg-blue-100 border-blue-300',
   };
 
   const Wrapper = onClick ? 'button' : 'div';
@@ -37,11 +40,21 @@ const Tile = ({ icon: Icon, label, value, sub, tone = 'neutral', onClick, active
       type={onClick ? 'button' : undefined}
       onClick={onClick}
       title={hint}
-      className={`group relative text-left bg-white border rounded-xl p-4 flex items-start gap-3 transition-colors ${
+      className={`group relative text-left bg-white border rounded-xl mb-4 md:mb-0 p-4 flex items-start gap-3 transition-colors ${
         onClick ? 'hover:border-primary/60 hover:bg-primary/2 cursor-pointer' : ''
       } ${active ? 'border-primary ring-1 ring-primary/30' : 'border-gray-200'}`}
     >
-      <span className={`shrink-0 p-2 rounded-lg ${tones[tone]}`}>
+      {/* Lifted out of the flow and straddling the top edge on mobile, where the tile is
+          narrow and the label needs the full width. From md the tile is wide enough for the
+          icon to sit beside the text, so it rejoins the flex row.
+
+          `md:static` alone is not enough: a translate is a transform, and transforms apply
+          to static elements too — without resetting them the icon would still be dragged up
+          and left out of its own row. */}
+      <span
+        className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-lg border p-2
+          md:static md:translate-x-0 md:translate-y-0 md:shrink-0 ${tones[tone]}`}
+      >
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0">

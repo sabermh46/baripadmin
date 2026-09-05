@@ -45,6 +45,7 @@ const HouseOwnerExpensesPage = lazy(() => import('../pages/Expenses'));
 const AppFeePage           = lazy(() => import('../pages/AppFee/AppFeePage'));
 const LoansPage            = lazy(() => import('../pages/Loans'));
 const LandingPageEditor    = lazy(() => import('../pages/Admin/LandingPageEditor'));
+const EmailTemplates       = lazy(() => import('../pages/Admin/EmailTemplates'));
 
 
 
@@ -388,6 +389,11 @@ const AppRoutes = () => {
             <Route path="admin/landing-editor" element={
               <RoleGuard roles={['web_owner', 'developer']}>
                 <LandingPageEditor />
+              </RoleGuard>
+            } />
+            <Route path="admin/email-templates" element={
+              <RoleGuard roles={['web_owner', 'developer']}>
+                <EmailTemplates />
               </RoleGuard>
             } />
         </Route>

@@ -8,6 +8,7 @@ import {
   FileText,
   House,
   Landmark,
+  Mail,
   Layout,
   LayoutDashboard,
   SettingsIcon,
@@ -124,6 +125,7 @@ const NAV_ITEMS = [
   },
   { path: "/admin/settings", labelKey: "settings", icon: SettingsIcon, roles: ["developer", "web_owner"] },
   { path: "/admin/landing-editor", labelKey: "landing_editor", icon: Layout, roles: ["web_owner"] },
+  { path: "/admin/email-templates", labelKey: "email_templates", icon: Mail, roles: ["web_owner", "developer"] },
 ];
 
 /**

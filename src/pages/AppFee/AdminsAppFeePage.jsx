@@ -287,7 +287,7 @@ const AdminsAppFeePage = () => {
   ];
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="">
       <div className="mb-4">
         <h1 className="text-xl font-semibold text-gray-900">{t('app_fee_and_subscriptions')}</h1>
         <p className="text-sm text-gray-500 mt-0.5">{t('app_fee_admin_subtitle')}</p>
