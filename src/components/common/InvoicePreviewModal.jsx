@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import ChannelPicker from './ChannelPicker';
 import { X, Send, SkipForward, Loader2, FileText } from 'lucide-react';
 
 /**
@@ -14,15 +15,16 @@ import { X, Send, SkipForward, Loader2, FileText } from 'lucide-react';
  *   onSkip      {() => void}
  *   isSending   {boolean}
  */
-const InvoicePreviewModal = ({ open, pdfBase64, renterName, onConfirm, onSkip, isSending }) => {
+const InvoicePreviewModal = ({ open, pdfBase64, renterName, renterPhone, houseOwnerId, onConfirm, onSkip, isSending }) => {
   const { t } = useTranslation();
   const [note, setNote] = useState('');
+  const [channels, setChannels] = useState(['email']);
 
   if (!open || !pdfBase64) return null;
 
   const dataUri = `data:application/pdf;base64,${pdfBase64}`;
 
-  const handleConfirm = () => onConfirm(note.trim());
+  const handleConfirm = () => onConfirm(note.trim(), channels);
 
   const handleSkip = () => {
     setNote('');
@@ -62,6 +64,17 @@ const InvoicePreviewModal = ({ open, pdfBase64, renterName, onConfirm, onSkip, i
         {/* Note input */}
         <div className="px-5 pt-4 pb-2 border-t border-gray-200 shrink-0">
           <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+          <div className="mb-4">
+            <ChannelPicker
+              value={channels}
+              onChange={setChannels}
+              houseOwnerId={houseOwnerId}
+              smsAvailable={!!renterPhone}
+              smsUnavailableReason={`${renterName || 'This renter'} has no phone number on file`}
+              note="The PDF receipt goes by email only — the SMS carries a short confirmation."
+            />
+          </div>
+
             <FileText size={13} />
             {t('receipt_note_label')}
           </label>

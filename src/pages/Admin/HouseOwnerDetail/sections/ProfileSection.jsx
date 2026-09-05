@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
-import { Mail, Phone, User } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Mail, Phone, User, Pencil } from 'lucide-react';
 import { useAuth } from '../../../../hooks';
 import { useNavigate } from 'react-router-dom';
 import ProtectedImage from '../../../../components/common/ProtectedImage';
+import EditUserProfileModal from '../../../../components/admin/EditUserProfileModal';
 
 const formatDate = (d) => {
   if (!d) return '–';
@@ -15,8 +16,15 @@ const formatDate = (d) => {
 
 const ProfileSection = ({ profile, user, onSuccess }) => {
   const data = profile || user || {};
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
   const navigate = useNavigate();
+  const [editing, setEditing] = useState(false);
+
+  // web_owner and developer pass on role; staff need the permission. The server enforces the
+  // same rule plus a rank check, so this only decides whether the button is worth showing.
+  const role = currentUser?.role?.slug;
+  const canEdit =
+    role === 'web_owner' || role === 'developer' || (role === 'staff' && hasPermission('users.edit'));
 
   useEffect(() => {
     if (data?.id != null && onSuccess) onSuccess({ section: 'profile', data });
@@ -24,10 +32,28 @@ const ProfileSection = ({ profile, user, onSuccess }) => {
 
   return (
     <section className="bg-surface rounded-xl border border-subdued/20 p-4 relative">
-      <h3 className="text-sm font-semibold text-primary-700 uppercase tracking-wide flex items-center gap-2 mb-3">
-        <User className="h-4 w-4" />
-        Profile
-      </h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-primary-700 uppercase tracking-wide flex items-center gap-2">
+          <User className="h-4 w-4" />
+          Profile
+        </h3>
+        {canEdit && data?.id && (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-subdued/30 text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <Pencil size={12} /> Edit
+          </button>
+        )}
+      </div>
+
+      <EditUserProfileModal
+        open={editing}
+        profile={data}
+        isSelf={data?.id === currentUser?.id}
+        onClose={() => setEditing(false)}
+      />
         <div className="bg-gray-100 rounded-lg p-4 space-y-2 flex-4 max-w-full min-w-max">
           <div className="flex items-center gap-3">
             {/* A plain <img> could never work here: an uploaded avatar is the relative

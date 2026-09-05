@@ -736,6 +736,7 @@ const resources = {
       "landing_signup": "Sign Up",
       "landing_editor": "Landing Page",
       "email_templates": "Email Templates",
+      "sms_allowance": "SMS Allowance",
 
       // House edit form
       "address_is_required": "Address is required",
@@ -1995,6 +1996,7 @@ const resources = {
       "landing_signup": "সাইন আপ",
       "landing_editor": "ল্যান্ডিং পেজ",
       "email_templates": "ইমেইল টেমপ্লেট",
+      "sms_allowance": "এসএমএস বরাদ্দ",
 
       // House edit form
       "address_is_required": "ঠিকানা প্রয়োজন",

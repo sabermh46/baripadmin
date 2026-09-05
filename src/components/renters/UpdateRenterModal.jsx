@@ -6,6 +6,8 @@ import { Upload, X, CheckCircle } from 'lucide-react';
 import Modal from '../common/Modal';
 import Btn from '../common/Button';
 import ProtectedImage from '../common/ProtectedImage';
+import { toast } from 'react-toastify';
+import { optimizeImage, optimizeErrorMessage, formatBytes } from '../../utils/imageOptimizer';
 
 const UpdateRenterModal = ({ isOpen, onClose, renter, onSuccess }) => {
   const [updateRenter, { isLoading }] = useUpdateRenterMutation();
@@ -16,6 +18,7 @@ const UpdateRenterModal = ({ isOpen, onClose, renter, onSuccess }) => {
   // Local blob preview URLs for newly selected files only
   const [previewFront, setPreviewFront] = useState(null);
   const [previewBack, setPreviewBack] = useState(null);
+  const [optimizing, setOptimizing] = useState(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
@@ -28,16 +31,43 @@ const UpdateRenterModal = ({ isOpen, onClose, renter, onSuccess }) => {
     },
   });
 
-  const handleImageChange = (e, type) => {
+  /**
+   * Shrink on this device before the file is ever attached to the form.
+   *
+   * The optimiser was wired into RenterForm but not into this modal, which is what the
+   * /renters page actually opens — so NID photos taken on a phone were still uploading at
+   * full size from here, EXIF and all. Optimising in the handler keeps the rest of this
+   * component's preview/state shape untouched.
+   */
+  const handleImageChange = async (e, type) => {
     const file = e.target.files[0];
+    // Cleared so re-picking the same file after a failure still fires a change event.
+    e.target.value = '';
     if (!file) return;
-    const blobUrl = URL.createObjectURL(file);
-    if (type === 'front') {
-      setNidFrontImage(file);
-      setPreviewFront(blobUrl);
-    } else {
-      setNidBackImage(file);
-      setPreviewBack(blobUrl);
+
+    setOptimizing(type);
+    try {
+      const optimized = await optimizeImage(file, 'document');
+      const blobUrl = URL.createObjectURL(optimized.file);
+
+      if (type === 'front') {
+        setPreviewFront((old) => { if (old) URL.revokeObjectURL(old); return blobUrl; });
+        setNidFrontImage(optimized.file);
+      } else {
+        setPreviewBack((old) => { if (old) URL.revokeObjectURL(old); return blobUrl; });
+        setNidBackImage(optimized.file);
+      }
+
+      if (!optimized.skipped) {
+        toast.success(
+          `Image optimised: ${formatBytes(optimized.originalBytes)} → ${formatBytes(optimized.bytes)}`
+          + (optimized.savedPct > 0 ? ` (${optimized.savedPct}% smaller)` : ''),
+        );
+      }
+    } catch (err) {
+      toast.error(optimizeErrorMessage(err));
+    } finally {
+      setOptimizing(null);
     }
   };
 
@@ -72,10 +102,18 @@ const UpdateRenterModal = ({ isOpen, onClose, renter, onSuccess }) => {
     <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
       <div className="flex flex-col items-center justify-center pt-5 pb-6">
         <Upload className="h-8 w-8 text-gray-400 mb-2" />
-        <p className="text-sm text-gray-500">Click to upload</p>
-        <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
+        <p className="text-sm text-gray-500">
+          {optimizing === type ? 'Optimising on your device…' : 'Click to upload'}
+        </p>
+        <p className="text-xs text-gray-400">Shrunk here before upload</p>
       </div>
-      <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, type)} className="hidden" />
+      <input
+        type="file"
+        accept="image/*"
+        disabled={optimizing === type}
+        onChange={(e) => handleImageChange(e, type)}
+        className="hidden"
+      />
     </label>
   );
 
@@ -111,8 +149,14 @@ const UpdateRenterModal = ({ isOpen, onClose, renter, onSuccess }) => {
               className="absolute bottom-2 right-2 px-2 py-1 bg-white text-xs text-gray-600 rounded shadow cursor-pointer hover:bg-gray-100"
               title="Replace image"
             >
-              Replace
-              <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, type)} className="hidden" />
+              {optimizing === type ? 'Optimising…' : 'Replace'}
+              <input
+        type="file"
+        accept="image/*"
+        disabled={optimizing === type}
+        onChange={(e) => handleImageChange(e, type)}
+        className="hidden"
+      />
             </label>
             <p className="text-xs text-gray-500 mt-1">Current image</p>
           </div>

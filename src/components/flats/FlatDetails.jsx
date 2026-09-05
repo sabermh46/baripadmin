@@ -24,7 +24,6 @@ import AdvancePaymentFormModal from './AdvancePaymentFormModal';
 import AssignRenterModal from './AssignRenterModal';
 import InvoicePreviewModal from '../common/InvoicePreviewModal';
 import { generateRentReceiptPdf } from '../../utils/invoiceGenerator';
-import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 
 import OverviewTab from './FlatDetails/OverviewTab';
 import PaymentsTab from './FlatDetails/PaymentsTab';
@@ -221,13 +220,24 @@ const FlatDetails = () => {
   // the day-of-month, and "pending" follows the same definition the rest of the app uses.
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleSendReminder = async () => {
+  const handleSendReminder = async (channels = ['email']) => {
     try {
-      const response = await sendReminder({ flat_id: id, houseId: flat.house_id }).unwrap();
+      const response = await sendReminder({ flat_id: id, houseId: flat.house_id, channels }).unwrap();
       const result = response?.data ?? response;
+
+      // The request succeeds as a whole even when one channel failed — the email may well
+      // have gone. Surface the SMS outcome on its own rather than letting a green
+      // "reminder sent" imply both worked.
+      const sms = response?.channels?.sms;
+      if (sms && !sms.ok) {
+        toast.warn(sms.message || 'The SMS could not be sent.');
+      } else if (sms?.ok) {
+        toast.success(`SMS sent (${sms.segments} SMS used).`);
+      }
+
       setReminderResult(result || { remindersSent: 1, results: [] });
-    } catch {
-      toast.error('Failed to send reminder');
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to send reminder'));
     }
   };
 
@@ -548,6 +558,8 @@ const FlatDetails = () => {
         onSend={handleSendReminder}
         isSending={isSendingReminder}
         renterName={renter.name}
+        renterPhone={renter.phone}
+        houseOwnerId={house?.owner?.id}
       />
 
       <ReminderLogModal

@@ -9,6 +9,7 @@ import {
   House,
   Landmark,
   Mail,
+  MessageSquare,
   Layout,
   LayoutDashboard,
   SettingsIcon,
@@ -126,6 +127,7 @@ const NAV_ITEMS = [
   { path: "/admin/settings", labelKey: "settings", icon: SettingsIcon, roles: ["developer", "web_owner"] },
   { path: "/admin/landing-editor", labelKey: "landing_editor", icon: Layout, roles: ["web_owner"] },
   { path: "/admin/email-templates", labelKey: "email_templates", icon: Mail, roles: ["web_owner", "developer"] },
+  { path: "/admin/sms-allowance", labelKey: "sms_allowance", icon: MessageSquare, roles: ["web_owner", "developer"] },
 ];
 
 /**

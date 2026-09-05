@@ -476,7 +476,7 @@ const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePa
     }
   };
 
-  const handleConfirmSend = async (note) => {
+  const handleConfirmSend = async (note, channels = ['email']) => {
     try {
       let finalBase64 = pendingReceiptData?.pdfBase64;
 
@@ -488,11 +488,18 @@ const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePa
         });
       }
 
-      await sendPaymentReceiptPdf({
+      const response = await sendPaymentReceiptPdf({
         paymentId: pendingPaymentId,
         pdfBase64: finalBase64,
+        channels,
       }).unwrap();
       toast.success(t('toast_receipt_sent'));
+
+      // Reported separately: the email carrying the PDF may have gone even when the SMS did
+      // not, and one success toast for both would hide that.
+      const sms = response?.channels?.sms;
+      if (sms && !sms.ok) toast.warn(sms.message || 'The SMS could not be sent.');
+      else if (sms?.ok) toast.success(`SMS sent (${sms.segments} SMS used).`);
     } catch (err) {
       console.error('Failed to send receipt:', err);
       toast.error(t('toast_receipt_failed', { reason: apiErrorMessage(err) }));
@@ -1028,6 +1035,8 @@ const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePa
         open={previewOpen}
         pdfBase64={invoicePdfBase64}
         renterName={renter?.name}
+        renterPhone={renter?.phone}
+        houseOwnerId={house?.owner?.id}
         onConfirm={handleConfirmSend}
         onSkip={handleSkipReceipt}
         isSending={isSendingReceipt}

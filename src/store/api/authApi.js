@@ -144,6 +144,22 @@ export const authApi = baseApi.injectEndpoints({
       providesTags: ['ManagedUsers'],
     }),
 
+    /**
+     * An admin editing someone else's profile.
+     *
+     * There was no endpoint for this at all — the only user-mutating calls were role limits,
+     * staff permissions and the caller's own avatar. Invalidates ManagedUsers/ManagedOwners
+     * so every list showing the old name or email refreshes, not just the page that saved.
+     */
+    updateUser: builder.mutation({
+      query: ({ userId, ...body }) => ({
+        url: `/auth/user/${userId}`,
+        method: 'PUT',
+        data: body,
+      }),
+      invalidatesTags: ['ManagedUsers', 'ManagedOwners', 'User'],
+    }),
+
     uploadAvatar: builder.mutation({
       query: (formData) => ({
         url: '/auth/profile/avatar',
@@ -160,6 +176,7 @@ export const {
   useGoogleLoginQuery,
   useSetPasswordMutation,
   useLinkGoogleAccountMutation,
+  useUpdateUserMutation,
   useForgotPasswordMutation, // Exported
   useResetPasswordMutation,   // Exported
   useChangePasswordMutation,  // Exported

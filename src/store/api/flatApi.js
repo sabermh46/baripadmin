@@ -195,10 +195,10 @@ export const flatApi = baseApi.injectEndpoints({
     //POST: /financial/resend-payment-receipt'
     // const { rent_payment_id } = req.body;
     resendPaymentReceipt: builder.mutation({
-      query: ({rentPaymentId}) => ({
+      query: ({ rentPaymentId, channels }) => ({
         url: `/financial/resend-payment-receipt`,
         method: 'POST',
-        data: { rent_payment_id: rentPaymentId },
+        data: { rent_payment_id: rentPaymentId, channels },
       }),
       invalidatesTags: ['PaymentReceipt'],
     }),
@@ -206,10 +206,10 @@ export const flatApi = baseApi.injectEndpoints({
     // POST: /financial/rent-payment/:id/send-receipt
     // Sends a frontend-generated PDF receipt to the renter's email
     sendPaymentReceiptPdf: builder.mutation({
-      query: ({ paymentId, pdfBase64 }) => ({
+      query: ({ paymentId, pdfBase64, channels }) => ({
         url: `/financial/rent-payment/${paymentId}/send-receipt`,
         method: 'POST',
-        data: { pdfBase64 },
+        data: { pdfBase64, channels },
       }),
     }),
 

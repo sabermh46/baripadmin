@@ -1,18 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import ChannelPicker from '../../common/ChannelPicker';
 
-const ReminderModal = ({
-  open,
+/**
+ * Thin gate so the body MOUNTS on open rather than staying mounted and rendering null.
+ *
+ * The channel choice lives in the body's own useState, and a component that is never
+ * unmounted would carry a previous SMS selection into the next renter — who may not even
+ * have a phone number. Remounting is how this codebase already handles seeding state from
+ * props elsewhere; syncing it back with an effect is the thing being avoided.
+ */
+const ReminderModal = (props) => (props.open ? <ReminderModalBody {...props} /> : null);
+
+const ReminderModalBody = ({
   reminderResult,
   onClose,
   onSend,
   isSending,
   renterName,
+  renterPhone,
+  houseOwnerId,
 }) => {
   const { t } = useTranslation();
-
-  if (!open) return null;
+  const [channels, setChannels] = useState(['email']);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -80,11 +91,21 @@ const ReminderModal = ({
         ) : (
           /* Confirmation prompt */
           <>
-            <p className="text-subdued mb-6">
+            <p className="text-subdued mb-4">
               {t('send_reminder_confirm') ||
                 `Send reminder to`}{' '}
               <span className="font-semibold text-text">{renterName}</span>?
             </p>
+
+            <div className="mb-6">
+              <ChannelPicker
+                value={channels}
+                onChange={setChannels}
+                houseOwnerId={houseOwnerId}
+                smsAvailable={!!renterPhone}
+                smsUnavailableReason={`${renterName || 'This renter'} has no phone number on file`}
+              />
+            </div>
             <div className="flex justify-end gap-3">
               <button
                 onClick={onClose}
@@ -93,7 +114,7 @@ const ReminderModal = ({
                 {t('cancel')}
               </button>
               <button
-                onClick={onSend}
+                onClick={() => onSend(channels)}
                 disabled={isSending}
                 className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >

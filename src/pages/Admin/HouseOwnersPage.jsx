@@ -1,9 +1,10 @@
 // HouseOwnersPage - Updated to use Table component
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Mail, Home, UserPlus, Eye } from 'lucide-react';
+import { Search, Mail, Home, UserPlus, Eye, Pencil } from 'lucide-react';
 import { useGetManagedOwnersQuery } from '../../store/api/houseApi';
 import { useAuth } from '../../hooks';
+import EditUserProfileModal from '../../components/admin/EditUserProfileModal';
 import debounce from 'lodash/debounce';
 import Table from '../../components/common/Table';
 import CreateHouseOwnerModal from '../AppFee/CreateHouseOwnerModal';
@@ -12,7 +13,15 @@ import { t } from 'i18next';
 
 const HouseOwnersPage = () => {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user: currentUser } = useAuth();
+  const [editingOwner, setEditingOwner] = useState(null);
+
+  // web_owner and developer pass on role; staff need the permission. The server checks
+  // the same rule plus rank, so this only decides whether the button is worth showing.
+  const canEditUsers =
+    currentUser?.role?.slug === 'web_owner'
+    || currentUser?.role?.slug === 'developer'
+    || (currentUser?.role?.slug === 'staff' && hasPermission('users.edit'));
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -118,14 +127,26 @@ const HouseOwnersPage = () => {
       title: t('actions'),
       key: 'actions',
       render: (owner) => (
-        <button
-          type="button"
-          onClick={() => navigate(`/admin/house-owners/${owner.id}`)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors"
-        >
-          <Eye size={16} />
-          View
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => navigate(`/admin/house-owners/${owner.id}`)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors"
+          >
+            <Eye size={16} />
+            View
+          </button>
+          {canEditUsers && (
+            <button
+              type="button"
+              onClick={() => setEditingOwner(owner)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Pencil size={15} />
+              Edit
+            </button>
+          )}
+        </div>
       )
     }
   ];
@@ -204,6 +225,16 @@ const HouseOwnersPage = () => {
           className="border-0"
         />
       </div>
+
+      {/* Keyed on the owner, so opening a second row after a first seeds the form from the
+          right person rather than reusing the previous mount's state. */}
+      <EditUserProfileModal
+        key={editingOwner?.id}
+        open={!!editingOwner}
+        profile={editingOwner || {}}
+        isSelf={editingOwner?.id === currentUser?.id}
+        onClose={() => setEditingOwner(null)}
+      />
 
       <CreateHouseOwnerModal
         isOpen={createOwnerOpen}

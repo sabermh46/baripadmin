@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import Modal from '../common/Modal';
 import Btn from '../common/Button';
+import { toast } from 'react-toastify';
+import { optimizeImage, optimizeErrorMessage, formatBytes } from '../../utils/imageOptimizer';
 
 const CreateRenterModal = ({ isOpen, onClose, onSuccess }) => {
   const [createRenter, { isLoading }] = useCreateRenterMutation();
@@ -16,19 +18,47 @@ const CreateRenterModal = ({ isOpen, onClose, onSuccess }) => {
   const [nidBackImage, setNidBackImage] = useState(null);
   const [previewFront, setPreviewFront] = useState(null);
   const [previewBack, setPreviewBack] = useState(null);
+  const [optimizing, setOptimizing] = useState(null);
   
   const { register, handleSubmit, formState: { errors }, reset } = useForm();
 
-  const handleImageChange = (e, type) => {
+  /**
+   * Shrink on this device before the file is ever attached to the form.
+   *
+   * The optimiser was wired into RenterForm but not into this modal, which is what the
+   * /renters page actually opens — so NID photos taken on a phone were still uploading at
+   * full size from here, EXIF and all. Optimising in the handler keeps the rest of this
+   * component's preview/state shape untouched.
+   */
+  const handleImageChange = async (e, type) => {
     const file = e.target.files[0];
+    // Cleared so re-picking the same file after a failure still fires a change event.
+    e.target.value = '';
     if (!file) return;
 
-    if (type === 'front') {
-      setNidFrontImage(file);
-      setPreviewFront(URL.createObjectURL(file));
-    } else {
-      setNidBackImage(file);
-      setPreviewBack(URL.createObjectURL(file));
+    setOptimizing(type);
+    try {
+      const optimized = await optimizeImage(file, 'document');
+      const blobUrl = URL.createObjectURL(optimized.file);
+
+      if (type === 'front') {
+        setPreviewFront((old) => { if (old) URL.revokeObjectURL(old); return blobUrl; });
+        setNidFrontImage(optimized.file);
+      } else {
+        setPreviewBack((old) => { if (old) URL.revokeObjectURL(old); return blobUrl; });
+        setNidBackImage(optimized.file);
+      }
+
+      if (!optimized.skipped) {
+        toast.success(
+          `Image optimised: ${formatBytes(optimized.originalBytes)} → ${formatBytes(optimized.bytes)}`
+          + (optimized.savedPct > 0 ? ` (${optimized.savedPct}% smaller)` : ''),
+        );
+      }
+    } catch (err) {
+      toast.error(optimizeErrorMessage(err));
+    } finally {
+      setOptimizing(null);
     }
   };
 
@@ -210,6 +240,7 @@ const CreateRenterModal = ({ isOpen, onClose, onSuccess }) => {
                   <input
                     type="file"
                     accept="image/*"
+                    disabled={optimizing === 'front'}
                     onChange={(e) => handleImageChange(e, 'front')}
                     className="hidden"
                   />
@@ -247,6 +278,7 @@ const CreateRenterModal = ({ isOpen, onClose, onSuccess }) => {
                   <input
                     type="file"
                     accept="image/*"
+                    disabled={optimizing === 'back'}
                     onChange={(e) => handleImageChange(e, 'back')}
                     className="hidden"
                   />

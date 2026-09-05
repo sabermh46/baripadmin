@@ -252,7 +252,7 @@ export const baseApi = createApi({
     'ManagedOwners', 'ManagedUsers',
     'Notification', 'UserApproval', 'NotificationSettings', 'SmsProvider',
     'Analytics', 'HouseOwnerAnalytics', 'Report', 'EmailStats', 'WorkerStats',
-    'EmailTemplate',
+    'EmailTemplate', 'SmsAllowance', 'SmsSettings', 'SmsLog',
   ],
 
   // Restores the query cache that redux-persist wrote to IndexedDB, so a reload paints
