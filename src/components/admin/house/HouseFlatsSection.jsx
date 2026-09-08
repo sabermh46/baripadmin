@@ -22,12 +22,12 @@ const money = (n) =>
 const VIEW_MODES = {
   comfortable: {
     icon: Grid2x2,
-    grid: 'grid grid-cols-2 lg:grid-cols-4 gap-3',
+    grid: 'grid grid-cols-2 gap-x-2 gap-y-4 lg:grid-cols-4 sm:gap-3',
     labelKey: 'view_comfortable',
   },
   compact: {
     icon: Grid3x3,
-    grid: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2',
+    grid: 'grid grid-cols-2 gap-x-1.5 gap-y-3.5 sm:grid-cols-3 lg:grid-cols-6 sm:gap-2',
     labelKey: 'view_compact',
   },
   list: {
@@ -42,7 +42,7 @@ const RENT_STATE = {
   pending: 'bg-amber-100 text-amber-800',
   overdue: 'bg-red-100 text-red-800',
   partial: 'bg-blue-100 text-blue-800',
-  none: 'bg-gray-100 text-gray-600',
+  none: 'bg-gray-100 text-gray-700',
 };
 
 /**
@@ -92,28 +92,40 @@ const FlatCard = ({ flat, dense, onOpen, onAssign, t }) => {
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
-      className={`text-left bg-white border rounded-xl transition-all cursor-pointer hover:border-primary/60 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-        dense ? 'p-2.5' : 'p-3.5'
+      className={`relative text-left bg-white border rounded-xl transition-all cursor-pointer hover:border-primary/60 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+        dense ? 'p-2 sm:p-2.5' : 'p-2.5 sm:p-3.5'
       } ${flat.isOccupied ? 'border-gray-200' : 'border-dashed border-gray-300'}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className={`font-semibold text-gray-900 truncate ${dense ? 'text-sm' : 'text-base'}`}>
+      <div className="flex items-start justify-between gap-1 sm:gap-2">
+        <div className="min-w-0 flex-1">
+          {/* Two lines, then ellipsis. The name is the only thing telling one card from
+              the next, and a single truncated line rendered every flat in a 2-up phone
+              grid as the same "Fl…" — so it gets a second line before it gets cut. */}
+          <p
+            title={flat.name || flat.number || undefined}
+            className={`font-semibold text-gray-900 leading-tight break-words line-clamp-2 ${
+              dense ? 'text-[13px] sm:text-sm' : 'text-[13px] sm:text-base'
+            }`}
+          >
             {flat.name || flat.number || `#${flat.id}`}
           </p>
           {!dense && flat.number && flat.name && (
-            <p className="text-[11px] text-gray-500">{flat.number}</p>
+            <p className="text-[11px] text-gray-500 mt-0.5 truncate">{flat.number}</p>
           )}
         </div>
+        {/* On a phone the badge is lifted out of the flow and hung on the card's top
+            edge, which is the only way the name gets the card's full width — in-flow it
+            claimed nearly half of a ~110px card and left the name two or three
+            characters. The grid's gap-y carries the half that overhangs. */}
         <span
           title={rent.forMonth ? t('rent_state_for_month', { month: rent.forMonth }) : undefined}
-          className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${stateClass(rent, state)}`}
+          className={`absolute right-2 top-0 -translate-y-1/2 shadow-sm sm:static sm:translate-y-0 sm:shadow-none shrink-0 whitespace-nowrap px-1 sm:px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-medium ${stateClass(rent, state)}`}
         >
           {rent.paidAhead ? t('rent_state_paid_ahead') : t(`rent_state_${state}`)}
         </span>
       </div>
 
-      <p className={`font-semibold text-gray-900 ${dense ? 'text-sm mt-1' : 'text-lg mt-1.5'}`}>
+      <p className={`font-semibold text-gray-900 tabular-nums ${dense ? 'text-sm mt-1' : 'text-base sm:text-lg mt-1.5'}`}>
         {money(flat.rent_amount)}
       </p>
 
@@ -128,11 +140,13 @@ const FlatCard = ({ flat, dense, onOpen, onAssign, t }) => {
           {!flat.isOccupied && onAssign && (
             <button
               type="button"
+              title={t('assign_renter')}
               onClick={(e) => { e.stopPropagation(); onAssign(flat); }}
-              className="text-[11px] font-medium text-primary hover:underline inline-flex items-center gap-1"
+              className="max-w-full text-[11px] font-medium text-primary hover:underline inline-flex items-center gap-1 whitespace-nowrap"
             >
-              <UserPlus className="h-3 w-3" />
-              {t('assign_renter')}
+              <UserPlus className="h-3 w-3 shrink-0" />
+              <span className="truncate sm:hidden">{t('assign_renter_short')}</span>
+              <span className="hidden sm:inline truncate">{t('assign_renter')}</span>
             </button>
           )}
         </div>
@@ -142,40 +156,48 @@ const FlatCard = ({ flat, dense, onOpen, onAssign, t }) => {
         <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
           {flat.isOccupied ? (
             <>
-              <p className="text-xs text-gray-700 truncate flex items-center gap-1.5">
+              <p title={flat.renterName} className="text-xs text-gray-700 flex items-center gap-1.5">
                 <BedDouble className="h-3 w-3 shrink-0 text-gray-400" />
-                {flat.renterName}
+                <span className="truncate">{flat.renterName}</span>
               </p>
               {flat.renterPhone && (
                 <p className="text-[11px] text-gray-500 flex items-center gap-1.5">
                   <Phone className="h-3 w-3 shrink-0 text-gray-400" />
-                  {flat.renterPhone}
+                  <span className="truncate">{flat.renterPhone}</span>
                 </p>
               )}
             </>
           ) : (
             <>
-              <p className="text-xs text-gray-500 flex items-center gap-1.5">
+              <p className="text-xs text-gray-600 flex items-center gap-1.5">
                 <BedDouble className="h-3 w-3 shrink-0" />
-                {t('vacant')}
+                <span className="truncate">{t('vacant')}</span>
               </p>
+              {/* Fixed h-8 rather than py-1.5: "Assign renter" wrapped to two lines on a
+                  phone, which mangled the label and left every vacant card a different
+                  height from its neighbour in the same grid row. */}
               {onAssign && (
                 <button
                   type="button"
+                  title={t('assign_renter')}
                   onClick={(e) => { e.stopPropagation(); onAssign(flat); }}
-                  className="mt-1 w-full inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-primary/40 text-primary text-xs font-medium hover:bg-primary/5"
+                  className="mt-1 w-full h-8 inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 rounded-lg border border-primary/40 bg-primary/5 text-primary text-[11px] sm:text-xs font-medium whitespace-nowrap overflow-hidden hover:bg-primary/10"
                 >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  {t('assign_renter')}
+                  <UserPlus className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate sm:hidden">{t('assign_renter_short')}</span>
+                  <span className="hidden sm:inline truncate">{t('assign_renter')}</span>
                 </button>
               )}
             </>
           )}
           <DueLine rent={rent} t={t} />
           {flat.should_pay_rent_day && (
-            <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
+            <p
+              title={t('rent_due_day', { day: flat.should_pay_rent_day })}
+              className="text-[11px] text-gray-500 flex items-center gap-1.5"
+            >
               <CalendarDays className="h-3 w-3 shrink-0" />
-              {t('rent_due_day', { day: flat.should_pay_rent_day })}
+              <span className="truncate">{t('rent_due_day', { day: flat.should_pay_rent_day })}</span>
             </p>
           )}
         </div>
@@ -204,13 +226,17 @@ const FlatRow = ({ flat, onOpen, onAssign, t }) => {
         <DueLine rent={rent} t={t} small />
       </div>
 
+      {/* Below sm the label is hidden and this is icon-only, so it carries its own
+          accessible name instead of announcing as an unlabelled button. */}
       {!flat.isOccupied && onAssign && (
         <button
           type="button"
+          title={t('assign_renter')}
+          aria-label={t('assign_renter')}
           onClick={(e) => { e.stopPropagation(); onAssign(flat); }}
-          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/40 text-primary text-xs font-medium hover:bg-primary/5"
+          className="shrink-0 h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg border border-primary/40 bg-primary/5 text-primary text-xs font-medium whitespace-nowrap hover:bg-primary/10"
         >
-          <UserPlus className="h-3.5 w-3.5" />
+          <UserPlus className="h-3.5 w-3.5 shrink-0" />
           <span className="hidden sm:inline">{t('assign_renter')}</span>
         </button>
       )}
@@ -270,7 +296,7 @@ const HouseFlatsSection = ({ flats = [], onAddFlat, onAssignRenter, can }) => {
   const occupied = flats.filter((f) => f.isOccupied).length;
 
   return (
-    <section className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
+    <section className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">{t('flats')}</h2>

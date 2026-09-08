@@ -1,5 +1,6 @@
 // components/common/Table.jsx
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 const Table = ({
@@ -17,6 +18,10 @@ const Table = ({
   hoverable = true,
   compact = false,
 }) => {
+  // The pagination strings were hardcoded English, so every table in the app kept saying
+  // "Showing 1 to 20 of 45 results" with the interface switched to Bangla.
+  const { t } = useTranslation();
+
   const handleRowClick = (row) => {
     if (onRowClick) {
       onRowClick(row);
@@ -29,7 +34,9 @@ const Table = ({
     }
   };
 
-  const { current, total, totalPages, pageSize = 10 } = pagination || {};
+  // totalPages is read as pagination.totalPages at each use below, so destructuring it
+  // here only produced an unused binding.
+  const { current, total, pageSize = 10 } = pagination || {};
   const startIndex = (current - 1) * pageSize;
   const endIndex = Math.min(current * pageSize, total);
 
@@ -138,28 +145,24 @@ const Table = ({
                 disabled={pagination.current === 1}
                 className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
+                {t('previous')}
               </button>
               <button
                 onClick={() => handlePageChange(pagination.current + 1)}
                 disabled={pagination.current === pagination.totalPages}
                 className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next
+                {t('next')}
               </button>
             </div>
             <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-700">
-                  Showing{' '}
-                  <span className="font-medium">
-                    {total === 0 ? 0 : startIndex + 1}
-                  </span>{' '}
-                  to{' '}
-                  <span className="font-medium">{endIndex}</span>{' '}
-                  of{' '}
-                  <span className="font-medium">{pagination.total}</span>{' '}
-                  results
+                  {t('showing_range', {
+                    from: total === 0 ? 0 : startIndex + 1,
+                    to: endIndex,
+                    total: pagination.total,
+                  })}
                 </p>
               </div>
               <div>
@@ -172,7 +175,7 @@ const Table = ({
                     disabled={pagination.current === 1}
                     className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="sr-only">First</span>
+                    <span className="sr-only">{t('first_page')}</span>
                     <ChevronsLeft className="h-5 w-5" />
                   </button>
                   <button
@@ -180,7 +183,7 @@ const Table = ({
                     disabled={pagination.current === 1}
                     className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="sr-only">Previous</span>
+                    <span className="sr-only">{t('previous')}</span>
                     <ChevronLeft className="h-5 w-5" />
                   </button>
                   
@@ -221,7 +224,7 @@ const Table = ({
                     disabled={pagination.current === pagination.totalPages}
                     className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="sr-only">Next</span>
+                    <span className="sr-only">{t('next')}</span>
                     <ChevronRight className="h-5 w-5" />
                   </button>
                   <button
@@ -229,7 +232,7 @@ const Table = ({
                     disabled={pagination.current === pagination.totalPages}
                     className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="sr-only">Last</span>
+                    <span className="sr-only">{t('last_page')}</span>
                     <ChevronsRight className="h-5 w-5" />
                   </button>
                 </nav>

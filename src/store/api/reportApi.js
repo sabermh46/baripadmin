@@ -1,7 +1,7 @@
 import { baseApi } from './baseApi';
 
 /**
- * Financial reporting.
+ * Financial reporting and house expenses.
  *
  * `houseId` is optional on the profit report: omitting it reports across every house the
  * signed-in role may see, which is how an owner gets a portfolio total and how an admin
@@ -27,6 +27,18 @@ export const reportApi = baseApi.injectEndpoints({
       providesTags: ['Report'],
     }),
 
+    getExpenses: builder.query({
+      query: ({ houseOwnerId, houseId, page, limit }) => ({
+        url: `/houses/${houseOwnerId}/expenses`,
+        method: 'GET',
+        params: clean({ houseId, page, limit }),
+      }),
+      providesTags: ['Report'],
+    }),
+
+    // Note the key name: the endpoint interpolates `houseId` into the path, so a caller
+    // passing the form's `house_id` would send /houses/undefined/expenses. The dev-only
+    // guard in baseApi catches that now, but the mismatch is worth stating here too.
     recordExpense: builder.mutation({
       query: ({ houseId, ...expenseData }) => ({
         url: `/houses/${houseId}/expenses`,
@@ -36,15 +48,41 @@ export const reportApi = baseApi.injectEndpoints({
       invalidatesTags: ['Report'],
     }),
 
-    getExpenses: builder.query({
-      query: ({ houseOwnerId, houseId }) => ({
-        url: `/houses/${houseOwnerId}/expenses`,
-        method: 'GET',
-        params: clean({ houseId }),
+    updateExpense: builder.mutation({
+      query: ({ houseId, expenseId, ...expenseData }) => ({
+        url: `/houses/${houseId}/expenses/${expenseId}`,
+        method: 'PUT',
+        data: expenseData,
       }),
-      providesTags: ['Report'],
+      invalidatesTags: ['Report'],
+    }),
+
+    deleteExpense: builder.mutation({
+      query: ({ houseId, expenseId }) => ({
+        url: `/houses/${houseId}/expenses/${expenseId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Report'],
+    }),
+
+    // Approve or reject an expense someone else recorded. Only the house owner may decide,
+    // and only on one still pending — the server enforces both.
+    decideExpense: builder.mutation({
+      query: ({ houseId, expenseId, status, reason }) => ({
+        url: `/houses/${houseId}/expenses/${expenseId}`,
+        method: 'PATCH',
+        data: clean({ status, reason }),
+      }),
+      invalidatesTags: ['Report'],
     }),
   }),
 });
 
-export const { useGetProfitReportQuery, useRecordExpenseMutation, useGetExpensesQuery } = reportApi;
+export const {
+  useGetProfitReportQuery,
+  useGetExpensesQuery,
+  useRecordExpenseMutation,
+  useUpdateExpenseMutation,
+  useDeleteExpenseMutation,
+  useDecideExpenseMutation,
+} = reportApi;

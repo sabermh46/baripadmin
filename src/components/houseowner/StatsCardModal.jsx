@@ -124,7 +124,7 @@ const StatsCardModal = ({ open, onClose, cardFor, value, label, houses = [], ren
                     }`}
                   >
                     <div className="flex items-baseline justify-between gap-1">
-                      <p className="font-semibold text-gray-900 truncate">{f.name}</p>
+                      <p className="text-xs md:text-xl font-semibold text-gray-900 line-clamp-2">{f.name}</p>
                       <span className="text-[10px] text-gray-400 font-mono shrink-0">{f.number}</span>
                     </div>
                     <p className="text-xs text-gray-500 truncate mt-0.5">

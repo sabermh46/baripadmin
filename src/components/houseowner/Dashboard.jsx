@@ -28,6 +28,33 @@ import {
 import Btn from '../common/Button';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * How small the amount has to get to stay on one line inside its tile.
+ *
+ * The three money tiles are a third of the content column each — about 74px of usable
+ * width once the layout's p-4 and the tile's own p-2 are taken out on a 320px screen —
+ * and the figure was rendered at a fixed text-sm with nothing bounding it, so a
+ * nine-digit value ran straight out of the tile and was clipped by the content column's
+ * overflow-x-clip. Seven digits is the realistic ceiling for one month's rent; this
+ * ladder carries nine comfortably and falls back to an ellipsis past that rather than
+ * breaking the grid.
+ *
+ * Keyed on the formatted string's length rather than the number's magnitude, so a minus
+ * sign on a loss-making month counts, and so does a device locale that groups in
+ * lakh/crore (13 characters for nine digits) instead of thousands.
+ *
+ * Desktop needs none of it: at md the same tile is roughly 230px wide, so the figure
+ * keeps text-xl until it is genuinely absurd.
+ */
+const amountSizeClass = (text) => {
+  const len = String(text).length;
+  if (len <= 9) return 'text-sm md:text-xl';      // up to 6 digits
+  if (len <= 10) return 'text-xs md:text-xl';     // 7 digits
+  if (len <= 11) return 'text-[11px] md:text-xl'; // 8 digits
+  if (len <= 12) return 'text-[10px] md:text-xl'; // 9 digits
+  return 'text-[9px] md:text-lg';
+};
+
 const HouseOwnerComponent = () => {
   const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -191,19 +218,19 @@ const HouseOwnerComponent = () => {
   const profitStats = [
     {
       label: t('monthly_rent'),
-      value: `৳ ${(summary?.monthlyRentCollection ?? 0).toLocaleString()}`,
+      value: `৳${(summary?.monthlyRentCollection ?? 0).toLocaleString()}`,
       trend: (summary?.monthlyRentCollection ?? 0) > 0 ? 'up' : 'neutral',
       change: t('current_month')
     },
     {
       label: t('monthly_expenses'),
-      value: `৳ ${(summary?.monthlyExpenses ?? 0).toLocaleString()}`,
+      value: `৳${(summary?.monthlyExpenses ?? 0).toLocaleString()}`,
       trend: (summary?.monthlyExpenses ?? 0) > 0 ? 'down' : 'neutral',
       change: t('current_month')
     },
     {
       label: t('monthly_profit'),
-      value: `৳ ${(summary?.monthlyProfit ?? 0).toLocaleString()}`,
+      value: `৳${(summary?.monthlyProfit ?? 0).toLocaleString()}`,
       trend: (summary?.monthlyProfit ?? 0) > 0 ? 'up' : (summary?.monthlyProfit ?? 0) < 0 ? 'down' : 'neutral',
       change: t('occupancy_percent', { percent: summary?.occupancyRate ?? 0 })
     }
@@ -238,10 +265,17 @@ const HouseOwnerComponent = () => {
         {/* Profit Stats */}
         <div className="grid grid-cols-3 gap-2">
           {profitStats.map((stat, index) => (
-            <div key={index} className={`bg-white rounded-lg p-2 border-2 border-gray-300 ${index === 0 ? 'rounded-tl-xl rounded-bl-xl' : ''} ${index === profitStats.length -1 ? 'rounded-tr-xl rounded-br-xl' : ''}`}>
+            // min-w-0: a grid item defaults to min-width:auto and will happily grow past
+            // its track to fit its content, which is what let the figure escape the tile.
+            <div key={index} className={`min-w-0 bg-white rounded-lg p-2 border-2 border-gray-300 ${index === 0 ? 'rounded-tl-xl rounded-bl-xl' : ''} ${index === profitStats.length -1 ? 'rounded-tr-xl rounded-br-xl' : ''}`}>
               <p className="text-xs text-center text-gray-600 mb-1">{stat.label}</p>
-              <div className="flex items-center justify-center md:justify-between flex-col gap-4">
-                <p className="text-sm text-primary md:text-xl font-bold">{stat.value}</p>
+              <div className="flex items-center justify-center md:justify-between flex-col gap-4 min-w-0 w-full">
+                <p
+                  title={stat.value}
+                  className={`w-full text-center text-primary font-bold tabular-nums leading-tight whitespace-nowrap truncate ${amountSizeClass(stat.value)}`}
+                >
+                  {stat.value}
+                </p>
                 <span className={`px-2 py-1 text-xs font-genos text-center rounded-xl ${
                   stat.trend === 'up' ? 'bg-green-100 text-green-800' :
                   stat.trend === 'down' ? 'bg-red-100 text-red-800' :

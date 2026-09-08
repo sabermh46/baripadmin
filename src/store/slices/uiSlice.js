@@ -22,6 +22,16 @@ const initialState = {
   flatViewMode: 'comfortable',
 
   /**
+   * How the renter list on the house detail page is laid out.
+   *
+   * Separate from `flatViewMode` rather than one shared "house page density": the two
+   * lists hold different amounts of per-card content, so someone who wants flats dense
+   * does not necessarily want renters dense, and tying them together would move a list
+   * the user never touched.
+   */
+  renterViewMode: 'comfortable',
+
+  /**
    * Set when the API answers 402 SUBSCRIPTION_EXPIRED.
    *
    * The gate has always returned that code and the client had no idea what it meant, so a
@@ -42,6 +52,10 @@ const uiSlice = createSlice({
   reducers: {
     setFlatViewMode: (state, action) => {
       state.flatViewMode = action.payload;
+    },
+
+    setRenterViewMode: (state, action) => {
+      state.renterViewMode = action.payload;
     },
 
     setSubscriptionBlocked: (state, action) => {
@@ -107,6 +121,7 @@ const uiSlice = createSlice({
 
 export const {
   setFlatViewMode,
+  setRenterViewMode,
   setSubscriptionBlocked,
   addNotification,
   markNotificationAsRead,

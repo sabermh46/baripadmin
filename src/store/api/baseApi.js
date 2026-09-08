@@ -154,7 +154,32 @@ axiosInstance.interceptors.response.use(
 );
 
 
+/**
+ * An id that arrives undefined does not fail loudly on its own — it interpolates straight
+ * into the path and the request goes out as `/houses/undefined/expenses`, which the backend
+ * rejects as an unknown route. The resulting toast blames routing, when the real fault is at
+ * the call site: usually a key spelled `house_id` where the endpoint destructures `houseId`.
+ *
+ * Development only. In production the request proceeds exactly as before, so this can never
+ * turn a degraded page into a broken one for a user.
+ */
+const warnOnMissingPathParam = (args) => {
+  const url = typeof args === 'string' ? args : args?.url;
+  if (typeof url !== 'string') return;
+
+  const bad = url.match(/\/(undefined|null)(\/|$|\?)/);
+  if (!bad) return;
+
+  console.error(
+    `[api] "${bad[1]}" in request path: ${url}`,
+    'An id was undefined when the request was built — check that the call site passes the '
+    + 'exact key the endpoint destructures (a snake_case/camelCase mismatch is the usual cause).',
+  );
+};
+
 const axiosBaseQuery = () => async (args, api) => {
+  if (import.meta.env.DEV) warnOnMissingPathParam(args);
+
   try {
     // If body is FormData, we need to handle it specially
     if (args.body instanceof FormData) {

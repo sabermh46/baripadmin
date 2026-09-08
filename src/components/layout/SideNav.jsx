@@ -2,19 +2,22 @@ import {
   BellDot,
   BellRing,
   BookUser,
+  ChartColumnBig,
   CircleUser,
   Wallet,
   FileClock,
-  FileText,
   House,
   Landmark,
+  LayoutDashboard,
+  LayoutTemplate,
+  LogOut,
   Mail,
   MessageSquare,
-  Layout,
-  LayoutDashboard,
-  SettingsIcon,
-  Users,
+  Receipt,
+  Settings,
   UserCheck,
+  UserCog,
+  Users,
   UsersRound,
 } from "lucide-react";
 import { useState, memo } from "react";
@@ -30,6 +33,20 @@ import ProtectedImage from "../common/ProtectedImage";
 import { clearOffline } from '../../utils/offlineCache';
 
 /**
+ * The sections the nav is divided into, in the order they appear.
+ *
+ * A web_owner sees eighteen entries. As one flat list that is a scroll with no landmarks,
+ * and the two an admin actually reaches for sit in the middle of it. A house owner sees
+ * eight across three sections, so the headings cost them almost nothing.
+ */
+const NAV_GROUPS = [
+  { key: "main", labelKey: "nav_group_main" },
+  { key: "people", labelKey: "nav_group_people" },
+  { key: "money", labelKey: "nav_group_money" },
+  { key: "admin", labelKey: "nav_group_admin" },
+];
+
+/**
  * Hoisted to module scope, and `icon` holds the component *reference* rather than a
  * rendered `<LayoutDashboard />` element.
  *
@@ -41,13 +58,18 @@ import { clearOffline } from '../../utils/offlineCache';
  *
  * `labelKey` instead of a resolved label so translation still happens at render time and
  * the list stays static across language switches.
+ *
+ * Every `icon` is distinct. Expenses and Reports both used FileText, and Staffs and Renters
+ * both used Users — two pairs of unrelated destinations that were indistinguishable at a
+ * glance, which is most of what "the icons look basic" was actually about.
  */
 const NAV_ITEMS = [
-  { path: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, toMatch: ["/admin/generate-token"] },
+  { path: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, group: "main", toMatch: ["/admin/generate-token"] },
   {
     path: "/houses",
     labelKey: "houses",
     icon: House,
+    group: "main",
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
     // /flats/:id has no entry of its own and belongs here. The two entries alongside it
     // were "houses" and "/houses/create", both already covered by the /houses prefix.
@@ -57,15 +79,16 @@ const NAV_ITEMS = [
     path: "/notification",
     labelKey: "notification",
     icon: BellDot,
+    group: "main",
     roles: ["developer", "web_owner", "staff", "house_owner"],
   },
-  { path: "/profile", labelKey: "profile", icon: CircleUser },
-  { path: "/admin/staff", labelKey: "staffs", icon: Users, roles: ["developer", "web_owner"] },
-  { path: "/staff/audit-logs", labelKey: "audit_logs", icon: FileClock, roles: ["developer", "web_owner"] },
+  { path: "/profile", labelKey: "profile", icon: CircleUser, group: "main" },
+  { path: "/admin/staff", labelKey: "staffs", icon: UserCog, group: "people", roles: ["developer", "web_owner"] },
   {
     path: "/staff/user-approvals",
     labelKey: "caretaker_requests",
     icon: UserCheck,
+    group: "people",
     roles: ["developer", "web_owner", "staff"],
     // Staff need the same capability the approve endpoint enforces.
     permission: "caretakers.create",
@@ -74,6 +97,7 @@ const NAV_ITEMS = [
     path: "/caretakers",
     labelKey: "caretakers",
     icon: UsersRound,
+    group: "people",
     // A caretaker belongs here too — it is where they see their own assignments.
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
   },
@@ -81,6 +105,7 @@ const NAV_ITEMS = [
     path: "/admin/house-owners",
     labelKey: "house_owners",
     icon: BookUser,
+    group: "people",
     roles: ["developer", "web_owner", "staff"],
     // Staff need users.view for this; without it the page is an Access Denied.
     permission: "users.view",
@@ -89,6 +114,7 @@ const NAV_ITEMS = [
     path: "/renters",
     labelKey: "renters",
     icon: Users,
+    group: "people",
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
     // Same permission the route and the endpoint require, so the link is not offered to
     // somebody it would only refuse.
@@ -97,37 +123,43 @@ const NAV_ITEMS = [
   {
     path: "/expenses",
     labelKey: "expenses",
-    icon: FileText,
+    icon: Receipt,
+    group: "money",
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
   },
   {
     path: "/app-fee",
     labelKey: "app_fee",
     icon: Wallet,
+    group: "money",
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
   },
   {
     path: "/loans",
     labelKey: "loans",
     icon: Landmark,
+    group: "money",
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
   },
   {
     path: "/reports",
     labelKey: "reports",
-    icon: FileText,
+    icon: ChartColumnBig,
+    group: "money",
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
   },
+  { path: "/staff/audit-logs", labelKey: "audit_logs", icon: FileClock, group: "admin", roles: ["developer", "web_owner"] },
   {
     path: "/admin/notification-settings",
     labelKey: "notification_settings",
     icon: BellRing,
+    group: "admin",
     roles: ["developer", "web_owner"],
   },
-  { path: "/admin/settings", labelKey: "settings", icon: SettingsIcon, roles: ["developer", "web_owner"] },
-  { path: "/admin/landing-editor", labelKey: "landing_editor", icon: Layout, roles: ["web_owner"] },
-  { path: "/admin/email-templates", labelKey: "email_templates", icon: Mail, roles: ["web_owner", "developer"] },
-  { path: "/admin/sms-allowance", labelKey: "sms_allowance", icon: MessageSquare, roles: ["web_owner", "developer"] },
+  { path: "/admin/settings", labelKey: "settings", icon: Settings, group: "admin", roles: ["developer", "web_owner"] },
+  { path: "/admin/landing-editor", labelKey: "landing_editor", icon: LayoutTemplate, group: "admin", roles: ["web_owner"] },
+  { path: "/admin/email-templates", labelKey: "email_templates", icon: Mail, group: "admin", roles: ["web_owner", "developer"] },
+  { path: "/admin/sms-allowance", labelKey: "sms_allowance", icon: MessageSquare, group: "admin", roles: ["web_owner", "developer"] },
 ];
 
 /**
@@ -185,13 +217,13 @@ const AppFeeBadges = ({ counts, collapsed }) => {
     notEnabled > 0 && {
       key: 'notEnabled',
       value: notEnabled,
-      className: 'bg-red-100 text-red-700 group-hover:bg-white/90 group-hover:text-red-700',
+      className: 'bg-red-100 text-red-700',
       title: t('badge_no_active_subscription', { count: notEnabled }),
     },
     pendingVerification > 0 && {
       key: 'pendingVerification',
       value: pendingVerification,
-      className: 'bg-amber-100 text-amber-800 group-hover:bg-white/90 group-hover:text-amber-800',
+      className: 'bg-amber-100 text-amber-800',
       title: t('badge_awaiting_verification', { count: pendingVerification }),
     },
   ].filter(Boolean);
@@ -202,12 +234,69 @@ const AppFeeBadges = ({ counts, collapsed }) => {
         <span
           key={p.key}
           title={p.title}
-          className={`min-w-5 px-1.5 h-5 inline-flex items-center justify-center rounded-full text-[11px] font-semibold transition-colors ${p.className}`}
+          className={`min-w-5 px-1.5 h-5 inline-flex items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${p.className}`}
         >
           {p.value > 99 ? '99+' : p.value}
         </span>
       ))}
     </span>
+  );
+};
+
+/**
+ * One nav row.
+ *
+ * The active row used to carry three competing signals at once — a slate-100 ground, an
+ * orange filled square around the icon, and an orange bold label — and a fourth that never
+ * fired, because `aria-[current=page]:bg-primary` was written against a plain `Link`, which
+ * (unlike `NavLink`) never sets aria-current. The result read as an accident rather than a
+ * state. It is one signal now: a tinted pill with an orange edge, and the icon and label
+ * tinted to match. `aria-current` is set for real, for screen readers.
+ *
+ * Inactive icons are slate, not orange. Eighteen orange icons in a column is eighteen things
+ * asking for attention, which is the same as none of them getting it; orange now means "you
+ * are here" or "you are pointing at this".
+ */
+const NavRow = ({ item, isActive, isBengali, onClicked, badges, t }) => {
+  const Icon = item.icon;
+
+  return (
+    <Link
+      to={item.path}
+      // Optional call: Layout renders the desktop sidebar as <SideNav /> with no props, so an
+      // unguarded onClicked(false) threw a TypeError inside the Link's click handler on every
+      // desktop nav click.
+      onClick={() => onClicked?.(false)}
+      aria-current={isActive ? 'page' : undefined}
+      className={`group relative mb-0.5 flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/50 ${
+        isBengali ? 'font-hind-siliguri' : 'font-roboto'
+      } ${isActive ? 'bg-primary-100/70' : 'hover:bg-slate-100 active:bg-slate-200'}`}
+    >
+      {/* Clipped by the pill's own rounded corners, which tapers it at both ends. */}
+      {isActive && (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-primary-500"
+        />
+      )}
+      <Icon
+        size={20}
+        strokeWidth={isActive ? 2.25 : 1.75}
+        className={`shrink-0 transition-colors ${
+          isActive ? 'text-primary-600' : 'text-slate-400 group-hover:text-primary-500'
+        }`}
+      />
+      <span
+        className={`min-w-0 flex-1 truncate text-sm transition-colors ${
+          isActive
+            ? `font-semibold text-primary-700 ${isBengali ? 'font-hind-siliguri' : 'font-poppins'}`
+            : 'text-text group-hover:text-slate-900'
+        }`}
+      >
+        {t(item.labelKey)}
+      </span>
+      {badges}
+    </Link>
   );
 };
 
@@ -281,55 +370,57 @@ export const SideNav = ({ onClicked }) => {
     { score: 0, path: null }
   ).path;
 
+  // Groups with nothing in them after role and permission filtering are dropped, so nobody
+  // is shown a heading over empty space.
+  const visibleGroups = NAV_GROUPS
+    .map((group) => ({ ...group, items: filteredNavItems.filter((i) => i.group === group.key) }))
+    .filter((group) => group.items.length > 0);
+
+  // A single heading over the whole list names nothing — it only takes a row of height.
+  const showHeadings = visibleGroups.length > 1;
+
   return (
     <>
       <div>
         {/* Clears the fixed header. Its height is the grid's first row in Layout, kept in
             rem so it tracks the header's h-16 when the root font scale changes. */}
       </div>
-      <div className="max-h-min overflow-y-auto">
-        {filteredNavItems.map((item) => {
-          const isActive = item.path === activePath;
-          const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              // Optional call: Layout renders the desktop sidebar as <SideNav /> with no
-              // props, so an unguarded onClicked(false) threw a TypeError inside the Link's
-              // click handler on every desktop nav click.
-              onClick={() => onClicked?.(false)}
-              className={`flex ${isBengali ? 'font-hind-siliguri' : 'font-roboto'} group items-center gap-3 px-5 py-2 md:py-3 text-text hover:bg-primary hover:text-white duration-300 transition-colors aria-[current=page]:bg-primary aria-[current=page]:text-white ${
-                isActive ? "bg-slate-100" : ""
-              }`}
-            >
-              <span
-                className={`text-xl text-primary p-1 group-hover:text-white duration-300 transition-colors ${
-                  isActive ? "text-white bg-primary-500 rounded-lg" : ""
-                }`}
-              >
-                <Icon />
-              </span>
-              <span
-                className={`group-hover:text-white ${
-                  isActive ? `font-bold text-primary ${isBengali ? 'font-hind-siliguri' : 'font-poppins'}` : ""
-                }`}
-              >
-                {t(item.labelKey)}
-              </span>
-              {item.path === '/app-fee' && isAdmin && <AppFeeBadges counts={appFeeBadges} />}
-            </Link>
-          );
-        })}
+      {/* min-h-0 is what actually lets this scroll: it sits in a 1fr grid row, and a grid
+          item's automatic minimum size is its content, so an eighteen-item list grew the row
+          instead of scrolling inside it and pushed the footer off-screen. */}
+      <div className="min-h-0 overflow-y-auto px-2 pb-2">
+        {visibleGroups.map((group) => (
+          <div key={group.key}>
+            {showHeadings && (
+              <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                {t(group.labelKey)}
+              </p>
+            )}
+            {group.items.map((item) => (
+              <NavRow
+                key={item.path}
+                item={item}
+                isActive={item.path === activePath}
+                isBengali={isBengali}
+                onClicked={onClicked}
+                t={t}
+                badges={
+                  item.path === '/app-fee' && isAdmin ? <AppFeeBadges counts={appFeeBadges} /> : null
+                }
+              />
+            ))}
+          </div>
+        ))}
       </div>
 
-      <div className="px-5 pt-5 border-t shadow-[0_-5px_5px_rgba(0,0,0,0.1)] border-gray-200 w-full max-w-full pb-1 bg-white overflow-x-clip">
-        <div className="pb-2 flex justify-end md:hidden">
+      <div className="border-t border-gray-200 bg-white px-3 pt-3 pb-2 w-full max-w-full overflow-x-clip">
+        <div className="pb-3 flex justify-end md:hidden">
           <LanguageSwitcher />
         </div>
-        <div className="flex items-center gap-3 mb-4 max-w-full">
-          <div className="min-w-10 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold overflow-clip">
+
+        <div className="flex items-center gap-3 mb-3 max-w-full">
+          <div className="min-w-10 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold overflow-clip ring-2 ring-primary-100">
             {user?.metadata?.avatarPath ? (
               <ProtectedImage
                 src={user.metadata.avatarPath}
@@ -356,17 +447,23 @@ export const SideNav = ({ onClicked }) => {
               refuses to shrink below its content, so min-w-0 is what actually permits the
               truncation, and flex-1 lets it take the space the avatar leaves. */}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-medium" title={user?.name}>{user?.name || 'User'}</p>
+            <p className="truncate text-sm font-semibold text-slate-800" title={user?.name}>
+              {user?.name || 'User'}
+            </p>
             <p className="truncate text-xs text-subdued" title={user?.email}>{user?.email}</p>
           </div>
         </div>
+
+        {/* Was a full-width saturated red bar, which made signing out the loudest thing in
+            the panel. Still unmistakably destructive, no longer shouting. */}
         <button
           onClick={handleLogout}
-          className="w-full py-2 bg-red-500 text-white border-none rounded-lg cursor-pointer hover:bg-red-600 transition-colors"
+          className="w-full inline-flex items-center justify-center gap-2 py-2 rounded-xl border border-red-200 bg-red-50 text-sm font-medium text-red-700 cursor-pointer outline-none transition-colors hover:bg-red-100 hover:border-red-300 focus-visible:ring-2 focus-visible:ring-red-400/50"
         >
+          <LogOut className="h-4 w-4 shrink-0" strokeWidth={2} />
           {t('logout')}
         </button>
-        <p className="text-center text-xs text-gray-400 mt-1">v{__APP_VERSION__}</p>
+        <p className="text-center text-[11px] text-gray-400 mt-1.5">v{__APP_VERSION__}</p>
       </div>
     </>
   );
