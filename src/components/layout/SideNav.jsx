@@ -287,7 +287,7 @@ const NavRow = ({ item, isActive, isBengali, onClicked, badges, t }) => {
         }`}
       />
       <span
-        className={`min-w-0 flex-1 truncate text-sm transition-colors ${
+        className={`min-w-0 flex-1 truncate text-base transition-colors ${
           isActive
             ? `font-semibold text-primary-700 ${isBengali ? 'font-hind-siliguri' : 'font-poppins'}`
             : 'text-text group-hover:text-slate-900'

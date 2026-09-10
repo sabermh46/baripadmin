@@ -1,7 +1,9 @@
 // components/dashboard/HouseOwnerComponent.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from "../../hooks";
 import StatsCardGrid from "./StatsCardGrid";
+import DashboardBanner from "./DashboardBanner";
+import FinancialSummary from "./FinancialSummary";
 import RentCollectionProgress from "./RentCollectionProgress";
 import UpcomingPayments from "./UpcomingPayment.jsx";
 import OverduePayments from "./OverduePayments.jsx";
@@ -20,40 +22,13 @@ import Flats from "../../assets/icons/flats.svg";
 import Renters from "../../assets/icons/renter.svg";
 import CareTaker from "../../assets/icons/caretaker.svg";
 import { Link } from "react-router-dom";
-import { RefreshCcw as RefreshIcon } from 'lucide-react';
+import { CalendarDays, RefreshCcw as RefreshIcon } from 'lucide-react';
 import { 
   useGetHouseOwnerDashboardDataQuery,
   useRefreshDashboardDataMutation
 } from '../../store/api/houseOwnerAnalyticsApi';
 import Btn from '../common/Button';
 import { useTranslation } from 'react-i18next';
-
-/**
- * How small the amount has to get to stay on one line inside its tile.
- *
- * The three money tiles are a third of the content column each — about 74px of usable
- * width once the layout's p-4 and the tile's own p-2 are taken out on a 320px screen —
- * and the figure was rendered at a fixed text-sm with nothing bounding it, so a
- * nine-digit value ran straight out of the tile and was clipped by the content column's
- * overflow-x-clip. Seven digits is the realistic ceiling for one month's rent; this
- * ladder carries nine comfortably and falls back to an ellipsis past that rather than
- * breaking the grid.
- *
- * Keyed on the formatted string's length rather than the number's magnitude, so a minus
- * sign on a loss-making month counts, and so does a device locale that groups in
- * lakh/crore (13 characters for nine digits) instead of thousands.
- *
- * Desktop needs none of it: at md the same tile is roughly 230px wide, so the figure
- * keeps text-xl until it is genuinely absurd.
- */
-const amountSizeClass = (text) => {
-  const len = String(text).length;
-  if (len <= 9) return 'text-sm md:text-xl';      // up to 6 digits
-  if (len <= 10) return 'text-xs md:text-xl';     // 7 digits
-  if (len <= 11) return 'text-[11px] md:text-xl'; // 8 digits
-  if (len <= 12) return 'text-[10px] md:text-xl'; // 9 digits
-  return 'text-[9px] md:text-lg';
-};
 
 const HouseOwnerComponent = () => {
   const { user } = useAuth();
@@ -131,6 +106,17 @@ const HouseOwnerComponent = () => {
     };
   }, [dashboardData]);
 
+  // The month the summary figures describe. Formatted through the app's language rather
+  // than the browser's, so it does not read "September" beside a page of Bengali.
+  const summaryMonthLabel = useMemo(
+    () =>
+      new Date(
+        dashboardData?.currentYear ?? new Date().getFullYear(),
+        (dashboardData?.currentMonth ?? new Date().getMonth() + 1) - 1
+      ).toLocaleString(i18n.language || undefined, { month: 'long', year: 'numeric' }),
+    [dashboardData?.currentMonth, dashboardData?.currentYear, i18n.language]
+  );
+
   // Handle month change
   const handleMonthChange = (month, year) => {
     setSelectedMonth(month);
@@ -183,6 +169,7 @@ const HouseOwnerComponent = () => {
   const stats = [
     { 
       label: t('total_properties'), 
+      shortLabel: t('stat_houses_short'),
       value: summary?.totalHouses ?? 0, 
       icon: HomeIcon,
       subtext: t('n_active_inactive', { active: summary?.activeHouses ?? 0, inactive: summary?.inactiveHouses ?? 0 }),
@@ -192,6 +179,7 @@ const HouseOwnerComponent = () => {
     },
     { 
       label: t('total_flats'), 
+      shortLabel: t('stat_flats_short'),
       value: summary?.totalFlats ?? 0, 
       icon: Flats,
       subtext: t('n_occupied_vacant', { occupied: summary?.occupiedFlats ?? 0, vacant: summary?.vacantFlats ?? 0 }),
@@ -200,6 +188,7 @@ const HouseOwnerComponent = () => {
     },
     { 
       label: t('active_renters'), 
+      shortLabel: t('stat_renters_short'),
       value: summary?.totalRenters ?? 0, 
       icon: Renters,
       subtext: t('n_active_inactive', { active: summary?.activeRenters ?? 0, inactive: summary?.inactiveRenters ?? 0 }),
@@ -207,6 +196,7 @@ const HouseOwnerComponent = () => {
     },
     { 
       label: t('active_caretakers'), 
+      shortLabel: t('stat_caretakers_short'),
       value: summary?.assignedCaretakers ?? 0, 
       icon: CareTaker,
       subtext: t('assigned_to_your_houses'),
@@ -214,89 +204,58 @@ const HouseOwnerComponent = () => {
     },
   ];
 
-  // Fix for: "Uncaught TypeError: can't access property toLocaleString"
-  const profitStats = [
-    {
-      label: t('monthly_rent'),
-      value: `৳${(summary?.monthlyRentCollection ?? 0).toLocaleString()}`,
-      trend: (summary?.monthlyRentCollection ?? 0) > 0 ? 'up' : 'neutral',
-      change: t('current_month')
-    },
-    {
-      label: t('monthly_expenses'),
-      value: `৳${(summary?.monthlyExpenses ?? 0).toLocaleString()}`,
-      trend: (summary?.monthlyExpenses ?? 0) > 0 ? 'down' : 'neutral',
-      change: t('current_month')
-    },
-    {
-      label: t('monthly_profit'),
-      value: `৳${(summary?.monthlyProfit ?? 0).toLocaleString()}`,
-      trend: (summary?.monthlyProfit ?? 0) > 0 ? 'up' : (summary?.monthlyProfit ?? 0) < 0 ? 'down' : 'neutral',
-      change: t('occupancy_percent', { percent: summary?.occupancyRate ?? 0 })
-    }
-  ];
-
   return (
     <div className="">
       {isStale && <StaleDataNotice isOffline={isOffline} savedAt={savedAt} />}
 
-      {/* Welcome Header with Refresh */}
-      <div className="flex justify-between items-center">
-        <div className="">
-          <h2 className="text-sm text-slate-700 font-semibold ">
-            {t('welcome_back')}, {" "}
-            <span className={`text-base ${isBengali ? 'font-hind-siliguri' : 'font-mooli'} text-primary`}>{user?.name || 'User'}</span>
+      <DashboardBanner name={user?.name || 'User'} />
+
+      {/* Summary. The month chip is a label rather than a picker: this endpoint takes no
+          month parameter and answers for the current one, so a dropdown would be a control
+          that cannot do what it says. Refresh sits here because it is the only thing on the
+          band that acts, and the banner above is deliberately all chrome. */}
+      <section className="mt-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className={`min-w-0 truncate text-base font-bold text-slate-900 sm:text-lg ${isBengali ? 'font-hind-siliguri' : 'font-mooli'}`}>
+            {t('summary_heading')}
           </h2>
-        </div>
-        
-        <Btn
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="flex items-center gap-2"
-        >
-          <RefreshIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-        </Btn>
-      </div>
 
-      {/* Stats Grid */}
-      <StatsCardGrid stats={stats} />
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] font-medium text-slate-600 sm:text-xs">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <span className="whitespace-nowrap">{summaryMonthLabel}</span>
+            </span>
 
-      <div className='flex flex-col mt-4'>
-        {/* Profit Stats */}
-        <div className="grid grid-cols-3 gap-2">
-          {profitStats.map((stat, index) => (
-            // min-w-0: a grid item defaults to min-width:auto and will happily grow past
-            // its track to fit its content, which is what let the figure escape the tile.
-            <div key={index} className={`min-w-0 bg-white rounded-lg p-2 border-2 border-gray-300 ${index === 0 ? 'rounded-tl-xl rounded-bl-xl' : ''} ${index === profitStats.length -1 ? 'rounded-tr-xl rounded-br-xl' : ''}`}>
-              <p className="text-xs text-center text-gray-600 mb-1">{stat.label}</p>
-              <div className="flex items-center justify-center md:justify-between flex-col gap-4 min-w-0 w-full">
-                <p
-                  title={stat.value}
-                  className={`w-full text-center text-primary font-bold tabular-nums leading-tight whitespace-nowrap truncate ${amountSizeClass(stat.value)}`}
-                >
-                  {stat.value}
-                </p>
-                <span className={`px-2 py-1 text-xs font-genos text-center rounded-xl ${
-                  stat.trend === 'up' ? 'bg-green-100 text-green-800' :
-                  stat.trend === 'down' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {stat.change}
-                </span>
-              </div>
-            </div>
-          ))}
+            <Btn
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              title={t('refresh')}
+              aria-label={t('refresh')}
+              className="flex items-center gap-2"
+            >
+              <RefreshIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Btn>
+          </div>
         </div>
 
-        {/* Rent Collection Progress */}
-        <RentCollectionProgress
-          month={selectedMonth}
-          year={selectedYear}
-          houses={currentMonthHouses}
-          onMonthChange={handleMonthChange}
-          maxDate={maxDate}
-        />
-      </div>
+        <StatsCardGrid stats={stats} />
+      </section>
+
+      <FinancialSummary
+        rent={summary?.monthlyRentCollection ?? 0}
+        expenses={summary?.monthlyExpenses ?? 0}
+        profit={summary?.monthlyProfit ?? 0}
+        expectedRent={summary?.expectedMonthlyRent}
+        occupancyRate={summary?.occupancyRate}
+      />
+
+      <RentCollectionProgress
+        month={selectedMonth}
+        year={selectedYear}
+        houses={currentMonthHouses}
+        onMonthChange={handleMonthChange}
+        maxDate={maxDate}
+      />
 
 
       {/* Order depends on whether there is anything to act on.

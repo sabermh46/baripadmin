@@ -1217,6 +1217,17 @@ const resources = {
       "due_today": "Due today",
       "next_30_days": "Next 30 days",
       "this_month": "This month",
+      "summary_heading": "Summary",
+      "stat_houses_short": "Houses",
+      "stat_flats_short": "Flats",
+      "stat_renters_short": "Renters",
+      "stat_caretakers_short": "Caretakers",
+      "financial_summary": "Financial Summary",
+      "rent_collection_progress": "Rent Collection Progress",
+      "dashboard_banner_subtitle": "Everything about your houses and renters, in one place.",
+      "expected_rent_total": "Total expected rent",
+      "total_profit": "Total profit",
+      "flats_paid_of_total": "{{paid}} of {{total}} flats paid",
       "due_within_30_days": "Unsettled and due in the next 30 days",
       "unsettled_for_this_month": "Everything unsettled for this month",
 
@@ -1318,6 +1329,11 @@ const resources = {
       "first_page": "First page",
       "last_page": "Last page",
       "showing_range": "Showing {{from}} to {{to}} of {{total}} results",
+      // --- Upcoming payments ------------------------------------------------
+      "of_invoice_total": "of ৳{{total}}",
+      "paid_of_total": "৳{{paid}} of ৳{{total}} collected",
+      "nothing_unsettled_this_month": "Everything billed for this month has been settled.",
+      "already_collected": "already collected",
 
     }
   },
@@ -2534,6 +2550,17 @@ const resources = {
       "due_today": "আজ দেয়",
       "next_30_days": "পরবর্তী ৩০ দিন",
       "this_month": "এই মাস",
+      "summary_heading": "সারাংশ",
+      "stat_houses_short": "টি বাড়ি",
+      "stat_flats_short": "টি ফ্লাট",
+      "stat_renters_short": "জন ভাড়াটিয়া",
+      "stat_caretakers_short": "জন পরিচারক",
+      "financial_summary": "আর্থিক সারাংশ",
+      "rent_collection_progress": "ভাড়া সংগ্রহের অগ্রগতি",
+      "dashboard_banner_subtitle": "আপনার বাড়ি ও ভাড়াটিয়াদের সব তথ্য এখানে এক জায়গায়।",
+      "expected_rent_total": "মোট নির্ধারিত ভাড়া",
+      "total_profit": "মোট লাভ",
+      "flats_paid_of_total": "{{total}} টির মধ্যে {{paid}} টি ফ্ল্যাট পরিশোধিত",
       "due_within_30_days": "অপরিশোধিত এবং পরবর্তী ৩০ দিনের মধ্যে দেয়",
       "unsettled_for_this_month": "এই মাসের সব অপরিশোধিত",
 
@@ -2630,6 +2657,11 @@ const resources = {
       "first_page": "প্রথম পাতা",
       "last_page": "শেষ পাতা",
       "showing_range": "{{total}} টির মধ্যে {{from}} থেকে {{to}} দেখানো হচ্ছে",
+      // --- Upcoming payments ------------------------------------------------
+      "of_invoice_total": "৳{{total}} এর মধ্যে",
+      "paid_of_total": "৳{{total}} এর মধ্যে ৳{{paid}} আদায় হয়েছে",
+      "nothing_unsettled_this_month": "এই মাসের সব বিল পরিশোধিত হয়েছে।",
+      "already_collected": "ইতিমধ্যে আদায় হয়েছে",
 
     }
   }

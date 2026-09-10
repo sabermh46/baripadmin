@@ -10,14 +10,26 @@ import {
 } from '../../store/api/flatApi';
 import { toast } from 'react-toastify';
 import { apiErrorMessage } from '../../utils/apiError';
+import TkSymbol from '../common/TkSymbol';
 
 const flatSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   number: z.string().optional(),
   rent_amount: z.coerce.number().positive('Rent amount must be positive'),
-  should_pay_rent_day: z.coerce.number().min(1).max(31, 'Day must be between 1-31'),
+  // Capped at 28 to match the server, which rejects 29-31 outright: those days do not
+  // exist in every month, and update() clamps the stored value with min(day, 28) anyway.
+  should_pay_rent_day: z.coerce.number().min(1).max(28, 'Day must be between 1 and 28'),
   late_fee_percentage: z.coerce.number().min(0).max(100).default(5),
-  metadata: z.string().optional(),
+  // `metadata` is deliberately absent.
+  //
+  // It was declared here as z.string() while the API casts it to an array, so every flat
+  // (all of them carry at least `metadata: {}`, most carry `amenities`) failed validation
+  // with "Expected string, received object". Nothing rendered a metadata input, so the
+  // error had nowhere to appear: handleSubmit simply refused to call onSubmit and Update
+  // Flat looked like a dead button. The server would have rejected the empty string too.
+  //
+  // This form does not edit metadata, so it must not send it — the server merges what it
+  // is given over the existing value, and amenities live in there.
 });
 
 const FlatForm = ({ open, onClose, houseId, flat }) => {
@@ -36,7 +48,6 @@ const FlatForm = ({ open, onClose, houseId, flat }) => {
       rent_amount: '',
       should_pay_rent_day: 10,
       late_fee_percentage: 5,
-      metadata: '',
     }
   });
 
@@ -52,7 +63,6 @@ useEffect(() => {
         // Use ?? to allow 0 or other falsy but valid numbers
         should_pay_rent_day: flat.should_pay_rent_day ?? 10,
         late_fee_percentage: flat.late_fee_percentage ?? 5,
-        metadata: flat.metadata ?? '',
       });
     } else {
       // It's good practice to reset to empty/defaults when not editing
@@ -62,10 +72,24 @@ useEffect(() => {
         rent_amount: '',
         should_pay_rent_day: 10,
         late_fee_percentage: 0,
-        metadata: '',
       });
     }
   }, [flat, reset]);
+
+  /**
+   * Every field the form actually draws. react-hook-form blocks submission on any schema
+   * error, so a schema key with no corresponding input produces a silent refusal — which is
+   * precisely how the metadata bug above presented. If that ever happens again, say so
+   * instead of leaving the user clicking a button that does nothing.
+   */
+  const RENDERED_FIELDS = ['name', 'number', 'rent_amount', 'should_pay_rent_day', 'late_fee_percentage'];
+
+  const onInvalid = (formErrors) => {
+    const hidden = Object.keys(formErrors).filter((k) => !RENDERED_FIELDS.includes(k));
+    if (hidden.length) {
+      toast.error(`Cannot save: ${hidden.join(', ')} failed validation but is not shown on this form.`);
+    }
+  };
 
   const onSubmit = async (data) => {
     try {
@@ -102,7 +126,7 @@ useEffect(() => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-text mb-2">
@@ -135,7 +159,7 @@ useEffect(() => {
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued">
-                  $
+                  <TkSymbol />
                 </span>
                 <input
                   {...register('rent_amount')}
@@ -152,13 +176,13 @@ useEffect(() => {
 
             <div>
               <label className="block text-sm font-medium text-text mb-2">
-                Rent Due Day (1-31) *
+                Rent Due Day (1-28) *
               </label>
               <input
                 {...register('should_pay_rent_day')}
                 type="number"
                 min="1"
-                max="31"
+                max="28"
                 className="w-full px-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
               />
               {errors.should_pay_rent_day && (

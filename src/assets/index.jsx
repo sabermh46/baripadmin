@@ -2,6 +2,8 @@ export { default as appLogo } from './icons/logo.svg';
 export { default as laptopImage } from './laptop.png';
 export { default as profileAvatar } from './profile.png';
 export { default as buildingShade } from './building.png';
+export { default as banner_big } from './banner_web.webp';
+export { default as banner_mobile } from './banner_mob.webp';
 
 export { default as caretakerIcon } from './icons/caretaker.svg';
 export { default as flatsIcon } from './icons/flats.svg';
