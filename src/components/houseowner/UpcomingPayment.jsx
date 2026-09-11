@@ -138,7 +138,7 @@ const UpcomingPayments = ({ payments = [], paymentsThisMonth = [] }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-4">
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-200">
         <div className="flex items-start justify-between gap-2">

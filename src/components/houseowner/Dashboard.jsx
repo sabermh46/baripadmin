@@ -23,10 +23,7 @@ import Renters from "../../assets/icons/renter.svg";
 import CareTaker from "../../assets/icons/caretaker.svg";
 import { Link } from "react-router-dom";
 import { CalendarDays, RefreshCcw as RefreshIcon } from 'lucide-react';
-import { 
-  useGetHouseOwnerDashboardDataQuery,
-  useRefreshDashboardDataMutation
-} from '../../store/api/houseOwnerAnalyticsApi';
+import { useGetHouseOwnerDashboardDataQuery } from '../../store/api/houseOwnerAnalyticsApi';
 import Btn from '../common/Button';
 import { useTranslation } from 'react-i18next';
 
@@ -55,14 +52,28 @@ const HouseOwnerComponent = () => {
   } = useOfflineFallback(`ho-dashboard:${user?.id ?? 'anon'}`, dashboardQuery);
 
 
-  const [refreshDashboard, { isLoading: isRefreshing }] = useRefreshDashboardDataMutation();
+  /**
+   * Refetch the dashboard directly.
+   *
+   * This used to POST /refresh-dashboard and let `invalidatesTags` trigger the GET, which
+   * meant one click cost two requests returning the identical payload. There is no
+   * server-side cache for that POST to clear — getDashboard() reads live — so the GET was
+   * always the entire operation.
+   *
+   * `isFetching`, not `isLoading`: the latter is only true when there is no data yet, so the
+   * spinner would never appear on a refresh of an already-loaded screen.
+   */
+  const isRefreshing = dashboardQuery.isFetching;
 
-  // Refresh data
   const handleRefresh = async () => {
-    try {
-      await refreshDashboard().unwrap();
-    } catch (error) {
-      console.error('Error refreshing dashboard:', error);
+    // `refetch()` resolves with { data, error } rather than rejecting, so the failure is read
+    // off the result instead of caught. Avoids depending on `.unwrap()` being present on the
+    // hook's refetch result, and cannot leave an unhandled rejection either way — the error
+    // itself is already on the query, which is what renders the retry state below.
+    const result = await dashboardQuery.refetch();
+
+    if (result?.error) {
+      console.error('Error refreshing dashboard:', result.error);
     }
   };
 
