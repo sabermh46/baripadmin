@@ -149,7 +149,7 @@ export default defineConfig({
           // Vite's __vitePreload helper is a virtual module, so the node_modules guard
           // below returns early on it and leaves Rollup free to park it anywhere. It chose
           // the `pdf` chunk — which made the entry statically `import { _ } from
-          // "./pdf-*.js"`, forcing every visitor to download 570 kB of jsPDF + html2canvas
+          // "./pdf-*.js"`, forcing every visitor to download 570 kB of the PDF stack
           // on first paint just to obtain one helper function. Pin it to a chunk that is
           // part of the initial payload regardless.
           if (id.includes('vite/preload-helper')) return 'react-core'
@@ -203,7 +203,7 @@ export default defineConfig({
           ) return 'redux'
           if (pkg.startsWith('i18next') || pkg.startsWith('react-i18next')) return 'i18n'
           if (pkg.startsWith('date-fns')) return 'date-fns'
-          // recharts / jsPDF / html2canvas are deliberately NOT manually chunked.
+          // recharts / pdf-lib / fontkit / pdfjs-dist are deliberately NOT manually chunked.
           //
           // A manual chunk is a hard grouping: Rollup must put every module it claims into
           // that one chunk, including transitive dependencies shared with eagerly-loaded
@@ -218,10 +218,10 @@ export default defineConfig({
 
           // Deliberately no `return 'vendor'` catch-all.
           //
-          // Forcing every remaining package into one eager `vendor` chunk pulled jsPDF's
-          // and html2canvas's transitive dependencies — pako, canvg, fflate, dompurify,
-          // core-js, ~680 kB of source between them — into the initial payload, even
-          // though only the lazy reports/receipt routes ever touch them. The rules above
+          // Forcing every remaining package into one eager `vendor` chunk pulled the PDF
+          // stack's transitive dependencies — pako, restructure, unicode-trie, brotli,
+          // ~680 kB of source between them — into the initial payload, even though only
+          // the lazy reports/receipt routes ever touch them. The rules above
           // match by package name and so never caught those.
           //
           // Returning undefined hands placement back to Rollup, which assigns each module

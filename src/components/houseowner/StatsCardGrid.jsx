@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
 import StatsCardModal from "./StatsCardModal";
 
 /**
@@ -42,8 +41,6 @@ const FALLBACK_ACCENT = {
 export default function StatsCardGrid({ stats = [] }) {
   // Which card's modal is open, by index — the card owns the data it hands over.
   const [openIdx, setOpenIdx] = useState(null);
-  const { i18n } = useTranslation();
-  const isBengali = i18n.language?.startsWith('bn');
 
   const active = openIdx == null ? null : stats[openIdx];
 
@@ -52,7 +49,7 @@ export default function StatsCardGrid({ stats = [] }) {
       {/* Four across at every width, so the whole summary is one glance with no scroll.
           That leaves each card about 57px of content on a 320px screen and about 73px on a
           390px one, which is the budget everything below is sized against. */}
-      <div className={`grid grid-cols-4 gap-1.5 sm:gap-3 ${isBengali ? 'font-hind-siliguri' : 'font-mooli'}`}>
+      <div className={`grid grid-cols-4 gap-1.5 sm:gap-3 font-anek-bn`}>
         {stats.map(({ label, shortLabel, value, icon: Icon, subtext, hover }, idx) => {
           const accent = ACCENTS[hover?.cardFor] ?? FALLBACK_ACCENT;
 
@@ -86,7 +83,7 @@ export default function StatsCardGrid({ stats = [] }) {
                   reads as a fragment on its own, so the panel keeps the full wording. */}
               <p
                 title={label}
-                className={`text-[10px] leading-tight text-slate-600 break-words line-clamp-2 sm:text-xs sm:leading-snug ${isBengali ? 'font-hind-siliguri' : 'font-roboto'}`}
+                className={`text-[10px] leading-tight text-slate-600 break-words line-clamp-2 sm:text-xs sm:leading-snug font-anek-bn`}
               >
                 {shortLabel || label}
               </p>

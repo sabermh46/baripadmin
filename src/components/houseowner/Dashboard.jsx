@@ -227,7 +227,7 @@ const HouseOwnerComponent = () => {
           band that acts, and the banner above is deliberately all chrome. */}
       <section className="mt-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className={`min-w-0 truncate text-base font-bold text-slate-900 sm:text-lg ${isBengali ? 'font-hind-siliguri' : 'font-mooli'}`}>
+          <h2 className={`min-w-0 truncate text-base font-bold text-slate-900 sm:text-lg  font-anek-bn`}>
             {t('summary_heading')}
           </h2>
 

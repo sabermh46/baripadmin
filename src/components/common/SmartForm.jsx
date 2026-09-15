@@ -166,7 +166,7 @@ export default function SmartForm({
             <button
                 type="submit"
                 disabled={submitDisabled}
-                className={`mt-4 w-full py-1 bg-primary rounded-md font-poppins transition cursor-pointer ${submitDisabled ? 'opacity-50 cursor-not-allowed' : 'bg-primary hover:bg-primary-700 cursor-pointer'}`}
+                className={`mt-4 w-full py-1 bg-primary rounded-md font-hind-siliguri transition cursor-pointer ${submitDisabled ? 'opacity-50 cursor-not-allowed' : 'bg-primary hover:bg-primary-700 cursor-pointer'}`}
             >
                 {submitText}
             </button>

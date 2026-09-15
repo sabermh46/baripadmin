@@ -257,7 +257,7 @@ const AppFeeBadges = ({ counts, collapsed }) => {
  * asking for attention, which is the same as none of them getting it; orange now means "you
  * are here" or "you are pointing at this".
  */
-const NavRow = ({ item, isActive, isBengali, onClicked, badges, t }) => {
+const NavRow = ({ item, isActive, onClicked, badges, t }) => {
   const Icon = item.icon;
 
   return (
@@ -268,9 +268,7 @@ const NavRow = ({ item, isActive, isBengali, onClicked, badges, t }) => {
       // desktop nav click.
       onClick={() => onClicked?.(false)}
       aria-current={isActive ? 'page' : undefined}
-      className={`group relative mb-0.5 flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/50 ${
-        isBengali ? 'font-hind-siliguri' : 'font-roboto'
-      } ${isActive ? 'bg-primary-100/70' : 'hover:bg-slate-100 active:bg-slate-200'}`}
+      className={`group relative mb-0.5 flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/50  font-anek-bn ${isActive ? 'bg-primary-100/70' : 'hover:bg-slate-100 active:bg-slate-200'}`}
     >
       {/* Clipped by the pill's own rounded corners, which tapers it at both ends. */}
       {isActive && (
@@ -287,9 +285,9 @@ const NavRow = ({ item, isActive, isBengali, onClicked, badges, t }) => {
         }`}
       />
       <span
-        className={`min-w-0 flex-1 truncate text-base transition-colors ${
+        className={`min-w-0 flex-1 truncate text-base transition-colors font-hind-siliguri ${
           isActive
-            ? `font-semibold text-primary-700 ${isBengali ? 'font-hind-siliguri' : 'font-poppins'}`
+            ? 'font-semibold text-primary-700'
             : 'text-text group-hover:text-slate-900'
         }`}
       >
@@ -302,9 +300,8 @@ const NavRow = ({ item, isActive, isBengali, onClicked, badges, t }) => {
 
 export const SideNav = ({ onClicked }) => {
   const { user, hasPermission } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [googleAvatarError, setGoogleAvatarError] = useState(false);
-  const isBengali = i18n.language?.startsWith('bn');
 
   const dispatch = useAppDispatch();
   const [logoutMutation] = useLogoutMutation();
@@ -402,7 +399,6 @@ export const SideNav = ({ onClicked }) => {
                 key={item.path}
                 item={item}
                 isActive={item.path === activePath}
-                isBengali={isBengali}
                 onClicked={onClicked}
                 t={t}
                 badges={

@@ -13,7 +13,7 @@ export default function GoogleButton({onClick, disabled = false, title = "Contin
       }`}
     >
       <img className="h-6 w-6" src={googleIcon} alt="Google Icon" />
-      <span className="font-poppins text-sm md:text-xl">{title}</span>
+      <span className="font-hind-siliguri text-sm md:text-xl">{title}</span>
     </button>
   );
 }

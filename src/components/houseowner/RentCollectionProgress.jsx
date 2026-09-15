@@ -27,8 +27,6 @@ export default function RentCollectionProgress({
   maxDate = { month: new Date().getMonth() + 1, year: new Date().getFullYear() }
 }) {
   const { t, i18n } = useTranslation();
-  const isBengali = i18n.language?.startsWith('bn');
-
   // Was toLocaleString("default", …), which is the *browser's* locale — so the header read
   // "September" to someone using the app in Bengali, next to Bengali everything else.
   const monthLabel = new Date(year, month - 1).toLocaleString(i18n.language || undefined, {
@@ -65,7 +63,7 @@ export default function RentCollectionProgress({
   return (
     <section className="my-4 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className={`flex min-w-0 items-center gap-2 text-base font-bold text-slate-900 sm:text-lg ${isBengali ? 'font-hind-siliguri' : 'font-mooli'}`}>
+        <h2 className={`flex min-w-0 items-center gap-2 text-base font-bold text-slate-900 sm:text-lg font-anek-bn`}>
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
             <Target className="h-[18px] w-[18px]" strokeWidth={2} />
           </span>
@@ -141,11 +139,11 @@ export default function RentCollectionProgress({
                   <div className="min-w-0 flex-1">
                     <p
                       title={name}
-                      className="truncate text-sm font-semibold text-slate-800 sm:text-base font-poppins"
+                      className="truncate text-sm font-semibold text-slate-800 sm:text-base font-hind-siliguri"
                     >
                       {name}
                     </p>
-                    <p className={`truncate text-[11px] text-slate-500 ${isBengali ? 'font-hind-siliguri' : 'font-roboto'}`}>
+                    <p className={`truncate text-[11px] text-slate-500 font-anek-bn`}>
                       {t('flats_paid_of_total', { paid: paidFlats, total: totalFlats })}
                     </p>
                   </div>

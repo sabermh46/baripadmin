@@ -23,12 +23,11 @@ import RecordPaymentModal from './RecordPaymentModal';
 import AdvancePaymentFormModal from './AdvancePaymentFormModal';
 import AssignRenterModal from './AssignRenterModal';
 import InvoicePreviewModal from '../common/InvoicePreviewModal';
-import { generateRentReceiptPdf } from '../../utils/invoiceGenerator';
+import { generateRentReceiptPdf, generateRentReminderPdf } from '../../utils/invoiceGenerator';
 
 import OverviewTab from './FlatDetails/OverviewTab';
 import PaymentsTab from './FlatDetails/PaymentsTab';
 import AdvanceTab from './FlatDetails/AdvanceTab';
-import ReminderModal from './FlatDetails/ReminderModal';
 import ReminderLogModal from './FlatDetails/ReminderLogModal';
 import PaymentEmailLogModal from './FlatDetails/PaymentEmailLogModal';
 import RemoveRenterModal from './FlatDetails/RemoveRenterModal';
@@ -44,8 +43,10 @@ const FlatDetails = () => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openPayment, setOpenPayment] = useState(false);
   const [openReminder, setOpenReminder] = useState(false);
+  const [reminderPdfBase64, setReminderPdfBase64] = useState(null);
+  const [reminderData, setReminderData] = useState(null);
+  const [reminderPaymentId, setReminderPaymentId] = useState(null);
   const [openAssignModal, setOpenAssignModal] = useState(false);
-  const [reminderResult, setReminderResult] = useState(null);
   const [selectedPaymentRenterId, setSelectedPaymentRenterId] = useState(null);
   const [selectedAdvanceRenterId, setSelectedAdvanceRenterId] = useState(null);
   const [openReminderLog, setOpenReminderLog] = useState(false);
@@ -220,10 +221,80 @@ const FlatDetails = () => {
   // the day-of-month, and "pending" follows the same definition the rest of the app uses.
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleSendReminder = async (channels = ['email']) => {
+  const handleCloseReminderModal = () => {
+    setOpenReminder(false);
+    setReminderPdfBase64(null);
+    setReminderData(null);
+    setReminderPaymentId(null);
+  };
+
+  /**
+   * Build the reminder notice and show it for approval, the same way recording a payment
+   * shows its receipt.
+   *
+   * The pending row is chosen here and its id travels with the send, so the notice the admin
+   * approved and the row the server reminds about are guaranteed to be the same one - the
+   * server would otherwise re-pick by earliest due date and could land on a different month.
+   */
+  const handleOpenReminder = async () => {
+    const pending = payments
+      .filter((p) => p.status === 'pending')
+      .sort((a, b) => new Date(a.due_date ?? 0) - new Date(b.due_date ?? 0))[0];
+
+    if (!pending) {
+      toast.warn(t('no_pending_rent') || 'There is no pending rent for this flat.');
+      return;
+    }
+
+    const due = Number(pending.amount ?? 0);
+    const paid = Number(pending.paid_amount ?? 0);
+    const data = {
+      renterName: renter?.name || 'N/A',
+      houseName: house?.name || 'N/A',
+      houseAddress: house?.address || null,
+      ownerName: house?.owner?.name || null,
+      ownerEmail: house?.owner?.email || null,
+      ownerPhone: house?.owner?.phone || null,
+      flatNumber: flat.number,
+      // What is still owed, not what was billed, so a part-paid month asks for the remainder.
+      amountDue: Math.max(0, due - paid),
+      totalAmount: paid,
+      dueDate: pending.due_date || null,
+      status: pending.status,
+      baseRent: pending.base_amount || pending.amount || 0,
+      amenitiesTotal: pending.amenities_charge || 0,
+      lateFee: pending.late_fee_amount || 0,
+      amenities: flat.metadata?.amenities ?? [],
+      forMonth: pending.for_month || null,
+      paymentId: pending.id,
+    };
+
     try {
-      const response = await sendReminder({ flat_id: id, houseId: flat.house_id, channels }).unwrap();
-      const result = response?.data ?? response;
+      setReminderData(data);
+      setReminderPaymentId(pending.id);
+      setReminderPdfBase64(await generateRentReminderPdf(data));
+      setOpenReminder(true);
+    } catch (err) {
+      console.error('Reminder PDF failed', err);
+      toast.error(t('toast_pdf_failed') || 'Could not build the reminder PDF.');
+    }
+  };
+
+  const handleSendReminder = async (note, channels = ['email']) => {
+    try {
+      const pdfBase64 = note
+        ? await generateRentReminderPdf({ ...reminderData, note })
+        : reminderPdfBase64;
+
+      const response = await sendReminder({
+        flat_id: id,
+        houseId: flat.house_id,
+        payment_id: reminderPaymentId,
+        channels,
+        pdfBase64,
+      }).unwrap();
+
+      toast.success(t('reminder_sent_success') || 'Rent reminder sent');
 
       // The request succeeds as a whole even when one channel failed — the email may well
       // have gone. Surface the SMS outcome on its own rather than letting a green
@@ -235,16 +306,14 @@ const FlatDetails = () => {
         toast.success(`SMS sent (${sms.segments} SMS used).`);
       }
 
-      setReminderResult(result || { remindersSent: 1, results: [] });
+      refetchPaymentReceipts();
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to send reminder'));
+    } finally {
+      handleCloseReminderModal();
     }
   };
 
-  const handleCloseReminderModal = () => {
-    setOpenReminder(false);
-    setReminderResult(null);
-  };
 
   const handleResendReceiptClick = async (payment) => {
     const renterInfo = selectedPaymentRenterInfo || { name: flat.renter?.name, email: flat.renter?.email };
@@ -278,6 +347,9 @@ const FlatDetails = () => {
       forMonth: payment.for_month || null,
       paymentMethod: payment.payment_method || null,
       paymentId: payment.id,
+      // A reissued receipt for a part payment must not be stamped PAID either.
+      status: payment.status,
+      amountDue: payment.amount,
     };
     try {
       const pdfBase64 = await generateRentReceiptPdf(invoiceData);
@@ -409,7 +481,7 @@ const FlatDetails = () => {
                   {flat.renter_id && (
                     <>
                       <button
-                        onClick={() => { setOpenReminder(true); setOpenActionsMenu(false); }}
+                        onClick={() => { setOpenActionsMenu(false); handleOpenReminder(); }}
                         className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text hover:bg-subdued/10 transition-colors"
                       >
                         <Send size={16} className="text-subdued" />
@@ -551,15 +623,17 @@ const FlatDetails = () => {
         advancePayments={advancePayments}
       />
 
-      <ReminderModal
+      {/* The same preview the receipt gets: the notice, the channel choice and the note box.
+          A reminder used to go out with nothing to look at first. */}
+      <InvoicePreviewModal
         open={openReminder}
-        reminderResult={reminderResult}
-        onClose={handleCloseReminderModal}
-        onSend={handleSendReminder}
-        isSending={isSendingReminder}
+        pdfBase64={reminderPdfBase64}
         renterName={renter.name}
         renterPhone={renter.phone}
         houseOwnerId={house?.owner?.id}
+        onConfirm={handleSendReminder}
+        onSkip={handleCloseReminderModal}
+        isSending={isSendingReminder}
       />
 
       <ReminderLogModal

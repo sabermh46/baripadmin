@@ -57,7 +57,7 @@ const TONES = {
   },
 };
 
-const MoneyTile = ({ tone, label, value, subtext, isBengali }) => {
+const MoneyTile = ({ tone, label, value, subtext }) => {
   const Icon = tone.icon;
 
   return (
@@ -68,9 +68,7 @@ const MoneyTile = ({ tone, label, value, subtext, isBengali }) => {
 
       <p
         title={label}
-        className={`mt-2 text-[11px] leading-snug text-slate-600 line-clamp-2 sm:text-xs ${
-          isBengali ? 'font-hind-siliguri' : 'font-roboto'
-        }`}
+        className={`mt-2 text-[11px] leading-snug text-slate-600 line-clamp-2 sm:text-xs font-anek-bn`}
       >
         {label}
       </p>
@@ -100,13 +98,12 @@ const MoneyTile = ({ tone, label, value, subtext, isBengali }) => {
  * the zero legible. The backend already computes it — nothing on the dashboard was reading it.
  */
 const FinancialSummary = ({ rent, expenses, profit, expectedRent, occupancyRate }) => {
-  const { t, i18n } = useTranslation();
-  const isBengali = i18n.language?.startsWith('bn');
+  const { t } = useTranslation();
 
   return (
     <section className="mt-4 rounded-2xl border border-gray-200 bg-white p-2.5 sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className={`flex min-w-0 items-center gap-2 text-base font-bold text-slate-900 sm:text-lg ${isBengali ? 'font-hind-siliguri' : 'font-mooli'}`}>
+        <h2 className={`flex min-w-0 items-center gap-2 text-base font-bold text-slate-900 sm:text-lg font-anek-bn`}>
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
             <Wallet className="h-[18px] w-[18px]" strokeWidth={2} />
           </span>
@@ -127,14 +124,12 @@ const FinancialSummary = ({ rent, expenses, profit, expectedRent, occupancyRate 
           label={t('monthly_rent')}
           value={money(rent)}
           subtext={expectedRent != null ? `${t('expected_rent_total')}: ${money(expectedRent)}` : null}
-          isBengali={isBengali}
         />
         <MoneyTile
           tone={TONES.expenses}
           label={t('monthly_expenses')}
           value={money(expenses)}
           subtext={t('monthly_spend')}
-          isBengali={isBengali}
         />
         <MoneyTile
           tone={TONES.profit}
@@ -143,7 +138,6 @@ const FinancialSummary = ({ rent, expenses, profit, expectedRent, occupancyRate 
           subtext={
             occupancyRate != null ? t('occupancy_percent', { percent: occupancyRate }) : t('total_profit')
           }
-          isBengali={isBengali}
         />
       </div>
     </section>

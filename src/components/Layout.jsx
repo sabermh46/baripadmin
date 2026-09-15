@@ -32,7 +32,7 @@ const AppHeader = memo(function AppHeader({ isMobileMenuOpen, onToggleMobileMenu
       <div className="flex gap-2 items-center">
         <Link
           to="/"
-          className={`flex items-center text-xl font-bold gap-3 text-primary ${isBengali ? 'font-hind-siliguri' : 'font-oswald'}`}
+          className={`flex items-center text-xl font-bold gap-3 text-primary font-anek-bn`}
         >
           <img src={appLogo} className="h-10" alt="App Logo" width={40} height={40} />
           <p className="leading-[100%]">

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Mail, MessageSquare, AlertTriangle, Loader2 } from 'lucide-react';
 import { useGetSmsBalanceQuery } from '../../store/api/smsApi';
 
@@ -10,7 +11,7 @@ import { useGetSmsBalanceQuery } from '../../store/api/smsApi';
 const ChannelOption = ({ channel, icon: Icon, label, sub, disabled, reason, checked, onToggle }) => (
   <label
     title={reason || undefined}
-    className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+    className={`flex items-start gap-3 rounded-lg border p-3 min-h-11 transition-colors ${
       disabled
         ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-70'
         : checked
@@ -23,14 +24,14 @@ const ChannelOption = ({ channel, icon: Icon, label, sub, disabled, reason, chec
       checked={checked}
       disabled={disabled}
       onChange={() => onToggle(channel)}
-      className="mt-0.5 accent-primary"
+      className="mt-0.5 size-4 shrink-0 accent-primary"
     />
-    <span className="min-w-0">
-      <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
+    <span className="min-w-0 flex-1">
+      <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800 break-words">
         <Icon size={14} /> {label}
       </span>
       {(reason || sub) && (
-        <span className={`block text-xs mt-0.5 ${reason ? 'text-amber-700' : 'text-gray-500'}`}>
+        <span className={`mt-0.5 block text-xs break-words ${reason ? 'text-amber-700' : 'text-gray-500'}`}>
           {reason || sub}
         </span>
       )}
@@ -64,17 +65,18 @@ const ChannelPicker = ({
   smsUnavailableReason,
   note,
 }) => {
+  const { t } = useTranslation();
   const { data: sms, isLoading } = useGetSmsBalanceQuery(houseOwnerId || undefined);
 
   const gatewayMissing = sms && !sms.gatewayConfigured;
   const noBalance = sms && sms.balance <= 0;
 
   const smsBlockedReason = !smsAvailable
-    ? (smsUnavailableReason || 'Not available for this recipient')
+    ? (smsUnavailableReason || t('channel_sms_not_available'))
     : gatewayMissing
-      ? 'No SMS gateway is set up yet'
+      ? t('channel_sms_no_gateway')
       : noBalance
-        ? 'No SMS balance left — ask an administrator to top it up'
+        ? t('channel_sms_no_balance')
         : null;
 
   const smsDisabled = isLoading || !!smsBlockedReason;
@@ -89,26 +91,26 @@ const ChannelPicker = ({
 
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Send via</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{t('channel_send_via')}</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <ChannelOption
-          channel="email" icon={Mail} label="Email" sub="Always available"
+          channel="email" icon={Mail} label={t('channel_email')} sub={t('channel_email_always')}
           disabled={false} checked={value.includes('email')} onToggle={toggle}
         />
         <ChannelOption
           channel="sms"
           icon={MessageSquare}
-          label="SMS"
+          label={t('channel_sms')}
           checked={value.includes('sms')}
           onToggle={toggle}
           disabled={smsDisabled}
           reason={smsBlockedReason}
           sub={
             isLoading
-              ? 'Checking balance…'
+              ? t('channel_sms_checking')
               : sms
-                ? `${sms.balance} SMS remaining`
+                ? t('channel_sms_remaining', { count: sms.balance })
                 : undefined
           }
         />
@@ -117,11 +119,9 @@ const ChannelPicker = ({
       {/* A long or Bengali message costs more than one SMS, so "remaining" is not the same
           as "messages you can send". Warn while it still matters. */}
       {sms && sms.balance > 0 && sms.balance <= (sms.lowBalanceThreshold ?? 5) && value.includes('sms') && (
-        <p className="mt-2 text-xs text-amber-700 flex items-start gap-1.5">
-          <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-          <span>
-            Only {sms.balance} SMS left. A long message, or one written in Bangla, uses more than one.
-          </span>
+        <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700">
+          <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+          <span>{t('channel_sms_low_balance', { count: sms.balance })}</span>
         </p>
       )}
 
@@ -130,8 +130,8 @@ const ChannelPicker = ({
       )}
 
       {isLoading && (
-        <p className="mt-2 text-xs text-gray-400 flex items-center gap-1.5">
-          <Loader2 size={12} className="animate-spin" /> Checking SMS availability…
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-gray-400">
+          <Loader2 size={12} className="animate-spin" /> {t('channel_sms_checking_availability')}
         </p>
       )}
     </div>

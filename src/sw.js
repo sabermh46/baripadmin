@@ -65,6 +65,27 @@ registerRoute(
   })
 );
 
+// Self-hosted font files, fetched on demand rather than precached.
+//
+// Two sets live here and neither belongs in the precache manifest: /fonts holds the Bengali
+// faces the PDF generator embeds when a receipt contains Bengali, and /pdfjs/standard_fonts
+// holds the Latin substitute pdf.js needs to render a PDF preview on Android. Together they
+// are most of a megabyte, and a user who never sends a receipt should never download them.
+//
+// Fetched once and then immutable, so CacheFirst with a long expiry - which also means a
+// receipt generated offline still gets its Bengali, rather than falling back to "?".
+registerRoute(
+  ({ url }) => url.origin === self.location.origin
+    && (url.pathname.startsWith('/fonts/') || url.pathname.startsWith('/pdfjs/')),
+  new CacheFirst({
+    cacheName: 'pdf-fonts',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({ maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 365 }),
+    ],
+  })
+);
+
 // Deliberately NOT caching /api responses here. RTK Query already persists them to
 // IndexedDB, scoped to the logged-in user and purged on logout; a second copy in the
 // service worker's HTTP cache would outlive logout and could serve one user's data to

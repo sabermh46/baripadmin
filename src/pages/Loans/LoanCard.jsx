@@ -163,7 +163,7 @@ const LoanCard = ({ loan, onRecordPayment, onViewPayments, onEdit, onDelete }) =
           </span>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <IconBtn onClick={() => onViewPayments(loan)} title={t('payment_history')}>
             <History size={16} />
           </IconBtn>

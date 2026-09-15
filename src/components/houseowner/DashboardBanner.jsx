@@ -17,9 +17,7 @@ import { banner_big, banner_mobile } from '../../assets';
  * cards below it their own accents to work with instead of competing with an orange field.
  */
 const DashboardBanner = ({ name }) => {
-  const { t, i18n } = useTranslation();
-  const isBengali = i18n.language?.startsWith('bn');
-
+  const { t } = useTranslation();
   return (
     // <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-sky-50 via-sky-50/70 to-sky-50 shadow-[inset_0_1px_0_0_#ffffffe6,0_1px_2px_-1px_#c77c0240,0_14px_30px_-16px_#c77c0240]">
     <section className="relative py-4 px-5 z-10 overflow-hidden rounded-2xl bg-[#EEF8FE] shadow-[inset_0_1px_0_0_#ffffffe6,0_1px_2px_-1px_#c77c0240,0_14px_30px_-16px_#c77c0240]">
@@ -50,9 +48,7 @@ const DashboardBanner = ({ name }) => {
         <p className="text-xs text-slate-500 sm:text-sm">{t('welcome_back')},</p>
         <h1
           title={name}
-          className={`mt-0.5 truncate text-lg font-bold text-slate-900 sm:text-2xl ${
-            isBengali ? 'font-hind-siliguri' : 'font-mooli'
-          }`}
+          className={`mt-0.5 truncate text-lg font-bold text-slate-900 sm:text-2xl  font-anek-bn`}
         >
           {name}
         </h1>

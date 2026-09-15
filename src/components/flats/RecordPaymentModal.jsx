@@ -453,6 +453,10 @@ const RecordPaymentModal = ({ open, onClose, flat, house = {}, renter, advancePa
             forMonth: response.data?.for_month || null,
             paymentMethod: formData.payment_method,
             paymentId: response.data?.paymentId,
+            // What the badge needs to tell a settled receipt from a part payment. Without
+            // these it fell back to "any amount above zero means PAID".
+            status: response.data?.status,
+            amountDue: response.data?.amount,
           };
           const pdfBase64 = await generateRentReceiptPdf(invoiceData);
 

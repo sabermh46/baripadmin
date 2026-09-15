@@ -622,7 +622,7 @@ const SystemSettings = () => {
                     <Settings className="h-6 w-6 text-primary-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-700 font-poppins break-all">
+                    <h3 className="text-lg font-semibold text-slate-700 font-hind-siliguri break-all">
                       {selectedSetting.key}
                     </h3>
                     <div className="flex items-center flex-wrap gap-2 mt-1">

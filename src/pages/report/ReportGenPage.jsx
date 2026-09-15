@@ -1,6 +1,4 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { useGetProfitReportQuery } from '../../store/api/reportApi';
 import { useGetHousesQuery } from '../../store/api/houseApi';
 import { useAuth } from '../../hooks';
@@ -14,28 +12,16 @@ import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOption
 
 import appLogo from '../../assets/icons/logo.svg';
 import useOwnerOptions from '../../hooks/useOwnerOptions';
+// One definition of each, shared by the screen, the CSV and the PDF so the three can never
+// disagree about a figure. See utils/financialReportPdf.js for why the locale is pinned.
+import {
+  fmt,
+  fmtMonth,
+  financialReportFileName,
+  generateFinancialReportPdf,
+} from '../../utils/financialReportPdf';
 
 const BRAND_HEX = '#f9873c';
-const BRAND_RGB = [249, 135, 60];
-
-/**
- * Always en-US, never the ambient locale.
- *
- * This used to be toLocaleString(undefined, …). Under a Bengali locale that renders
- * Bengali digits (১২,৩৪৫), which the PDF's helvetica cannot draw — the export came out as
- * boxes. The screen and the PDF now share one formatter so they can never disagree either.
- */
-const fmt = (v) =>
-  Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const fmtMonth = (ym) => {
-  if (!ym) return '—';
-  const [y, m] = ym.split('-').map(Number);
-  if (!y || !m) return ym;
-  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', {
-    month: 'short', year: 'numeric', timeZone: 'UTC',
-  });
-};
 
 const iso = (d) => d.toISOString().slice(0, 10);
 
@@ -72,6 +58,10 @@ export const ReportGenPage = () => {
     endDate: presets.ytd.end,
   }));
 
+  // The PDF export is asynchronous now - it may fetch a Bengali typeface - so the button
+  // reports its own progress instead of appearing inert for a second.
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
   const [ownerSearch, setOwnerSearch] = useState('');
   const [selectedOwner, setSelectedOwner] = useState(null);
 
@@ -153,152 +143,30 @@ export const ReportGenPage = () => {
   };
 
   // ── Exports ────────────────────────────────────────────────────────────────
-  const getLogoBase64 = (url) =>
-    new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          canvas.getContext('2d').drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
-        } catch {
-          resolve(null);
-        }
-      };
-      img.onerror = () => resolve(null);
-      img.src = url;
-    });
-
   const handleExportPDF = async () => {
     if (!report) return;
-    const doc = new jsPDF();
-
-    const logo = await getLogoBase64(appLogo);
-    if (logo) doc.addImage(logo, 'PNG', 20, 14, 12, 12);
-    else {
-      doc.setFillColor(...BRAND_RGB);
-      doc.circle(26, 20, 6, 'F');
-    }
-
-    doc.setTextColor(0, 0, 0).setFontSize(16).setFont('helvetica', 'bold');
-    doc.text('Bari Porichalona', 36, 20);
-    doc.setFontSize(8).setFont('helvetica', 'normal').setTextColor(120);
-    doc.text('Smart Property Management Platform', 36, 25);
-
-    doc.setTextColor(0, 0, 0).setFontSize(13).setFont('helvetica', 'bold');
-    doc.text('FINANCIAL REPORT', 190, 19, { align: 'right' });
-    doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(90);
-    doc.text(periodLabel, 190, 25, { align: 'right' });
-
-    doc.setDrawColor(...BRAND_RGB).setLineWidth(0.6);
-    doc.line(20, 31, 190, 31);
-
-    // This block used to print the HOUSE name under a "HOUSE OWNER:" label, so every
-    // exported report attributed a property to itself and named no person at all.
-    doc.setTextColor(0, 0, 0).setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('OWNER', 20, 40);
-    doc.text('SCOPE', 80, 40);
-    doc.text('GENERATED', 150, 40);
-    doc.setFont('helvetica', 'normal').setTextColor(70);
-    doc.text(String(ownerLabel), 20, 45, { maxWidth: 55 });
-    if (effectiveOwner?.email) doc.text(String(effectiveOwner.email), 20, 50, { maxWidth: 55 });
-    doc.text(String(scopeLabel), 80, 45, { maxWidth: 65 });
-    doc.text(new Date().toLocaleDateString('en-US'), 150, 45);
-
-    doc.setTextColor(...BRAND_RGB).setFontSize(11).setFont('helvetica', 'bold');
-    doc.text('Summary', 20, 62);
-
-    autoTable(doc, {
-      startY: 66,
-      margin: { left: 20, right: 20 },
-      head: [['', 'Amount (BDT)']],
-      body: [
-        ['Rent collected', fmt(totals.rent_collected)],
-        ['Advance received', fmt(totals.advance_received)],
-        ['Less: advance applied to rent', `(${fmt(totals.advance_applied)})`],
-        ['Total income', fmt(totals.total_income)],
-        ['Expenses', `(${fmt(totals.expenses)})`],
-        ['NET PROFIT', fmt(totals.net_profit)],
-        ['Rent outstanding (unpaid)', fmt(totals.rent_outstanding)],
-      ],
-      theme: 'plain',
-      headStyles: { fillColor: BRAND_RGB, textColor: 255, halign: 'left', fontSize: 9 },
-      columnStyles: { 0: { cellWidth: 110 }, 1: { halign: 'right' } },
-      styles: { fontSize: 9, cellPadding: 2.5 },
-      didParseCell: (d) => {
-        if (d.section !== 'body') return;
-        const label = d.row.raw[0];
-        if (label === 'NET PROFIT' || label === 'Total income') {
-          d.cell.styles.fontStyle = 'bold';
-          d.cell.styles.fillColor = [255, 245, 236];
-        }
-        if (label === 'Less: advance applied to rent') d.cell.styles.textColor = [130, 130, 130];
-      },
-    });
-
-    // The note the whole rewrite exists for. Anyone re-adding the two figures by hand will
-    // get a bigger number than the report shows, so the report says why.
-    let y = doc.lastAutoTable.finalY + 6;
-    doc.setFontSize(7.5).setFont('helvetica', 'italic').setTextColor(120);
-    doc.text(
-      'Advance already spent on rent is shown inside "Rent collected" and deducted above, so it is counted once, not twice.',
-      20, y, { maxWidth: 170 },
-    );
-
-    y += 10;
-    doc.setTextColor(...BRAND_RGB).setFontSize(11).setFont('helvetica', 'bold');
-    doc.text('Monthly breakdown', 20, y);
-
-    autoTable(doc, {
-      startY: y + 4,
-      margin: { left: 20, right: 20 },
-      head: [['Month', 'Rent', 'Adv. net', 'Income', 'Expenses', 'Net profit']],
-      body: rows.map((r) => [
-        fmtMonth(r.month), fmt(r.rent_collected), fmt(r.advance_net),
-        fmt(r.total_income), fmt(r.expenses), fmt(r.net_profit),
-      ]),
-      foot: [[
-        'Total', fmt(totals.rent_collected), fmt(totals.advance_net),
-        fmt(totals.total_income), fmt(totals.expenses), fmt(totals.net_profit),
-      ]],
-      theme: 'striped',
-      headStyles: { fillColor: BRAND_RGB, halign: 'right', fontSize: 8.5 },
-      footStyles: { fillColor: [240, 240, 240], textColor: 20, fontStyle: 'bold', halign: 'right', fontSize: 8.5 },
-      columnStyles: { 0: { halign: 'left' } },
-      alternateRowStyles: { fillColor: [255, 248, 242] },
-      styles: { fontSize: 8.5, cellPadding: 3, halign: 'right' },
-      didParseCell: (d) => { if (d.column.index === 0) d.cell.styles.halign = 'left'; },
-    });
-
-    if (byHouse.length > 1) {
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
-        margin: { left: 20, right: 20 },
-        head: [['Property', 'Income', 'Expenses', 'Net profit', 'Outstanding']],
-        body: byHouse.map((h) => [
-          h.house_name, fmt(h.total_income), fmt(h.expenses), fmt(h.net_profit), fmt(h.rent_outstanding),
-        ]),
-        theme: 'striped',
-        headStyles: { fillColor: [70, 70, 70], halign: 'right', fontSize: 8.5 },
-        columnStyles: { 0: { halign: 'left' } },
-        styles: { fontSize: 8.5, cellPadding: 3, halign: 'right' },
-        didParseCell: (d) => { if (d.column.index === 0) d.cell.styles.halign = 'left'; },
+    try {
+      setExportError(null);
+      setExporting(true);
+      const surface = await generateFinancialReportPdf({
+        ownerLabel,
+        ownerEmail: effectiveOwner?.email,
+        scopeLabel,
+        periodLabel,
+        totals,
+        monthly: rows,
+        byHouse,
       });
+      await surface.save(financialReportFileName({ scopeLabel, period: report.period }));
+    } catch (err) {
+      // The export reaches for a Bengali typeface over the network when the report contains
+      // any, so it can fail for reasons that have nothing to do with the data. Saying so
+      // beats a button that looks like it did nothing.
+      console.error('Financial report export failed', err);
+      setExportError('Could not build the PDF. Check your connection and try again.');
+    } finally {
+      setExporting(false);
     }
-
-    const pages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pages; i++) {
-      doc.setPage(i);
-      doc.setFontSize(7.5).setFont('helvetica', 'normal').setTextColor(150);
-      doc.text(`${ownerLabel} — ${scopeLabel} — ${periodLabel}`, 20, 288);
-      doc.text(`Page ${i} of ${pages}`, 190, 288, { align: 'right' });
-    }
-
-    doc.save(`Financial_Report_${String(scopeLabel).replace(/[^\w]+/g, '_')}_${report.period.start_month}_${report.period.end_month}.pdf`);
   };
 
   const handleExportCSV = () => {
@@ -370,11 +238,18 @@ export const ReportGenPage = () => {
           <Btn onClick={handleExportCSV} disabled={!hasRows} className="flex gap-2 !px-4">
             <Download size={16} /> CSV
           </Btn>
-          <Btn onClick={handleExportPDF} disabled={!hasRows} className="flex gap-2 !px-4 bg-gray-900 hover:bg-black text-white">
-            <FileText size={16} /> PDF
+          <Btn onClick={handleExportPDF} disabled={!hasRows || exporting} className="flex gap-2 !px-4 bg-gray-900 hover:bg-black text-white">
+            {exporting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} PDF
           </Btn>
         </div>
       </div>
+
+      {exportError && (
+        <p className="mb-4 flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          {exportError}
+        </p>
+      )}
 
       {/* Filters */}
       <div className="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100 mb-5">
