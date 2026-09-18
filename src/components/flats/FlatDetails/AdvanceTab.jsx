@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,18 +9,11 @@ import {
   ArrowDownRight,
   TrendingUp,
   PlusCircle,
-  ChevronDown,
-  History,
 } from 'lucide-react';
 import TkSymbol from '../../common/TkSymbol';
-import AdvanceDeductionHistory from './AdvanceDeductionHistory';
+import { advanceStatusLabel, advanceStatusToneClass } from '../../../utils/advanceStatus';
 
-const advanceStatusPillClass = (status) => {
-  if (status === 'paid') return 'bg-green-100 text-green-800';
-  if (status === 'partially_used') return 'bg-yellow-100 text-yellow-800';
-  if (status === 'fully_used') return 'bg-blue-100 text-blue-800';
-  return 'bg-gray-100 text-gray-800';
-};
+
 
 const AdvanceTab = ({
   filteredAdvancePayments,
@@ -33,20 +26,9 @@ const AdvanceTab = ({
   setAdvancePaymentFormMode,
   setOpenAdvancePaymentForm,
   setOpenPayment,
-  onViewDeduction,
-  onSendDeduction,
-  onEditDeduction,
+  onViewAdvance,
 }) => {
   const { t } = useTranslation();
-
-  // Which advances have their history open. A Set rather than a single id: comparing two
-  // advances side by side is the reason to look at the history at all.
-  const [expanded, setExpanded] = useState(() => new Set());
-  const toggleExpanded = (id) => setExpanded((prev) => {
-    const next = new Set(prev);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
 
   const totalAdvance = filteredAdvancePayments.reduce(
     (sum, p) => sum + (parseFloat(p.amount) || 0),
@@ -59,11 +41,9 @@ const AdvanceTab = ({
   const monthsCovered =
     flat.rent_amount > 0 ? (remainingAdvance / flat.rent_amount).toFixed(1) : '0';
 
-  const handleView = (row) => {
-    setSelectedAdvancePaymentForForm(row);
-    setAdvancePaymentFormMode('view');
-    setOpenAdvancePaymentForm(true);
-  };
+  // The detail view is its own modal now, not a mode of the create/edit form. The deduction
+  // history, the breakdown and the payment particulars all live there.
+  const handleView = (row) => onViewAdvance?.(row);
 
   const tableColumns = [
     {
@@ -74,21 +54,25 @@ const AdvanceTab = ({
     },
     {
       key: 'amount',
-      title: t('amount'),
+      title: t('advance_received') || 'Received',
       render: (row) => (
         <span className="font-bold">
-          <TkSymbol />{row.amount?.toLocaleString()}
+          <TkSymbol />{(parseFloat(row.paid_amount ?? row.amount) || 0).toLocaleString()}
         </span>
       ),
     },
     {
-      key: 'paid_amount',
-      title: t('paid_amount'),
-      render: (row) => (
-        <span className="text-green-600">
-          <TkSymbol />{row.paid_amount?.toLocaleString()}
-        </span>
-      ),
+      key: 'used',
+      title: t('applied_to_rent') || 'Applied to rent',
+      render: (row) => {
+        const used = Math.max(
+          0,
+          (parseFloat(row.paid_amount ?? row.amount) || 0) - (parseFloat(row.remaining_amount) || 0),
+        );
+        return used > 0
+          ? <span className="text-subdued"><TkSymbol />{used.toLocaleString()}</span>
+          : <span className="text-subdued/50">-</span>;
+      },
     },
     {
       key: 'remaining',
@@ -104,35 +88,33 @@ const AdvanceTab = ({
       ),
     },
     {
-      key: 'method',
-      title: t('method'),
-      render: (row) => row.payment_method?.replace('_', ' ') || '-',
-    },
-    {
       key: 'status',
       title: t('status'),
       render: (row) => (
         <span
-          className={`px-3 py-1 rounded-full text-xs font-medium ${advanceStatusPillClass(row.status)}`}
+          className={`px-3 py-1 rounded-full text-xs font-medium ${advanceStatusToneClass(row.status)}`}
         >
-          {row.status}
+          {advanceStatusLabel(t, row.status)}
         </span>
       ),
     },
     {
       key: 'actions',
       title: t('actions'),
+      // Labelled, not a bare icon. This is the way into everything the row no longer shows -
+      // the breakdown, the particulars and the deduction history - so it has to read as an
+      // invitation rather than as one more glyph to decode.
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleView(row);
             }}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-            title={t('view') || 'View'}
+            className="flex items-center gap-1.5 rounded-lg border border-subdued/25 px-3 py-1.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50"
           >
-            <Eye size={18} />
+            <Eye size={16} />
+            {t('see_details') || 'See details'}
           </button>
           {parseFloat(row.remaining_amount) > 0 && (
             <button
@@ -140,7 +122,7 @@ const AdvanceTab = ({
                 e.stopPropagation();
                 setOpenPayment(true);
               }}
-              className="px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded transition-colors"
+              className="rounded-lg bg-green-100 px-3 py-1.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-200"
             >
               {t('apply') || 'Apply'}
             </button>
@@ -283,9 +265,9 @@ const AdvanceTab = ({
                       : '-'}
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${advanceStatusPillClass(row.status)}`}
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${advanceStatusToneClass(row.status)}`}
                   >
-                    {row.status}
+                    {advanceStatusLabel(t, row.status)}
                   </span>
                 </div>
 
@@ -311,55 +293,40 @@ const AdvanceTab = ({
                   </div>
                 </div>
 
-                {/* Method row */}
-                <div className="text-sm">
-                  <span className="text-subdued">{t('method') || 'Method'}: </span>
-                  <span>{row.payment_method?.replace('_', ' ') || '-'}</span>
-                </div>
+                {/* Applied so far, when any of it has been. On a freshly recorded advance
+                    this line would only restate the amount received. */}
+                {(parseFloat(row.paid_amount ?? row.amount) || 0) - (parseFloat(row.remaining_amount) || 0) > 0 && (
+                  <div className="text-sm">
+                    <span className="text-subdued">{t('applied_to_rent') || 'Applied to rent'}: </span>
+                    <span>
+                      <TkSymbol />
+                      {(
+                        (parseFloat(row.paid_amount ?? row.amount) || 0)
+                        - (parseFloat(row.remaining_amount) || 0)
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                )}
 
-                {/* Action row */}
-                <div className="border-t border-subdued/20 pt-3 flex flex-wrap items-center gap-2">
+                {/* Action row. Method, the particulars and the deduction history are all one
+                    tap away rather than crowded onto the card. */}
+                <div className="flex flex-wrap items-center gap-2 border-t border-subdued/20 pt-3">
                   <button
                     onClick={() => handleView(row)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="flex items-center gap-2 rounded-lg border border-subdued/25 px-3 py-1.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50"
                   >
                     <Eye size={16} />
-                    {t('view') || 'View'}
+                    {t('see_details') || 'See details'}
                   </button>
                   {parseFloat(row.remaining_amount) > 0 && (
                     <button
                       onClick={() => setOpenPayment(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors"
+                      className="flex items-center gap-2 rounded-lg bg-green-100 px-3 py-1.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-200"
                     >
                       {t('apply') || 'Apply'}
                     </button>
                   )}
-                  <button
-                    onClick={() => toggleExpanded(row.id)}
-                    aria-expanded={expanded.has(row.id)}
-                    className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-subdued transition-colors hover:bg-subdued/10"
-                  >
-                    <History size={15} />
-                    {(row.deductions ?? []).length}
-                    <ChevronDown
-                      size={15}
-                      className={`transition-transform ${expanded.has(row.id) ? 'rotate-180' : ''}`}
-                    />
-                  </button>
                 </div>
-
-                {/* The same history as the desktop table, so a phone is not a lesser view of
-                    the same record. */}
-                {expanded.has(row.id) && (
-                  <div className="rounded-lg border border-subdued/20 bg-surface">
-                    <AdvanceDeductionHistory
-                      deductions={row.deductions ?? []}
-                      onView={onViewDeduction}
-                      onSend={(entry) => onSendDeduction?.(row, entry)}
-                      onEdit={onEditDeduction ? (entry) => onEditDeduction(row, entry) : undefined}
-                    />
-                  </div>
-                )}
               </div>
             ))
           )}
@@ -368,16 +335,21 @@ const AdvanceTab = ({
         {/* Desktop table.
             Hand-rolled rather than the shared <Table>, which has no notion of an expanded row -
             and the whole point here is that each advance opens to show what it was spent on. */}
+        {/* Desktop table.
+            Back to a flat list: the deduction history was an expanded row here, which meant a
+            table inside a table and an outer row carrying columns that only mattered once you
+            were already investigating one advance. It lives in the details modal now. */}
         <div className="hidden overflow-x-auto sm:block">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-primary">
               <tr>
-                <th scope="col" className="w-10 px-3 py-3" />
                 {tableColumns.map((column) => (
                   <th
                     key={column.key}
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-black"
+                    className={`px-6 py-3 text-xs font-bold uppercase tracking-wider text-black ${
+                      column.key === 'actions' ? 'text-right' : 'text-left'
+                    }`}
                   >
                     {column.title}
                   </th>
@@ -387,63 +359,20 @@ const AdvanceTab = ({
             <tbody className="divide-y divide-gray-200 bg-white">
               {filteredAdvancePayments.length === 0 ? (
                 <tr>
-                  <td colSpan={tableColumns.length + 1} className="px-6 py-8 text-center text-subdued">
+                  <td colSpan={tableColumns.length} className="px-6 py-8 text-center text-subdued">
                     {t('no_advance_payments_recorded') || 'No advance payments recorded.'}
                   </td>
                 </tr>
               ) : (
-                filteredAdvancePayments.map((row) => {
-                  const history = row.deductions ?? [];
-                  const isOpen = expanded.has(row.id);
-
-                  return (
-                    <React.Fragment key={row.id}>
-                      <tr className="hover:bg-gray-50">
-                        <td className="px-3 py-4">
-                          <button
-                            type="button"
-                            onClick={() => toggleExpanded(row.id)}
-                            aria-expanded={isOpen}
-                            aria-label={t('deduction_history') || 'Deduction history'}
-                            className="flex items-center gap-1 rounded p-1 text-subdued transition-colors hover:bg-subdued/10"
-                          >
-                            <ChevronDown
-                              size={16}
-                              className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                            />
-                            {history.length > 0 && (
-                              <span className="text-xs font-semibold">{history.length}</span>
-                            )}
-                          </button>
-                        </td>
-                        {tableColumns.map((column) => (
-                          <td key={column.key} className="whitespace-nowrap px-6 py-4">
-                            {column.render(row)}
-                          </td>
-                        ))}
-                      </tr>
-
-                      {isOpen && (
-                        <tr>
-                          <td colSpan={tableColumns.length + 1} className="bg-subdued/5 px-6 py-3">
-                            <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-subdued">
-                              <History size={13} />
-                              {t('deduction_history') || 'Deduction history'}
-                            </p>
-                            <div className="rounded-lg border border-subdued/20 bg-white">
-                              <AdvanceDeductionHistory
-                                deductions={history}
-                                onView={onViewDeduction}
-                                onSend={(entry) => onSendDeduction?.(row, entry)}
-                                onEdit={onEditDeduction ? (entry) => onEditDeduction(row, entry) : undefined}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })
+                filteredAdvancePayments.map((row) => (
+                  <tr key={row.id} className="hover:bg-gray-50">
+                    {tableColumns.map((column) => (
+                      <td key={column.key} className="whitespace-nowrap px-6 py-4">
+                        {column.render(row)}
+                      </td>
+                    ))}
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

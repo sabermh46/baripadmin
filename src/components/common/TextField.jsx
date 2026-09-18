@@ -35,7 +35,7 @@ export default function TextField({
   };
 
   return (
-    <div className="flex flex-col mb-3 font-mooli">
+    <div className="flex flex-col mb-3">
       {label && (
         <label
           htmlFor={name}
@@ -55,20 +55,33 @@ export default function TextField({
           onChange={handleChange}
           className={`w-full px-3 py-2 rounded-md ring ${
             error ? "focus:ring-red-500" : "focus:ring-3"
-          } ${isPassword ? "pr-9" : ""} ${
+          } ${isPassword ? "pr-11" : ""} ${
             disabled ? "ring-gray-600 bg-gray-100" : "ring-primary"
           } outline-none text-text bg-white/40 shadow-[0px_0px_10px_5px_rgba(0,0,0,0.05)] transition`}
         />
         {isPassword && !disabled && (
+          /*
+           * `inset-y-0` with a grid centre rather than a fixed `top-2`: the offset only lined
+           * the icon up at one exact input height, and drifted the moment padding, font size
+           * or a ring changed. It also makes the whole right edge of the field the hit area -
+           * the icon alone was a 20x20 target, well under the 44px a thumb needs.
+           */
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute right-2 top-2 text-gray-500"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            title={showPassword ? "Hide password" : "Show password"}
+            // Skipped in the tab order on purpose: tabbing out of the password field should
+            // reach the submit button, not a display toggle. It stays reachable by click and
+            // by screen readers.
+            tabIndex={-1}
+            className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-md text-gray-500 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             {showPassword ? (
-              <EyeOff className="w-5 h-5" />
+              <EyeOff className="h-5 w-5" aria-hidden="true" />
             ) : (
-              <Eye className="w-5 h-5" />
+              <Eye className="h-5 w-5" aria-hidden="true" />
             )}
           </button>
         )}

@@ -96,8 +96,16 @@ const Layout = () => {
   const loseAccessText = safeFormat(loseAccessAt, 'dd MMM yyyy');
   const validThroughText = safeFormat(validThrough, 'dd MMM yyyy');
 
+  /*
+   * `h-dvh`, not `min-h-screen`: the shell is exactly one viewport tall, so <main>
+   * (flex-1, stretched) is bounded and its existing `overflow-auto` becomes a real scroll
+   * container instead of one that stretches to its own content and never scrolls. That is
+   * what makes `position: sticky` work inside a page - sticky binds to the nearest scroll
+   * container, and until now that container never moved. `dvh` over `vh` so the bottom of
+   * the column is not stranded under a mobile URL bar.
+   */
   return (
-    <div className="flex min-h-screen max-w-full overflow-x-clip">
+    <div className="flex h-dvh max-w-full overflow-x-clip">
       {/* Sidebar */}
       <div className="hidden md:flex md:sticky top-0 w-64 bg-surface border-r border-gray-200 flex-col h-screen!">
         <nav className="flex-1 h-full grid grid-rows-[4rem_1fr_auto]">

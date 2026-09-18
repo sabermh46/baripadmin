@@ -41,27 +41,30 @@ const Table = ({
   const endIndex = Math.min(current * pageSize, total);
 
   return (
-    <div className={`overflow-x-auto rounded-lg border border-gray-200 max-w-full ${className}`}>
+    <div className={`overflow-x-auto rounded-xl max-w-full ${className}`}>
       <div className="inline-block align-middle w-full">
-        <div className="overflow-x-auto shadow-sm">
-          <table className="min-w-full max-w-full divide-y divide-gray-200">
-            <thead className="bg-primary">
-              <tr>
-                {columns.map((column, index) => (
-                  <th
-                    key={column.key || index}
-                    scope="col"
-                    className={`
-                      px-${compact ? '3' : '6'} py-${compact ? '2' : '3'} 
-                      text-left text-xs font-bold text-black uppercase tracking-wider
-                      ${column.className || ''}
-                    `}
-                  >
-                    {column.title}
-                  </th>
-                ))}
-              </tr>
+        <div className="overflow-hidden shadow-sm bg-white  p-4">
+          <div className="overflow-x-auto rounded-lg">
+            <table className="min-w-full max-w-full">
+              <thead className="bg-primary-500">
+                <tr>
+                  {columns.map((column, index) => (
+                    <th
+                      key={column.key || index}
+                      scope="col"
+                      className={`
+                        px-${compact ? '1' : '2'} py-${compact ? '2' : '3'} 
+                        text-center text-base font-medium text-white uppercase whitespace-nowrap tracking-wider border-l-2 border-r-2 border-white/30
+                        ${column.className || ''}
+                        ${index === 0 ? "rounded-l-lg border-l-0!" : index === columns?.length - 1 ? "rounded-r-lg border-r-0!" : "rounded-none"}
+                      `}
+                    >
+                      {column.title}
+                    </th>
+                  ))}
+                </tr>
             </thead>
+            <div className='h-1'></div>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 // Loading skeleton
@@ -87,7 +90,7 @@ const Table = ({
                     onClick={() => handleRowClick(row)}
                     className={`
                       ${striped && rowIndex % 2 === 1 ? 'bg-gray-50' : ''}
-                      ${hoverable ? 'hover:bg-gray-50 cursor-pointer' : ''}
+                      ${hoverable ? 'hover:bg-gray-100 cursor-pointer' : ''}
                       ${onRowClick ? 'cursor-pointer' : ''}
                     `}
                   >
@@ -95,7 +98,7 @@ const Table = ({
                       <td
                         key={`${row[rowKey] || rowIndex}-${colIndex}`}
                         className={`
-                          px-${compact ? '3' : '6'} py-${compact ? '3' : '4'} 
+                          px-${compact ? '2' : '4'} py-${compact ? '2' : '3'} 
                           whitespace-nowrap
                           ${column.cellClassName || ''}
                         `}
@@ -133,6 +136,7 @@ const Table = ({
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Pagination */}

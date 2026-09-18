@@ -27,11 +27,13 @@ import AdvanceReceiptSender from './AdvanceReceiptSender';
 import AdvanceDeductionSender from './AdvanceDeductionSender';
 import AdvanceDeductionDetailsModal from './FlatDetails/AdvanceDeductionDetailsModal';
 import AdvanceDeductionEditModal from './FlatDetails/AdvanceDeductionEditModal';
+import AdvancePaymentDetailsModal from './FlatDetails/AdvancePaymentDetailsModal';
 import { generateRentReceiptPdf, generateRentReminderPdf } from '../../utils/invoiceGenerator';
 
 import OverviewTab from './FlatDetails/OverviewTab';
 import PaymentsTab from './FlatDetails/PaymentsTab';
 import AdvanceTab from './FlatDetails/AdvanceTab';
+import FlatTabs from './FlatDetails/FlatTabs';
 import ReminderLogModal from './FlatDetails/ReminderLogModal';
 import PaymentEmailLogModal from './FlatDetails/PaymentEmailLogModal';
 import RemoveRenterModal from './FlatDetails/RemoveRenterModal';
@@ -54,6 +56,7 @@ const FlatDetails = () => {
   const [viewedDeduction, setViewedDeduction] = useState(null);
   const [sendingDeduction, setSendingDeduction] = useState(null);
   const [editingDeduction, setEditingDeduction] = useState(null);
+  const [viewedAdvance, setViewedAdvance] = useState(null);
   const [reminderPdfBase64, setReminderPdfBase64] = useState(null);
   const [reminderData, setReminderData] = useState(null);
   const [reminderPaymentId, setReminderPaymentId] = useState(null);
@@ -438,14 +441,17 @@ const FlatDetails = () => {
 
   // ── Tabs config ───────────────────────────────────────────────────────────
   const tabs = [
-    { id: 'overview',  label: t('overview'),         icon: FileText },
-    { id: 'payments',  label: t('payment_history'),  icon: History  },
-    { id: 'advance',   label: t('advance_payments'), icon: Shield   },
+    // shortLabel is what a phone shows. Shortened, never dropped: two of these used to be
+    // bare icons, and a shield does not say "advance payment" to anyone who has not already
+    // learned this screen.
+    { id: 'overview', label: t('overview'), shortLabel: t('overview'), icon: FileText },
+    { id: 'payments', label: t('payment_history'), shortLabel: t('tab_payments'), icon: History },
+    { id: 'advance', label: t('advance_payments'), shortLabel: t('tab_advance'), icon: Shield },
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div>
+    <div className='relative'>
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap md:items-center gap-4 justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -537,40 +543,30 @@ const FlatDetails = () => {
       </div>
 
       {/* ── Tabs nav ─────────────────────────────────────────────────────── */}
-      <div className="pt-4 border-t-2 border-subdued/20 mb-2">
-        <div className="flex gap-2 flex-wrap">
-          {tabs.map((tab, index) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center justify-center hover:bg-secondary/40 px-2 py-2 rounded-sm font-medium transition-all duration-300 min-w-10 ${
-                  active ? 'bg-secondary/80 text-white' : 'text-subdued bg-secondary/30 hover:text-text'
-                } ${index === 0 ? 'rounded-tl-2xl' : ''} ${index === tabs.length - 1 ? 'rounded-tr-2xl' : ''}`}
-              >
-                <Icon size={18} />
-                <span
-                  className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
-                    active ? 'max-w-xs opacity-100 pl-2' : 'max-w-0 opacity-0'
-                  }`}
-                >
-                  {tab.label}
-                </span>
-                {tab.id === 'advance' && availableAdvance > 0 && (
-                  <span className="ml-1 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">
-                    {availableAdvance.toLocaleString()}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      {/* `top-16` is the fixed header height, so the bar parks flush under it rather than
+          leaving a strip of bare content showing between the two. `-mx-4 px-4` cancels the
+          content column gutter so the opaque background spans the full page width - without
+          it, rows show through at the left and right edges as they scroll underneath. The
+          negative margin lands exactly on the column padding box, so it adds no overflow.
+          `z-10` sits above the panel below and below the header actions menu (z-20), which
+          opens downward across this bar. */}
+      <div className="sticky top-0 z-10 -mx-4 px-4">
+        <FlatTabs
+          tabs={tabs}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          availableAdvance={availableAdvance}
+        />
       </div>
 
       {/* ── Tab content ──────────────────────────────────────────────────── */}
-      <div className="pt-2">
+      {/* Labelled by its tab, so assistive tech announces which section this is. */}
+      <div
+        className="pt-2"
+        role="tabpanel"
+        id={`flat-panel-${activeTab}`}
+        aria-labelledby={`flat-tab-${activeTab}`}
+      >
         {activeTab === 'overview' && (
           <OverviewTab
             flat={flat}
@@ -612,9 +608,7 @@ const FlatDetails = () => {
             setAdvancePaymentFormMode={setAdvancePaymentFormMode}
             setOpenAdvancePaymentForm={setOpenAdvancePaymentForm}
             setOpenPayment={setOpenPayment}
-            onViewDeduction={setViewedDeduction}
-            onSendDeduction={(advance, entry) => setSendingDeduction({ advance, entry })}
-            onEditDeduction={(advance, entry) => setEditingDeduction({ advance, entry })}
+            onViewAdvance={setViewedAdvance}
           />
         )}
       </div>
@@ -676,6 +670,29 @@ const FlatDetails = () => {
 
       {/* Offers the renter a receipt for each advance just recorded - from this tab one at a
           time, from Assign Renter possibly several. */}
+      {/* The advance's own detail view, and the home of its deduction history. Kept live
+          while a child modal is open so closing that one returns here rather than to the list. */}
+      <AdvancePaymentDetailsModal
+        open={!!viewedAdvance}
+        advance={
+          // Re-read from the refreshed list, so an edit made from inside this modal is
+          // reflected without closing it.
+          advancePayments.find((a) => a.id === viewedAdvance?.id) ?? viewedAdvance
+        }
+        flatId={id}
+        onClose={() => setViewedAdvance(null)}
+        onSuccess={() => { refetchDetails(); refetchAdvancePayments(); }}
+        onEdit={(advance) => {
+          setViewedAdvance(null);
+          setSelectedAdvancePaymentForForm(advance);
+          setAdvancePaymentFormMode('update');
+          setOpenAdvancePaymentForm(true);
+        }}
+        onViewDeduction={setViewedDeduction}
+        onSendDeduction={(advance, entry) => setSendingDeduction({ advance, entry })}
+        onEditDeduction={(advance, entry) => setEditingDeduction({ advance, entry })}
+      />
+
       <AdvanceDeductionEditModal
         open={!!editingDeduction}
         advance={editingDeduction?.advance}

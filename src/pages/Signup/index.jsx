@@ -332,9 +332,11 @@ const SignupPage = () => {
           header={getHeader()}
           fields={fields}
           onSubmit={handleSubmit}
-          submitText={isLoading ? 'Creating Account...' : 'Create Account'}
+          // A stable label with a spinner beside it, rather than swapping the text: the old
+          // version changed the button's width mid-press, moving it under the finger.
+          submitText="Create Account"
+          loading={isLoading}
           submitDisabled={
-            isLoading || 
             (token && !tokenValid) || 
             (!token && !publicRegistrationEnabled)
           }

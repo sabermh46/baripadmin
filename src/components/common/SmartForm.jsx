@@ -1,5 +1,6 @@
 // SmartForm.jsx
 import { useState, useCallback, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import TextField from "./TextField";
 import SelectField from "./SelectField";
 import { appLogo } from "../../assets";
@@ -14,7 +15,9 @@ export default function SmartForm({
   header = <p>Form</p>, 
   logoVisible = false, 
   submitText = "Submit", 
-  submitDisabled = false 
+  submitDisabled = false,
+  /** True while the caller's onSubmit is in flight. Shows a spinner and blocks re-submits. */
+  loading = false,
 }) {
     
     // Initialize formData with field values
@@ -89,8 +92,9 @@ export default function SmartForm({
         // Run validation
         const isValid = validateForm();
 
-        // Only call onSubmit if the form is valid
-        if (isValid) {
+        // Guarded as well as disabled: Enter in a text field submits the form without ever
+        // touching the button, so `disabled` alone would not stop a second request.
+        if (isValid && !loading) {
             onSubmit(formData);
         }
     };
@@ -162,12 +166,28 @@ export default function SmartForm({
                 );
             })}
 
-            {/* Submit Button */}
+            {/*
+              * Submit.
+              *
+              * `py-1` made it shorter than the fields above it, so the primary action read as
+              * the lightest thing on the form. It now matches the inputs' rhythm and clears
+              * the 44px a thumb needs.
+              *
+              * The label stays put while loading and the spinner joins it, rather than the
+              * text being swapped out - a button that changes width mid-press moves under the
+              * finger that is still on it.
+              */}
             <button
                 type="submit"
-                disabled={submitDisabled}
-                className={`mt-4 w-full py-1 bg-primary rounded-md font-hind-siliguri transition cursor-pointer ${submitDisabled ? 'opacity-50 cursor-not-allowed' : 'bg-primary hover:bg-primary-700 cursor-pointer'}`}
+                disabled={submitDisabled || loading}
+                aria-busy={loading}
+                className={`mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary py-2.5 font-anek-bn font-medium text-black transition ${
+                    submitDisabled || loading
+                        ? 'cursor-not-allowed opacity-60'
+                        : 'cursor-pointer hover:bg-primary-700'
+                }`}
             >
+                {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                 {submitText}
             </button>
         </form>

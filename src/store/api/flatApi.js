@@ -1,5 +1,6 @@
 // api/flatApi.js
 import { baseApi } from './baseApi';
+import { decodeAdvances } from '../../utils/advanceDeductionCodec';
 
 export const flatApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -41,6 +42,15 @@ export const flatApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
       providesTags: ['Flat', 'AdvancePayment', 'PaymentReceipt', 'Renter'],
+      // Deduction history arrives in its compact storage form - short keys, staff names sent
+      // once in `actors` rather than repeated on every row. Expanding it here, at the single
+      // point the data enters the app, is why no component had to learn about the codec.
+      transformResponse: (response) => (response?.data?.advancePayments
+        ? {
+          ...response,
+          data: { ...response.data, advancePayments: decodeAdvances(response.data.advancePayments) },
+        }
+        : response),
     }),
 
     // Create flat
@@ -74,10 +84,10 @@ export const flatApi = baseApi.injectEndpoints({
 
     // Assign renter to flat
     assignRenter: builder.mutation({
-      query: ({ flatId, renterId, amenities, next_payment_date, advance_payments }) => ({
+      query: ({ flatId, renterId, amenities, next_payment_date, late_fee_percentage, advance_payments }) => ({
         url: `/flats/${flatId}/renter`,
         method: 'POST',
-        data: { renter_id: renterId, amenities, next_payment_date, advance_payments },
+        data: { renter_id: renterId, amenities, next_payment_date, late_fee_percentage, advance_payments },
       }),
       // The house page renders occupancy, the flat cards and the renters section from one
       // house response — all three change the moment a flat gains or loses a tenant.
@@ -206,6 +216,9 @@ export const flatApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
       providesTags: ['AdvancePayment'],
+      // Same compact history as the overview endpoint, expanded the same way. This one
+      // answers with a bare array rather than a { data } envelope.
+      transformResponse: (response) => decodeAdvances(response),
     }),
 
     ///GET: /financial/payment-receipts

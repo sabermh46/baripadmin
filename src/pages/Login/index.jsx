@@ -94,7 +94,7 @@ export default function LoginPage() {
         
 
         {/* FORM */}
-        <SmartFrom logoVisible header={''} fields={fields} onSubmit={handleSubmit} />
+        <SmartFrom logoVisible header={''} fields={fields} onSubmit={handleSubmit} loading={isLoading} />
 
         
         {/* ERROR */}

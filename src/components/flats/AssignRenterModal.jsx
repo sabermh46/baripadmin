@@ -1,14 +1,78 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import TkSymbol from '../common/TkSymbol';
-import { Search, X, User, Coins, Plus, Trash2, Calendar, CreditCard, FileText, RefreshCcw, Phone, Mail, Check } from 'lucide-react';
+import { Search, X, User, Coins, Plus, Trash2, Calendar, CreditCard, FileText, RefreshCcw, Phone, Mail, Check, Loader2 } from 'lucide-react';
 import { useAssignRenterMutation } from '../../store/api/flatApi';
 import { useGetAvailableRentersQuery } from '../../store/api/renterApi';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { apiErrorMessage } from '../../utils/apiError';
-import Btn from '../common/Button';
+
+/**
+ * One numbered stage of the assignment.
+ *
+ * WHY NUMBERED STAGES
+ * -------------------
+ * This screen asks for four separate decisions, and the old layout ran them
+ * together as one undifferentiated scroll — worse, in an order that put a
+ * disabled "Advance Payments" panel ABOVE the renter list it depended on, so
+ * the first thing an owner read was an instruction to do something the page
+ * had not yet offered them. Numbering makes the sequence explicit and the
+ * order now follows the dependency rather than fighting it.
+ *
+ * WHY LOCKED STAGES COLLAPSE INSTEAD OF DISABLING
+ * ----------------------------------------------
+ * A locked stage keeps its heading and says in a short sentence what it is
+ * waiting for, then hides its controls. The owner can still see the whole job
+ * ahead of them — four things, in this order — without facing three panels of
+ * greyed-out inputs. Hiding the stages entirely would be worse: the screen
+ * would grow as they worked and they could not tell how much was left.
+ */
+const Step = ({ index, title, hint, locked, lockedHint, optional, done, children }) => {
+  const { t } = useTranslation();
+
+  return (
+    <section
+      className={`rounded-2xl border transition-colors ${
+        locked ? 'border-subdued/15 bg-surface/40' : 'border-subdued/25 bg-surface'
+      }`}
+    >
+      <div className="flex items-start gap-2.5 p-3">
+        {/* The step number doubles as the progress marker: it turns into a tick
+            once the stage is satisfied, so "where am I" is answerable at a
+            glance without reading anything. */}
+        <span
+          className={`grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold ${
+            done ? 'bg-green-600 text-white' : locked ? 'bg-subdued/20 text-subdued' : 'bg-primary text-white'
+          }`}
+          aria-hidden="true"
+        >
+          {done ? <Check size={16} /> : index}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <h3 className={`text-base font-bold ${locked ? 'text-subdued' : 'text-text'}`}>
+            <span className="sr-only">{t('step_n', { n: index })}: </span>
+            {title}
+            {optional && (
+              <span className="ml-2 align-middle text-xs font-medium uppercase tracking-wide text-subdued">
+                {t('optional')}
+              </span>
+            )}
+          </h3>
+          {(locked ? lockedHint : hint) && (
+            <p className="mt-0.5 text-xs leading-snug text-subdued">{locked ? lockedHint : hint}</p>
+          )}
+        </div>
+      </div>
+
+      {!locked && <div className="px-3 pb-3">{children}</div>}
+    </section>
+  );
+};
 
 const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = () => {} }) => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRenter, setSelectedRenter] = useState(null);
   const [amenities, setAmenities] = useState([]);
@@ -16,6 +80,22 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
   const [nextPaymentDate, setNextPaymentDate] = useState('');
   const [advancePayments, setAdvancePayments] = useState([]);
   const [showAdvancePaymentForm, setShowAdvancePaymentForm] = useState(false);
+  /**
+   * "There are none" is a different answer from "I have not looked yet", and until now the
+   * screen could not tell them apart: an owner who scrolled straight past the charges looked
+   * exactly like one who had decided the rent is the base rent alone. These two flags are how
+   * a deliberate "no" gets recorded, which is what lets the Assign button wait for all four
+   * stages instead of just the renter.
+   */
+  const [chargesConfirmed, setChargesConfirmed] = useState(false);
+  const [advanceConfirmed, setAdvanceConfirmed] = useState(false);
+  const [termsConfirmed, setTermsConfirmed] = useState(false);
+  /**
+   * null means untouched, so the field shows the flat's current fee without an effect to seed
+   * it — and, unlike a '' default, clearing the box to retype leaves it empty instead of
+   * snapping back to the old number under the owner's fingers.
+   */
+  const [lateFee, setLateFee] = useState(null);
   const [currentAdvancePayment, setCurrentAdvancePayment] = useState({
     amount: '',
     paid_amount: '',
@@ -120,14 +200,46 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
     0
   );
 
+  const lateFeeValue = lateFee ?? String(flat?.late_fee_percentage ?? 5);
+
+  /**
+   * What each stage needs before its tick turns green. A charge with a blank name does not
+   * count as finished — handleAssign rejects those anyway, so the tick would otherwise promise
+   * something the submit would refuse.
+   */
+  const steps = {
+    renter: !!selectedRenter,
+    // Both of these carry values the owner never typed - the house's amenities are copied in
+    // from its metadata, and the date and late fee arrive prefilled - so completing on the
+    // presence of a value would tick them green before anyone had read them. They need a
+    // deliberate confirmation, and editing afterwards withdraws it (see the handlers below).
+    charges: chargesConfirmed && amenities.every((a) => a.name?.trim()),
+    terms: termsConfirmed && !!nextPaymentDate && lateFeeValue !== '' && parseFloat(lateFeeValue) >= 0,
+    advance: advancePayments.length > 0 || advanceConfirmed,
+  };
+  const readyToAssign = Object.values(steps).every(Boolean);
+
+  /** Clears the renter and everything decided about them. */
+  const clearRenter = () => {
+    setSelectedRenter(null);
+    setShowAmenitiesEditor(false);
+    setAdvancePayments([]);
+    setShowAdvancePaymentForm(false);
+    setChargesConfirmed(false);
+    setAdvanceConfirmed(false);
+    setTermsConfirmed(false);
+  };
+
   // Handle amenities changes
   const handleAddAmenity = () => {
     setAmenities([...amenities, { name: '', charge: 0 }]);
+    setChargesConfirmed(false);
   };
 
   const handleRemoveAmenity = (index) => {
     const updated = amenities.filter((_, i) => i !== index);
     setAmenities(updated);
+    setChargesConfirmed(false);
   };
 
   const handleAmenityChange = (index, field, value) => {
@@ -138,6 +250,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
       updated[index][field] = value;
     }
     setAmenities(updated);
+    setChargesConfirmed(false);
   };
 
   // Handle advance payment changes
@@ -151,7 +264,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
   const handleAddAdvancePayment = () => {
     // Validate
     if (!currentAdvancePayment.amount || parseFloat(currentAdvancePayment.amount) <= 0) {
-      toast.error('Please enter a valid advance amount');
+      toast.error(t('enter_a_valid_advance_amount'));
       return;
     }
 
@@ -177,7 +290,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
     });
     
     setShowAdvancePaymentForm(false);
-    toast.success('Advance payment added');
+    toast.success(t('advance_payment_added'));
   };
 
   const handleRemoveAdvancePayment = (index) => {
@@ -194,13 +307,13 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
     );
     
     if (invalidAmenities.length > 0) {
-      toast.error('Please provide valid name and charge for all amenities');
+      toast.error(t('every_charge_needs_a_name_and_amount'));
       return;
     }
 
     // Validate next payment date
     if (!nextPaymentDate) {
-      toast.error('Please select next payment date');
+      toast.error(t('choose_the_first_payment_date'));
       return;
     }
 
@@ -210,6 +323,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
         renterId: selectedRenter.id,
         amenities: amenities.filter(a => a.name.trim()),
         next_payment_date: nextPaymentDate,
+        late_fee_percentage: parseFloat(lateFeeValue),
         advance_payments: advancePayments.map(payment => ({
           amount: payment.amount,
           paid_amount: payment.paid_amount,
@@ -223,9 +337,13 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
       }).unwrap();
       
       const successMessage = advancePayments.length > 0
-        ? `Renter "${selectedRenter.name}" assigned successfully with ${advancePayments.length} advance payment(s) totaling $${totalAdvance.toLocaleString()}`
-        : `Renter "${selectedRenter.name}" assigned successfully`;
-      
+        ? t('renter_assigned_with_advance', {
+            name: selectedRenter.name,
+            count: advancePayments.length,
+            total: totalAdvance.toLocaleString(),
+          })
+        : t('renter_assigned', { name: selectedRenter.name });
+
       toast.success(successMessage);
       // The ids let the caller offer a receipt for each deposit taken at assignment.
       onSuccess?.(response?.created_advance_ids ?? response?.data?.created_advance_ids ?? []);
@@ -236,651 +354,723 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
       setShowAmenitiesEditor(false);
       setAdvancePayments([]);
       setNextPaymentDate('');
+      setChargesConfirmed(false);
+      setAdvanceConfirmed(false);
+      setTermsConfirmed(false);
+      setLateFee(null);
     } catch (error) {
       console.error('Failed to assign renter:', error);
-      toast.error(apiErrorMessage(error, 'Could not assign the renter.'));
+      toast.error(apiErrorMessage(error, t('could_not_assign_the_renter')));
     }
   };
 
   const handleRefresh = () => {
     refetch();
-    toast.info('Refreshing available renters...');
+    toast.info(t('refreshing_available_renters'));
   };
 
   if (!open || !flat) return null;
 
+  const methodLabel = (value) => ({
+    cash: t('cash'),
+    bank: t('bank_transfer'),
+    mobile_banking: t('mobile_banking'),
+    other: t('other'),
+  }[value] || value);
+
+  const monthsCovered = totalRent > 0 ? totalAdvance / totalRent : 0;
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-surface/20 backdrop-blur-sm border-b border-subdued/20 p-4 z-50">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base md:text-xl font-bold text-text">Assign Renter to Flat</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 sm:p-4">
+      <div className="flex h-full w-full flex-col bg-surface sm:h-auto sm:max-h-[92dvh] sm:max-w-3xl sm:rounded-2xl sm:shadow-xl">
+
+        {/* ── Header ───────────────────────────────────────────────────────
+            Opaque, not the old `bg-surface/20 backdrop-blur-sm`: at 20% the
+            title sat on top of whatever scrolled underneath it, which is hard
+            to read at the best of times and worse for older eyes. */}
+        <div className="shrink-0 border-b border-subdued/20 px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-text sm:text-xl">
+                {t('assign_renter_to_flat')}
+              </h2>
+              <p className="mt-0.5 truncate text-sm text-subdued">
+                {flat.name}
+                {flat.number && !String(flat.name ?? '').includes(String(flat.number))
+                  ? ` · ${flat.number}`
+                  : ''}
+              </p>
+            </div>
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 hover:bg-subdued/10 rounded-lg transition-colors"
+              aria-label={t('close')}
+              className="-mr-1 grid size-11 shrink-0 place-items-center rounded-lg transition-colors hover:bg-subdued/10"
             >
-              <X size={20} />
+              <X size={22} />
             </button>
           </div>
+
+          {/* The flat's fixed terms. These are facts to read, not decisions to
+              make, so they sit as context under the title rather than as a
+              numbered step competing with the four that need a decision. */}
+          {/* `rent_due_day` is the whole sentence "Due on day {{day}}", so using it as a bare
+              label printed the placeholder itself to the screen. It takes the short label here
+              and the day goes in the value beside it. */}
+          <dl className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 rounded-xl bg-background px-3 py-2">
+            <div className="min-w-0">
+              <dt className="text-[10px] font-semibold uppercase tracking-wide text-subdued">{t('base_rent')}</dt>
+              <dd className="whitespace-nowrap text-sm font-bold text-text"><TkSymbol />{baseRent.toLocaleString()}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-[10px] font-semibold uppercase tracking-wide text-subdued">{t('due_day')}</dt>
+              <dd className="whitespace-nowrap text-sm font-medium text-text">{t('day_of_month', { day: flat.should_pay_rent_day })}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-[10px] font-semibold uppercase tracking-wide text-subdued">{t('late_fee')}</dt>
+              <dd className="whitespace-nowrap text-sm font-medium text-text">{flat.late_fee_percentage || 5}%</dd>
+            </div>
+          </dl>
         </div>
 
-        <div className="p-1 space-y-4">
-          {/* Flat Details & Rent Summary */}
-          <div className="p-3">
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="font-medium text-text">Flat Details</h3>
+        {/* ── Body ─────────────────────────────────────────────────────── */}
+        <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-background px-3 py-3 sm:px-6 sm:py-4">
+
+          {/* ── Step 1 · Choose the renter ───────────────────────────────
+              First, because every other step depends on it. It used to sit
+              fourth, below an Advance Payments panel that greeted the owner
+              with "Select a renter first" — telling them to do something they
+              had not yet been given the chance to do. */}
+          <Step index={1} title={t('choose_renter')} hint={t('choose_renter_hint')} done={steps.renter}>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subdued" size={20} />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label={t('search_renter')}
+                  className="min-h-12 w-full rounded-lg border border-subdued/30 bg-surface pl-11 pr-11 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                  placeholder={t('search_renter_placeholder')}
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    aria-label={t('clear')}
+                    className="absolute right-0 top-0 grid h-full w-11 place-items-center text-subdued hover:text-text"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
+              {/* Was a bare circular-arrow icon with no label or tooltip. */}
               <button
+                type="button"
                 onClick={handleRefresh}
                 disabled={isLoading}
-                className="text-sm text-primary hover:text-primary/80 disabled:opacity-50"
+                className="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-subdued/30 bg-surface px-4 text-sm font-medium text-text transition-colors hover:bg-subdued/10 disabled:opacity-50"
               >
-                <RefreshCcw size={18} />
+                <RefreshCcw size={18} className={isLoading ? 'animate-spin' : ''} />
+                {t('refresh')}
               </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div>
-                <p className="text-sm text-subdued">Name</p>
-                <p className="font-medium">{flat.name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-subdued">Flat Number</p>
-                <p>{flat.number}</p>
-              </div>
-              <div>
-                <p className="text-sm text-subdued">Base Rent</p>
-                <p className="font-bold">${baseRent.toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-sm text-subdued">Rent Due Day</p>
-                <p>Day {flat.should_pay_rent_day}</p>
-              </div>
-              <div>
-                <p className="text-sm text-subdued">Late Fee</p>
-                <p>{flat.late_fee_percentage || 5}%</p>
-              </div>
-            </div>
-            
-            {/* Next Payment Date Selection */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-text mb-2">
-                First Payment Date
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued" size={20} />
-                {/* Today used to be the floor, which made it impossible to record a tenancy
-                    that began earlier in the year — the common case when a renter is entered
-                    into the system after they have already moved in. */}
-                <input
-                  type="date"
-                  value={nextPaymentDate}
-                  onChange={(e) => setNextPaymentDate(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
-                  min={`${new Date().getFullYear()}-01-01`}
-                />
-              </div>
-            </div>
-            
-            {/* Rent Summary */}
-            <div className="border-t pt-4">
-              <h4 className="font-medium text-text mb-2">Rent Breakdown</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-subdued">Base Rent:</span>
-                  <span className="font-medium">${baseRent.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-subdued">Amenities Charge:</span>
-                  <span className="font-medium">${totalAmenitiesCharge.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="font-bold text-text">Total Monthly Rent:</span>
-                  <span className="font-bold text-primary text-lg">${totalRent.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Advance Payments Section */}
-          <div className="p-3 m-2 bg-slate-200 rounded-lg">
-            <div className="flex justify-between items-center flex-wrap mb-4">
-              <h4 className="font-medium text-sm md:text-lg text-text flex items-center gap-2">
-                <CreditCard className="w-4 h-4" /> Advance Payments
-              </h4>
-              <Btn
-                onClick={() => setShowAdvancePaymentForm(!showAdvancePaymentForm)}
-                type="outline"
-                disabled={!selectedRenter}
-              >
-                <Plus className="w-4 h-4" />
-              </Btn>
-            </div>
-            
-            {!selectedRenter ? (
-              <div className="text-center py-4 text-subdued">
-                Select a renter first to add advance payments
-              </div>
-            ) : (
-              <>
-                {/* Advance Payment Form */}
-                {showAdvancePaymentForm && (
-                  <div className="mb-6 p-2 px-3 bg-surface rounded-lg">
-                    <div className="flex justify-between items-center mb-3">
-                      <h5 className="font-medium text-primary">New Advance Payment</h5>
-                      <button
-                        onClick={() => setShowAdvancePaymentForm(false)}
-                        className="text-subdued hover:text-text"
+            {/* A real radiogroup. These were <div onClick>: not focusable, not
+                announced as choices, not reachable without a mouse. */}
+            <div
+              role="radiogroup"
+              aria-label={t('choose_renter')}
+              className="mt-3 max-h-80 space-y-2 overflow-y-auto"
+            >
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-10">
+                  <Loader2 className="animate-spin text-primary" size={28} />
+                  <p className="text-sm text-subdued">{t('loading_available_renters')}</p>
+                </div>
+              ) : filteredRenters.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-subdued/30 px-4 py-10 text-center">
+                  <User className="mx-auto mb-3 text-subdued/40" size={40} />
+                  <p className="text-base font-medium text-text">
+                    {searchTerm ? t('no_renters_match_search') : t('no_available_renters')}
+                  </p>
+                  <p className="mt-1 text-sm text-subdued">
+                    {searchTerm ? t('try_a_different_search') : t('all_renters_assigned_hint')}
+                  </p>
+                </div>
+              ) : (
+                filteredRenters.map((renter) => {
+                  const picked = selectedRenter?.id === renter.id;
+                  return (
+                    <button
+                      key={renter.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={picked}
+                      onClick={() => {
+                        setSelectedRenter(renter);
+                        setShowAmenitiesEditor(true);
+                      }}
+                      className={`flex w-full items-center gap-2.5 rounded-xl border-2 p-2.5 text-left transition-colors ${
+                        picked
+                          ? 'border-primary bg-primary/10'
+                          : 'border-subdued/20 bg-surface hover:border-subdued/40 hover:bg-subdued/5'
+                      }`}
+                    >
+                      {/* Selection used to flood the row with solid primary and
+                          set every line to white, dropping the phone number and
+                          email to poor contrast on orange. A border plus a tint
+                          reads as clearly and keeps the details legible. */}
+                      <span
+                        className={`grid size-10 shrink-0 place-items-center rounded-full text-base font-bold ${
+                          picked ? 'bg-primary text-white' : 'bg-subdued/15 text-subdued'
+                        }`}
                       >
-                        <X size={16} />
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-text mb-1">
-                          Amount *
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued"><TkSymbol /></span>
-                          <input
-                            type="number"
-                            value={currentAdvancePayment.amount}
-                            onChange={(e) => handleAdvancePaymentChange('amount', e.target.value)}
-                            className="w-full pl-8 pr-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                            placeholder="0.00"
-                            step="0.01"
-                            min="0"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-text mb-1">
-                          Paid Amount *
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued"><TkSymbol /></span>
-                          <input
-                            type="number"
-                            value={currentAdvancePayment.paid_amount || currentAdvancePayment.amount}
-                            onChange={(e) => handleAdvancePaymentChange('paid_amount', e.target.value)}
-                            className="w-full pl-8 pr-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                            placeholder="0.00"
-                            step="0.01"
-                            min="0"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-text mb-1">
-                          Payment Date *
-                        </label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued" size={16} />
-                          <input
-                            type="date"
-                            value={currentAdvancePayment.payment_date}
-                            onChange={(e) => handleAdvancePaymentChange('payment_date', e.target.value)}
-                            className="w-full pl-10 pr-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-text mb-1">
-                          Payment Method *
-                        </label>
-                        <select
-                          value={currentAdvancePayment.payment_method}
-                          onChange={(e) => handleAdvancePaymentChange('payment_method', e.target.value)}
-                          className="w-full px-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                        >
-                          <option value="cash">Cash</option>
-                          <option value="bank">Bank Transfer</option>
-                          <option value="mobile_banking">Mobile Banking</option>
-                          <option value="other">Other</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-text mb-1">
-                          Transaction ID
-                        </label>
-                        <input
-                          type="text"
-                          value={currentAdvancePayment.transaction_id}
-                          onChange={(e) => handleAdvancePaymentChange('transaction_id', e.target.value)}
-                          className="w-full px-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                          placeholder="TRX-123456"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-text mb-1">
-                          For Months
-                        </label>
-                        <input
-                          type="number"
-                          value={currentAdvancePayment.for_months}
-                          onChange={(e) => handleAdvancePaymentChange('for_months', e.target.value)}
-                          className="w-full px-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                          placeholder="0"
-                          min="0"
-                          step="1"
-                        />
-                      </div>
-                      
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-text mb-1">
-                          Description
-                        </label>
-                        <input
-                          type="text"
-                          value={currentAdvancePayment.description}
-                          onChange={(e) => handleAdvancePaymentChange('description', e.target.value)}
-                          className="w-full px-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                          placeholder="e.g., Security deposit, Advance for 2 months"
-                        />
-                      </div>
-                      
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-text mb-1">
-                          Notes
-                        </label>
-                        <textarea
-                          value={currentAdvancePayment.notes}
-                          onChange={(e) => handleAdvancePaymentChange('notes', e.target.value)}
-                          className="w-full px-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                          placeholder="Additional notes..."
-                          rows="2"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-end gap-2 mt-4">
-                      <button
-                        onClick={() => setShowAdvancePaymentForm(false)}
-                        className="px-4 py-2 text-sm border border-subdued/30 rounded hover:bg-subdued/10"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleAddAdvancePayment}
-                        className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-primary/90"
-                      >
-                        Add Payment
-                      </button>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Advance Payments List */}
-                {advancePayments.length > 0 ? (
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <h5 className="font-medium text-text">Added Advance Payments</h5>
-                      <span className="text-sm font-bold text-primary">
-                        Total: ${totalAdvance.toLocaleString()}
+                        {picked ? <Check size={20} /> : (renter.name?.trim()?.[0] || '?')}
                       </span>
-                    </div>
-                    
-                    {advancePayments.map((payment, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                              <Coins className="text-green-600" size={16} />
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                ${payment.amount.toLocaleString()}
-                                {payment.description && (
-                                  <span className="text-sm font-normal text-subdued ml-2">
-                                    - {payment.description}
-                                  </span>
-                                )}
-                              </p>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                <span className="text-xs text-subdued">
-                                  {format(new Date(payment.payment_date), 'dd MMM yyyy')}
-                                </span>
-                                <span className="text-xs text-subdued">
-                                  • {payment.payment_method}
-                                </span>
-                                {payment.transaction_id && (
-                                  <span className="text-xs text-subdued">
-                                    • {payment.transaction_id}
-                                  </span>
-                                )}
-                                {payment.for_months > 0 && (
-                                  <span className="text-xs text-green-600 font-medium">
-                                    • For {payment.for_months} month(s)
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveAdvancePayment(index)}
-                          className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                    
-                    {/* Example: Show how many months of rent are covered */}
-                    {totalAdvance > 0 && totalRent > 0 && (
-                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-2 text-blue-700">
-                          <FileText className="w-4 h-4" />
-                          <span className="font-medium">Advance Payment Analysis:</span>
-                        </div>
-                        <p className="text-sm text-blue-600 mt-1">
-                          Total advance of ${totalAdvance.toLocaleString()} covers approximately{' '}
-                          <span className="font-bold">
-                            {(totalAdvance / totalRent).toFixed(1)} months
-                          </span>{' '}
-                          of rent (${totalRent.toLocaleString()}/month)
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-subdued">
-                    <CreditCard className="mx-auto mb-2 text-subdued/50" size={24} />
-                    <p>No advance payments added yet</p>
-                    <p className="text-sm mt-1">
-                      Add advance payments like security deposit or prepaid rent
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
 
-          {/* Renter Search */}
-          <div className='p-2'>
-            <label className="block text-sm font-medium text-text mb-2">
-              Search Renter
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued" size={20} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-background border border-subdued/30 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none"
-                placeholder="Type name, phone, email, or NID..."
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-subdued hover:text-text"
-                >
-                  <X size={16} />
-                </button>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate text-base font-semibold text-text">{renter.name}</span>
+                          {renter.status === 'inactive' && (
+                            <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                              {t('inactive')}
+                            </span>
+                          )}
+                        </span>
+                        <span className="mt-1 flex flex-col gap-0.5 text-sm text-subdued">
+                          {renter.phone && (
+                            <span className="flex items-center gap-1.5 truncate">
+                              <Phone size={14} className="shrink-0" /> {renter.phone}
+                            </span>
+                          )}
+                          {renter.email && (
+                            <span className="flex items-center gap-1.5 truncate">
+                              <Mail size={14} className="shrink-0" /> {renter.email}
+                            </span>
+                          )}
+                          {renter.nid && (
+                            <span className="truncate">{t('nid')}: {renter.nid}</span>
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })
               )}
             </div>
-          </div>
+          </Step>
 
-          {/* Renter List */}
-          <div className="space-y-2 max-h-70 bg-slate-200 m-2 p-3 rounded-lg overflow-y-auto">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-                <p className="text-sm text-subdued">Loading available renters...</p>
+          {/* ── Step 2 · Monthly charges ───────────────────────────────
+              One list that adds up, rather than an editor and a separate breakdown card
+              restating the same three numbers. The base rent is the first line because it is
+              the line everything else is added to, and the total sits at the foot of the same
+              column of figures it is the sum of. */}
+          <Step
+            index={2}
+            title={t('monthly_charges')}
+            hint={t('monthly_charges_hint')}
+            locked={!selectedRenter || !showAmenitiesEditor}
+            lockedHint={t('choose_a_renter_first')}
+            done={steps.charges}
+          >
+            <div className="overflow-hidden rounded-xl border border-subdued/25">
+              {/* Read-only: the base rent belongs to the flat, not to this tenancy. */}
+              <div className="flex items-center justify-between gap-2 bg-background px-3 py-2">
+                <span className="min-w-0 text-sm font-medium text-text">{t('monthly_rent_payment')}</span>
+                <span className="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-text">
+                  <TkSymbol />{baseRent.toLocaleString()}
+                </span>
               </div>
-            ) : filteredRenters.length === 0 ? (
-              <div className="text-center py-8 text-subdued">
-                <User className="mx-auto mb-3 text-subdued/50" size={48} />
-                <p className="mb-2">
-                  {searchTerm ? 'No renters found matching your search' : 'No available renters found'}
-                </p>
-                <p className="text-sm">
-                  {searchTerm ? 'Try a different search term' : 'All renters are currently assigned or no renters exist'}
-                </p>
-              </div>
-            ) : (
-              filteredRenters.map((renter) => (
-                <div
-                  key={renter.id}
-                  onClick={() => {
-                    setSelectedRenter(renter);
-                    setShowAmenitiesEditor(true);
-                  }}
-                  className={`p-1 rounded-lg cursor-pointer transition-all relative ${
-                    selectedRenter?.id === renter.id
-                      ? 'bg-primary text-white'
-                      : 'bg-surface'
-                  }`}
-                >
-                  {
-                    selectedRenter?.id === renter.id ? (
-                      <div className="absolute top-2 right-2 bg-white/20 p-1 rounded-full">
-                        <Check size={16} className="text-white" />
-                      </div>
-                    ) : null
-                  }
-                  <div className="px-2 py-1 overflow-clip">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start">
-                        <p className="font-medium truncate">{renter.name}</p>
-                        {renter.status === 'inactive' && (
-                          <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-1 mt-1">
-                        {renter.phone && (
-                          <span className="text-sm flex gap-1 items-center truncate">
-                            <Phone size={14} /> {renter.phone}
-                          </span>
-                        )}
-                        {renter.email && (
-                          <span className="text-sm flex gap-1 items-center truncate">
-                            <Mail size={14} /> {renter.email}
-                          </span>
-                        )}
-                        {renter.nid && (
-                          <span className="text-xs truncate">
-                            NID: {renter.nid}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+
+              {amenities.map((amenity, index) => (
+                /* Wraps rather than sharing one line at a fixed split. The name box used to
+                     take whatever was left after a `w-28` amount field, and since the font-size
+                     preference scales every rem, "larger" grew that field to 140px and left the
+                     name with nothing at 320px wide. Both halves now claim a basis and drop to
+                     their own line when the row cannot hold them. */
+                <div key={index} className="flex flex-wrap items-center gap-2 border-t border-subdued/15 px-3 py-2">
+                  {/* Placeholders rather than a label above every field: at two fields per row
+                      the labels tripled the height of the list for words the boxes already say. */}
+                  <input
+                    type="text"
+                    value={amenity.name}
+                    onChange={(e) => handleAmenityChange(index, 'name', e.target.value)}
+                    aria-label={t('charge_name')}
+                    className="min-h-11 min-w-0 flex-1 basis-32 rounded-lg border border-subdued/30 bg-surface px-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    placeholder={t('charge_name_placeholder')}
+                  />
+                  <div className="flex min-w-0 flex-1 basis-32 items-center gap-1.5">
+                  <div className="relative min-w-0 flex-1">
+                    <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-subdued"><TkSymbol /></span>
+                    <input
+                      type="number"
+                      value={amenity.charge}
+                      onChange={(e) => handleAmenityChange(index, 'charge', e.target.value)}
+                      aria-label={t('amount')}
+                      className="min-h-11 w-full rounded-lg border border-subdued/30 bg-surface pl-7 pr-2 text-right text-sm tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="0"
+                      step="0.01"
+                      min="0"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAmenity(index)}
+                    aria-label={`${t('remove')} ${amenity.name || t('charge_name')}`}
+                    className="grid size-9 shrink-0 place-items-center rounded-lg text-red-600 transition-colors hover:bg-red-50"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
 
-          {/* Amenities Editor */}
-          {selectedRenter && showAmenitiesEditor && (
-            <div className="border rounded-lg p-4 animate-in fade-in">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="font-medium text-text flex flex-wrap items-center gap-2">
-                  <Coins className="w-4 h-4" /> Service Charges & Amenities
-                </h4>
-                <Btn
+              <div className="border-t border-subdued/15 p-2">
+                <button
+                  type="button"
                   onClick={handleAddAmenity}
-                  type="outline"
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/40 px-4 text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                 >
-                  <Plus className="w-4 h-4" />
-                </Btn>
+                  <Plus size={18} />
+                  {t('add_service_charge')}
+                </button>
               </div>
-              
-              <div className="space-y-3">
-                {amenities.map((amenity, index) => (
-                  <div key={index} className="flex gap-3 flex-wrap items-center border border-primary/60 p-2 rounded-lg">
-                    <div className="flex-1 min-w-32">
-                      <input
-                        type="text"
-                        value={amenity.name}
-                        onChange={(e) => handleAmenityChange(index, 'name', e.target.value)}
-                        className="w-full px-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                        placeholder="Amenity name"
-                      />
+
+              {/* `whitespace-nowrap` on the figure: without it the ৳ and the digits broke
+                  across two lines once the label had taken the width. */}
+              <div className="flex items-center justify-between gap-2 border-t-2 border-primary/25 bg-primary/5 px-3 py-2.5">
+                <span className="min-w-0 text-sm font-bold leading-snug text-text">{t('total_monthly_rent')}</span>
+                <span className="shrink-0 whitespace-nowrap text-xl font-bold tabular-nums text-primary">
+                  <TkSymbol />{totalRent.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* When the list is empty this button is how an owner with no service charges says
+                so; when it is not, it is how they agree to what the house metadata filled in. */}
+            {!steps.charges && (
+              <button
+                type="button"
+                onClick={() => setChargesConfirmed(true)}
+                disabled={!amenities.every((a) => a.name?.trim())}
+                className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-subdued/30 px-4 text-sm font-medium text-text transition-colors hover:bg-subdued/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Check size={18} />
+                {amenities.length === 0 ? t('no_monthly_charge') : t('confirm_charges')}
+              </button>
+            )}
+
+            <p className="mt-2 text-xs leading-snug text-subdued">{t('amenities_note')}</p>
+          </Step>
+
+          {/* ── Step 3 · Payment terms ───────────────────────────────────
+              The late fee lives here now rather than only in the flat form. It is part of the
+              terms being agreed with this renter, the owner is looking straight at it two
+              inches higher up in the header, and sending them to a different screen to change
+              a number they are already reading is how a form earns its reputation. */}
+          <Step
+            index={3}
+            title={t('payment_terms')}
+            hint={t('payment_terms_hint')}
+            locked={!selectedRenter}
+            lockedHint={t('choose_a_renter_first')}
+            done={steps.terms}
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-text">
+                  {t('first_payment_date')}
+                </label>
+                <div className="relative">
+                  <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subdued" size={20} />
+                  {/* Today used to be the floor, which made it impossible to record a tenancy
+                      that began earlier in the year — the common case when a renter is entered
+                      into the system after they have already moved in. */}
+                  <input
+                    type="date"
+                    value={nextPaymentDate}
+                    onChange={(e) => { setNextPaymentDate(e.target.value); setTermsConfirmed(false); }}
+                    className="min-h-12 w-full rounded-lg border border-subdued/30 bg-surface pl-11 pr-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    min={`${new Date().getFullYear()}-01-01`}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-subdued">{t('first_payment_date_hint')}</p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-text">
+                  {t('late_fee')}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={lateFeeValue}
+                    onChange={(e) => { setLateFee(e.target.value); setTermsConfirmed(false); }}
+                    className="min-h-12 w-full rounded-lg border border-subdued/30 bg-surface px-3 pr-9 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    placeholder="0"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-subdued">%</span>
+                </div>
+                <p className="mt-1 text-xs text-subdued">{t('late_fee_hint')}</p>
+              </div>
+            </div>
+
+            {/* Both fields arrive prefilled - the date from the flat's rent day, the fee from
+                the flat itself - so without this the stage would tick green having been
+                scrolled past rather than read. */}
+            {!steps.terms && (
+              <button
+                type="button"
+                onClick={() => setTermsConfirmed(true)}
+                disabled={!nextPaymentDate || lateFeeValue === '' || !(parseFloat(lateFeeValue) >= 0)}
+                className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-subdued/30 px-4 text-sm font-medium text-text transition-colors hover:bg-subdued/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Check size={18} />
+                {t('confirm_terms')}
+              </button>
+            )}
+          </Step>
+
+          {/* ── Step 4 · Advance payment ─────────────────────────────── */}
+          <Step
+            index={4}
+            title={t('advance_payments')}
+            hint={t('advance_payments_hint')}
+            optional
+            locked={!selectedRenter}
+            lockedHint={t('choose_a_renter_first')}
+            done={steps.advance}
+          >
+            {advancePayments.length > 0 && (
+              <div className="mb-3 space-y-2">
+                {advancePayments.map((payment, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 rounded-xl border border-subdued/20 bg-background p-3"
+                  >
+                    <span className="grid size-11 shrink-0 place-items-center rounded-full bg-green-100 text-green-700">
+                      <Coins size={20} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base font-bold text-text">
+                        <TkSymbol />{payment.amount.toLocaleString()}
+                      </p>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-subdued">
+                        <span>{format(new Date(payment.payment_date), 'dd MMM yyyy')}</span>
+                        <span aria-hidden>·</span>
+                        <span>{methodLabel(payment.payment_method)}</span>
+                        {payment.transaction_id && (
+                          <>
+                            <span aria-hidden>·</span>
+                            <span className="truncate">{payment.transaction_id}</span>
+                          </>
+                        )}
+                      </p>
+                      {payment.description && (
+                        <p className="mt-0.5 truncate text-sm text-subdued">{payment.description}</p>
+                      )}
+                      {payment.for_months > 0 && (
+                        <p className="mt-0.5 text-sm font-medium text-green-700">
+                          {t('covers_n_months', { count: Number(payment.for_months) })}
+                        </p>
+                      )}
                     </div>
-                    <div className='flex gap-2'>
-                      <div className="flex-1 min-w-32">
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-subdued"><TkSymbol /></span>
-                        <input
-                          type="number"
-                          value={amenity.charge}
-                          onChange={(e) => handleAmenityChange(index, 'charge', e.target.value)}
-                          className="w-full pl-8 pr-3 py-2 border border-subdued/30 rounded focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
-                          placeholder="0.00"
-                          step="0.01"
-                          min="0"
-                        />
-                      </div>
-                    </div>
-                    <Btn
+                    <button
                       type="button"
-                      onClick={() => handleRemoveAmenity(index)}
-                      className="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-sm"
+                      onClick={() => handleRemoveAdvancePayment(index)}
+                      aria-label={t('remove')}
+                      className="grid size-11 shrink-0 place-items-center rounded-lg text-red-600 transition-colors hover:bg-red-50"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Btn>
-                    </div>
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 ))}
-                
-                {amenities.length === 0 && (
-                  <div className="text-center py-4 text-subdued">
-                    No amenities added. Add house amenities or custom charges.
-                  </div>
-                )}
-                
-                {/* Total Summary */}
-                {amenities.length > 0 && (
-                  <div className="pt-4 border-t">
-                    <div className="flex justify-between items-center">
-                      <span className="text-subdued">Amenities Total:</span>
-                      <span className="font-bold">${totalAmenitiesCharge.toLocaleString()}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="text-sm text-subdued mt-4">
-                <p className="mb-1">Note: These charges will be added to the base rent for this flat.</p>
-                <p>You can modify the default house amenities or add custom charges.</p>
-              </div>
-            </div>
-          )}
 
-          {/* Selected Renter Info */}
-          {selectedRenter && (
-            <div className="bg-orange-50 border border-primary-200 rounded-lg p-4 animate-in fade-in">
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="font-medium text-primary-800">Selected Renter</h4>
+                <div className="flex items-center justify-between rounded-xl bg-green-50 px-4 py-3">
+                  <span className="text-sm font-medium text-green-900">{t('total_advance')}</span>
+                  <span className="text-lg font-bold text-green-700">
+                    <TkSymbol />{totalAdvance.toLocaleString()}
+                  </span>
+                </div>
+
+                {totalAdvance > 0 && totalRent > 0 && (
+                  <p className="flex items-start gap-2 px-1 text-sm text-subdued">
+                    <FileText size={16} className="mt-0.5 shrink-0" />
+                    {t('advance_covers_months', {
+                      months: monthsCovered.toFixed(1),
+                      rent: totalRent.toLocaleString(),
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {advancePayments.length === 0 && advanceConfirmed && !showAdvancePaymentForm && (
+              <p className="mb-2 flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-5 text-sm font-medium text-green-800">
+                <Check size={16} className="shrink-0" />
+                {t('no_advance_payment_confirmed')}
+              </p>
+            )}
+
+            {!showAdvancePaymentForm ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <button
-                  onClick={() => {
-                    setSelectedRenter(null);
-                    setShowAmenitiesEditor(false);
-                    setAdvancePayments([]);
-                    setShowAdvancePaymentForm(false);
-                  }}
-                  className="text-primary-600 hover:text-primary-800"
+                  type="button"
+                  onClick={() => setShowAdvancePaymentForm(true)}
+                  className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/40 px-4 text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                 >
-                  <X size={16} />
+                  <Plus size={18} />
+                  {advancePayments.length ? t('add_another_advance') : t('add_advance_payment')}
                 </button>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="text-primary-600" size={24} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-primary-900 truncate">{selectedRenter.name}</p>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {selectedRenter.phone && (
-                      <span className="text-sm text-primary-700">
-                        📱 {selectedRenter.phone}
-                      </span>
-                    )}
-                    {selectedRenter.email && (
-                      <span className="text-sm text-primary-700">
-                        ✉️ {selectedRenter.email}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Summary */}
-              <div className="mt-4 space-y-3">
-                {nextPaymentDate && (
-                  <div className="p-3 bg-white rounded border border-primary-100">
-                    <div className="flex items-center gap-2 text-primary-800 mb-2">
-                      <Calendar className="w-4 h-4" />
-                      <span className="font-medium">First Payment Date:</span>
-                      <span className="ml-auto font-bold">
-                        {format(new Date(nextPaymentDate), 'dd MMM yyyy')}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Base Rent:</span>
-                        <span className="font-medium">${baseRent.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Amenities:</span>
-                        <span className="font-medium">${totalAmenitiesCharge.toLocaleString()}</span>
-                      </div>
-                      {advancePayments.length > 0 && (
-                        <div className="flex justify-between text-sm text-green-600">
-                          <span>Advance Payments:</span>
-                          <span className="font-medium">${totalAdvance.toLocaleString()}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm font-bold border-t pt-1">
-                        <span>Total Monthly Rent:</span>
-                        <span className="text-primary">${totalRent.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
+                {/* Most tenancies take no advance at all, so "none" has to be one tap rather
+                    than the absence of an action the owner cannot know they have completed. */}
+                {advancePayments.length === 0 && !advanceConfirmed && (
+                  <button
+                    type="button"
+                    onClick={() => setAdvanceConfirmed(true)}
+                    className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-subdued/30 px-4 text-sm font-medium text-text transition-colors hover:bg-subdued/10"
+                  >
+                    <Check size={18} />
+                    {t('no_advance_payment')}
+                  </button>
                 )}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="rounded-xl border border-subdued/25 bg-background p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-base font-semibold text-text">{t('new_advance_payment')}</h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancePaymentForm(false)}
+                    aria-label={t('close')}
+                    className="grid size-9 place-items-center rounded-lg text-subdued transition-colors hover:bg-subdued/10 hover:text-text"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 py-4 px-4 border-t border-subdued/20">
-            <button
-              onClick={onClose}
-              className="px-6 py-2 border border-subdued/30 rounded-lg hover:bg-subdued/10 transition-colors"
-              disabled={isAssigning}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAssign}
-              disabled={!selectedRenter || isAssigning}
-              className="px-4 py-2 bg-primary text-sm md:text-lg text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-            >
-              {isAssigning ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Assigning...
-                </>
-              ) : (
-                <span className="flex flex-col md:flex-row">
-                  Assign Renter
-                  {totalAdvance > 0 && (
-                    <span className="ml-2 text-xs bg-white/20 px-2 py-1 rounded">
-                      +${totalAdvance.toLocaleString()} <span className='hidden md:static'>advance</span>
-                    </span>
-                  )}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {/* "Amount" and "Paid Amount" sat side by side with nothing
+                      to say how they differ. Both now say what they mean. */}
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      {t('agreed_advance_amount')} <span className="text-red-600">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subdued"><TkSymbol /></span>
+                      <input
+                        type="number"
+                        value={currentAdvancePayment.amount}
+                        onChange={(e) => handleAdvancePaymentChange('amount', e.target.value)}
+                        className="min-h-11 w-full rounded-lg border border-subdued/30 bg-surface pl-9 pr-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-subdued">{t('agreed_advance_amount_hint')}</p>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      {t('amount_received_now')} <span className="text-red-600">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subdued"><TkSymbol /></span>
+                      <input
+                        type="number"
+                        value={currentAdvancePayment.paid_amount || currentAdvancePayment.amount}
+                        onChange={(e) => handleAdvancePaymentChange('paid_amount', e.target.value)}
+                        className="min-h-11 w-full rounded-lg border border-subdued/30 bg-surface pl-9 pr-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-subdued">{t('amount_received_now_hint')}</p>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      {t('payment_date')} <span className="text-red-600">*</span>
+                    </label>
+                    <div className="relative">
+                      <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subdued" size={18} />
+                      <input
+                        type="date"
+                        value={currentAdvancePayment.payment_date}
+                        onChange={(e) => handleAdvancePaymentChange('payment_date', e.target.value)}
+                        className="min-h-11 w-full rounded-lg border border-subdued/30 bg-surface pl-10 pr-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      {t('payment_method')} <span className="text-red-600">*</span>
+                    </label>
+                    <select
+                      value={currentAdvancePayment.payment_method}
+                      onChange={(e) => handleAdvancePaymentChange('payment_method', e.target.value)}
+                      className="min-h-11 w-full rounded-lg border border-subdued/30 bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    >
+                      <option value="cash">{t('cash')}</option>
+                      <option value="bank">{t('bank_transfer')}</option>
+                      <option value="mobile_banking">{t('mobile_banking')}</option>
+                      <option value="other">{t('other')}</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      {t('transaction_id')}
+                    </label>
+                    <input
+                      type="text"
+                      value={currentAdvancePayment.transaction_id}
+                      onChange={(e) => handleAdvancePaymentChange('transaction_id', e.target.value)}
+                      className="min-h-11 w-full rounded-lg border border-subdued/30 bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder={t('transaction_id_placeholder')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      {t('months_covered')}
+                    </label>
+                    <input
+                      type="number"
+                      value={currentAdvancePayment.for_months}
+                      onChange={(e) => handleAdvancePaymentChange('for_months', e.target.value)}
+                      className="min-h-11 w-full rounded-lg border border-subdued/30 bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="0"
+                      min="0"
+                      step="1"
+                    />
+                    <p className="mt-1 text-xs text-subdued">{t('months_covered_hint')}</p>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      {t('description')}
+                    </label>
+                    <input
+                      type="text"
+                      value={currentAdvancePayment.description}
+                      onChange={(e) => handleAdvancePaymentChange('description', e.target.value)}
+                      className="min-h-11 w-full rounded-lg border border-subdued/30 bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder={t('advance_description_placeholder')}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      {t('notes')}
+                    </label>
+                    <textarea
+                      value={currentAdvancePayment.notes}
+                      onChange={(e) => handleAdvancePaymentChange('notes', e.target.value)}
+                      className="w-full rounded-lg border border-subdued/30 bg-surface px-3 py-2 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder={t('additional_notes')}
+                      rows="2"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancePaymentForm(false)}
+                    className="min-h-11 rounded-lg border border-subdued/30 px-5 text-base font-medium text-text transition-colors hover:bg-subdued/10"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddAdvancePayment}
+                    className="min-h-11 rounded-lg bg-primary px-5 text-base font-medium text-white transition-colors hover:bg-primary/90"
+                  >
+                    {t('add_payment')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </Step>
+        </div>
+
+        {/* ── Footer ───────────────────────────────────────────────────────
+            The running total travels with the button, so the owner can see what
+            they are committing to at the moment they commit to it rather than
+            scrolling back up to check. */}
+        <div className="shrink-0 border-t border-subdued/20 bg-surface px-4 py-3 sm:rounded-b-2xl sm:px-6">
+          {selectedRenter && (
+            <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+              <span className="flex items-center gap-1.5 font-medium text-text">
+                <User size={15} className="text-subdued" />
+                {selectedRenter.name}
+                <button
+                  type="button"
+                  onClick={clearRenter}
+                  className="rounded px-1.5 py-0.5 text-sm font-medium text-primary underline-offset-2 hover:underline"
+                >
+                  {t('change')}
+                </button>
+              </span>
+              <span className="text-subdued">
+                {t('total_monthly_rent')}:{' '}
+                <span className="font-bold text-text"><TkSymbol />{totalRent.toLocaleString()}</span>
+              </span>
+              {totalAdvance > 0 && (
+                <span className="text-subdued">
+                  {t('advance')}:{' '}
+                  <span className="font-bold text-green-700"><TkSymbol />{totalAdvance.toLocaleString()}</span>
                 </span>
               )}
+            </div>
+          )}
+
+          {/* One line on a phone: Cancel takes only the width its word needs and Assign takes
+              the rest, so the action they came for is the wide one under the thumb. Stacked,
+              Assign sat above Cancel and pushed the primary action away from the thumb while
+              burning a whole row on the escape hatch. */}
+          <div className="flex gap-2 sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isAssigning}
+              className="min-h-12 shrink-0 rounded-lg border border-subdued/30 px-5 text-base font-medium text-text transition-colors hover:bg-subdued/10 disabled:opacity-50"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleAssign}
+              disabled={!readyToAssign || isAssigning}
+              aria-busy={isAssigning}
+              className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+            >
+              {isAssigning && <Loader2 size={18} className="animate-spin" />}
+              {isAssigning ? t('assigning') : t('assign_renter')}
             </button>
           </div>
+
+          {/* Names the stage that is still open, rather than leaving a greyed button and no
+              account of what it is waiting for. */}
+          {!readyToAssign && (
+            <p className="mt-2 text-center text-sm text-subdued sm:text-right">
+              {!steps.renter
+                ? t('choose_a_renter_first')
+                : !steps.charges
+                  ? t('confirm_monthly_charges')
+                  : !steps.terms
+                    ? t('confirm_payment_terms')
+                    : t('confirm_advance_payment')}
+            </p>
+          )}
         </div>
       </div>
     </div>
