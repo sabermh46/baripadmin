@@ -205,7 +205,7 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
     }
 
     try {
-      await assignRenter({
+      const response = await assignRenter({
         flatId: flat.id,
         renterId: selectedRenter.id,
         amenities: amenities.filter(a => a.name.trim()),
@@ -227,7 +227,8 @@ const AssignRenterModal = ({ open, onClose, flat, houseinfo = null, onSuccess = 
         : `Renter "${selectedRenter.name}" assigned successfully`;
       
       toast.success(successMessage);
-      onSuccess?.();
+      // The ids let the caller offer a receipt for each deposit taken at assignment.
+      onSuccess?.(response?.created_advance_ids ?? response?.data?.created_advance_ids ?? []);
       onClose();
       setSelectedRenter(null);
       setSearchTerm('');

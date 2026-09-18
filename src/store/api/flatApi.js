@@ -165,6 +165,33 @@ export const flatApi = baseApi.injectEndpoints({
         data,
       }),
     }),
+    sendAdvanceReceipt: builder.mutation({
+      query: ({ flatId, advanceId, pdfBase64, channels }) => ({
+        url: `/flats/${flatId}/advance-payments/${advanceId}/receipt`,
+        method: 'POST',
+        data: { pdfBase64, channels },
+      }),
+    }),
+    sendAdvanceDeductionNotice: builder.mutation({
+      query: ({ flatId, advanceId, entryId, pdfBase64, channels }) => ({
+        url: `/flats/${flatId}/advance-payments/${advanceId}/deductions/${entryId}/notice`,
+        method: 'POST',
+        data: { pdfBase64, channels },
+      }),
+    }),
+    updateAdvanceDeduction: builder.mutation({
+      query: ({ flatId, advanceId, entryId, deducted_amount }) => ({
+        url: `/flats/${flatId}/advance-payments/${advanceId}/deductions/${entryId}`,
+        method: 'PUT',
+        data: { deducted_amount },
+      }),
+    }),
+    deleteAdvanceDeduction: builder.mutation({
+      query: ({ flatId, advanceId, entryId }) => ({
+        url: `/flats/${flatId}/advance-payments/${advanceId}/deductions/${entryId}`,
+        method: 'DELETE',
+      }),
+    }),
     applyAdvancePayment: builder.mutation({
       query: ({ flatId, advance_payment_id, rent_payment_id, amount }) => ({
         url: `/flats/${flatId}/apply-advance`,
@@ -259,4 +286,8 @@ export const {
   useSendPaymentReceiptPdfMutation,
   useUpdateRentPaymentMutation,
   useDeleteRentPaymentMutation,
+  useSendAdvanceReceiptMutation,
+  useSendAdvanceDeductionNoticeMutation,
+  useUpdateAdvanceDeductionMutation,
+  useDeleteAdvanceDeductionMutation,
 } = flatApi;

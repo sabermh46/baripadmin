@@ -20,6 +20,7 @@ const AdvancePaymentFormModal = ({
   flatId,
   payment = null,
   mode: initialMode = MODES.view,
+  onCreated,
   onSuccess,
 }) => {
 
@@ -76,7 +77,7 @@ const AdvancePaymentFormModal = ({
       return;
     }
     try {
-      await createAdvancePayment({
+      const created = await createAdvancePayment({
         flatId,
         amount: parseFloat(form.amount),
         payment_method: form.payment_method,
@@ -87,6 +88,9 @@ const AdvancePaymentFormModal = ({
       toast.success('Advance payment created');
       onSuccess?.();
       onClose();
+      // After the form is out of the way, so the receipt preview is not stacked on top of it.
+      // The renter may want telling about money they just handed over; the caller decides how.
+      onCreated?.(created?.data ?? created);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to create advance payment'));
     }

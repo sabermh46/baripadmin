@@ -23,6 +23,10 @@ import RecordPaymentModal from './RecordPaymentModal';
 import AdvancePaymentFormModal from './AdvancePaymentFormModal';
 import AssignRenterModal from './AssignRenterModal';
 import InvoicePreviewModal from '../common/InvoicePreviewModal';
+import AdvanceReceiptSender from './AdvanceReceiptSender';
+import AdvanceDeductionSender from './AdvanceDeductionSender';
+import AdvanceDeductionDetailsModal from './FlatDetails/AdvanceDeductionDetailsModal';
+import AdvanceDeductionEditModal from './FlatDetails/AdvanceDeductionEditModal';
 import { generateRentReceiptPdf, generateRentReminderPdf } from '../../utils/invoiceGenerator';
 
 import OverviewTab from './FlatDetails/OverviewTab';
@@ -43,6 +47,13 @@ const FlatDetails = () => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openPayment, setOpenPayment] = useState(false);
   const [openReminder, setOpenReminder] = useState(false);
+  // Advances just recorded, queued so the owner can offer the renter a receipt for each.
+  const [advanceReceiptQueue, setAdvanceReceiptQueue] = useState(null);
+  // One deduction the owner is looking at, and one they are sending a notice about. Separate
+  // because viewing the detail and then sending from it should not fight over one slot.
+  const [viewedDeduction, setViewedDeduction] = useState(null);
+  const [sendingDeduction, setSendingDeduction] = useState(null);
+  const [editingDeduction, setEditingDeduction] = useState(null);
   const [reminderPdfBase64, setReminderPdfBase64] = useState(null);
   const [reminderData, setReminderData] = useState(null);
   const [reminderPaymentId, setReminderPaymentId] = useState(null);
@@ -601,6 +612,9 @@ const FlatDetails = () => {
             setAdvancePaymentFormMode={setAdvancePaymentFormMode}
             setOpenAdvancePaymentForm={setOpenAdvancePaymentForm}
             setOpenPayment={setOpenPayment}
+            onViewDeduction={setViewedDeduction}
+            onSendDeduction={(advance, entry) => setSendingDeduction({ advance, entry })}
+            onEditDeduction={(advance, entry) => setEditingDeduction({ advance, entry })}
           />
         )}
       </div>
@@ -657,6 +671,45 @@ const FlatDetails = () => {
         payment={selectedAdvancePaymentForForm}
         mode={advancePaymentFormMode || 'view'}
         onSuccess={() => { refetchDetails(); refetchAdvancePayments(); }}
+        onCreated={(created) => setAdvanceReceiptQueue(created ? [created] : null)}
+      />
+
+      {/* Offers the renter a receipt for each advance just recorded - from this tab one at a
+          time, from Assign Renter possibly several. */}
+      <AdvanceDeductionEditModal
+        open={!!editingDeduction}
+        advance={editingDeduction?.advance}
+        entry={editingDeduction?.entry}
+        flatId={id}
+        onClose={() => setEditingDeduction(null)}
+        // Both the advance and the rent payment it funded have moved, so the whole screen is
+        // refetched rather than patching one list.
+        onSaved={() => { refetchDetails(); refetchAdvancePayments(); }}
+      />
+
+      <AdvanceDeductionDetailsModal
+        open={!!viewedDeduction}
+        entry={viewedDeduction}
+        onClose={() => setViewedDeduction(null)}
+      />
+
+      {sendingDeduction && (
+        <AdvanceDeductionSender
+          advance={sendingDeduction.advance}
+          entry={sendingDeduction.entry}
+          flat={flat}
+          house={house}
+          renter={renter}
+          onDone={() => { setSendingDeduction(null); refetchDetails(); }}
+        />
+      )}
+
+      <AdvanceReceiptSender
+        advances={advanceReceiptQueue}
+        flat={flat}
+        house={house}
+        renter={renter}
+        onDone={() => { setAdvanceReceiptQueue(null); refetchDetails(); }}
       />
 
       <AssignRenterModal
@@ -664,7 +717,16 @@ const FlatDetails = () => {
         onClose={() => setOpenAssignModal(false)}
         flat={flatData?.data?.flat || null}
         houseinfo={flatData?.data?.house || null}
-        onSuccess={() => { refetchDetails(); refetchAdvancePayments(); }}
+        onSuccess={async (createdAdvanceIds = []) => {
+          // Refetch FIRST and read the result, rather than waiting for a re-render: the ids
+          // are all the assign response carries, and the rows they name only exist in the
+          // refreshed payload.
+          const refreshed = await refetchDetails();
+          refetchAdvancePayments();
+          const rows = (refreshed?.data?.data?.advancePayments ?? [])
+            .filter((a) => createdAdvanceIds.includes(a.id));
+          setAdvanceReceiptQueue(rows.length ? rows : null);
+        }}
       />
 
       <RemoveRenterModal

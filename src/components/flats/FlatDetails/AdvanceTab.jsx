@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,9 +9,11 @@ import {
   ArrowDownRight,
   TrendingUp,
   PlusCircle,
+  ChevronDown,
+  History,
 } from 'lucide-react';
 import TkSymbol from '../../common/TkSymbol';
-import Table from '../../common/Table';
+import AdvanceDeductionHistory from './AdvanceDeductionHistory';
 
 const advanceStatusPillClass = (status) => {
   if (status === 'paid') return 'bg-green-100 text-green-800';
@@ -31,8 +33,20 @@ const AdvanceTab = ({
   setAdvancePaymentFormMode,
   setOpenAdvancePaymentForm,
   setOpenPayment,
+  onViewDeduction,
+  onSendDeduction,
+  onEditDeduction,
 }) => {
   const { t } = useTranslation();
+
+  // Which advances have their history open. A Set rather than a single id: comparing two
+  // advances side by side is the reason to look at the history at all.
+  const [expanded, setExpanded] = useState(() => new Set());
+  const toggleExpanded = (id) => setExpanded((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const totalAdvance = filteredAdvancePayments.reduce(
     (sum, p) => sum + (parseFloat(p.amount) || 0),
@@ -304,7 +318,7 @@ const AdvanceTab = ({
                 </div>
 
                 {/* Action row */}
-                <div className="border-t border-subdued/20 pt-3 flex items-center gap-2">
+                <div className="border-t border-subdued/20 pt-3 flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => handleView(row)}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -320,20 +334,119 @@ const AdvanceTab = ({
                       {t('apply') || 'Apply'}
                     </button>
                   )}
+                  <button
+                    onClick={() => toggleExpanded(row.id)}
+                    aria-expanded={expanded.has(row.id)}
+                    className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-subdued transition-colors hover:bg-subdued/10"
+                  >
+                    <History size={15} />
+                    {(row.deductions ?? []).length}
+                    <ChevronDown
+                      size={15}
+                      className={`transition-transform ${expanded.has(row.id) ? 'rotate-180' : ''}`}
+                    />
+                  </button>
                 </div>
+
+                {/* The same history as the desktop table, so a phone is not a lesser view of
+                    the same record. */}
+                {expanded.has(row.id) && (
+                  <div className="rounded-lg border border-subdued/20 bg-surface">
+                    <AdvanceDeductionHistory
+                      deductions={row.deductions ?? []}
+                      onView={onViewDeduction}
+                      onSend={(entry) => onSendDeduction?.(row, entry)}
+                      onEdit={onEditDeduction ? (entry) => onEditDeduction(row, entry) : undefined}
+                    />
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
 
-        {/* Desktop Table */}
-        <div className="hidden sm:block">
-          <Table
-            columns={tableColumns}
-            data={filteredAdvancePayments}
-            rowKey="id"
-            emptyMessage={t('no_advance_payments_recorded') || 'No advance payments recorded.'}
-          />
+        {/* Desktop table.
+            Hand-rolled rather than the shared <Table>, which has no notion of an expanded row -
+            and the whole point here is that each advance opens to show what it was spent on. */}
+        <div className="hidden overflow-x-auto sm:block">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-primary">
+              <tr>
+                <th scope="col" className="w-10 px-3 py-3" />
+                {tableColumns.map((column) => (
+                  <th
+                    key={column.key}
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-black"
+                  >
+                    {column.title}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {filteredAdvancePayments.length === 0 ? (
+                <tr>
+                  <td colSpan={tableColumns.length + 1} className="px-6 py-8 text-center text-subdued">
+                    {t('no_advance_payments_recorded') || 'No advance payments recorded.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredAdvancePayments.map((row) => {
+                  const history = row.deductions ?? [];
+                  const isOpen = expanded.has(row.id);
+
+                  return (
+                    <React.Fragment key={row.id}>
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-3 py-4">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(row.id)}
+                            aria-expanded={isOpen}
+                            aria-label={t('deduction_history') || 'Deduction history'}
+                            className="flex items-center gap-1 rounded p-1 text-subdued transition-colors hover:bg-subdued/10"
+                          >
+                            <ChevronDown
+                              size={16}
+                              className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                            />
+                            {history.length > 0 && (
+                              <span className="text-xs font-semibold">{history.length}</span>
+                            )}
+                          </button>
+                        </td>
+                        {tableColumns.map((column) => (
+                          <td key={column.key} className="whitespace-nowrap px-6 py-4">
+                            {column.render(row)}
+                          </td>
+                        ))}
+                      </tr>
+
+                      {isOpen && (
+                        <tr>
+                          <td colSpan={tableColumns.length + 1} className="bg-subdued/5 px-6 py-3">
+                            <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-subdued">
+                              <History size={13} />
+                              {t('deduction_history') || 'Deduction history'}
+                            </p>
+                            <div className="rounded-lg border border-subdued/20 bg-white">
+                              <AdvanceDeductionHistory
+                                deductions={history}
+                                onView={onViewDeduction}
+                                onSend={(entry) => onSendDeduction?.(row, entry)}
+                                onEdit={onEditDeduction ? (entry) => onEditDeduction(row, entry) : undefined}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
