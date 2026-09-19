@@ -3,7 +3,8 @@ import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import {
-  Bell, BellOff, BellRing, Calendar, CheckCircle2, KeyRound, Link2, Mail, Send, ShieldAlert, ShieldCheck, Type, UserCog,
+  Bell, BellOff, BellRing, Calendar, CheckCircle2, KeyRound, Link2, Mail, Send, ShieldAlert, ShieldCheck,
+  Smartphone, Type, UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../hooks';
 import { useLinkGoogleAccountMutation, useSetPasswordMutation, useUploadAvatarMutation } from '../../store/api/authApi';
@@ -17,6 +18,8 @@ import { optimizeImage, optimizeErrorMessage } from '../../utils/imageOptimizer'
 import ProfileHero from './ProfileHero';
 import RoleImpact from './RoleImpact';
 import { FONT_SCALES, readFontScale, writeFontScale } from '../../utils/fontScale';
+import usePwaInstall from '../../hooks/usePwaInstall';
+import IosInstallGuide from '../../components/common/IosInstallGuide';
 
 const Card = ({ icon: Icon, title, subtitle, children }) => (
   <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -57,6 +60,9 @@ const ProfilePage = () => {
   const { t } = useTranslation();
   const [fontScale, setFontScale] = useState(readFontScale);
   const dispatch = useDispatch();
+  // The bottom banner is dismissible and, once dismissed, never comes back — so this is the
+  // one place someone who said "not now" can still install the app.
+  const { canInstall, isIos, isInstalled, install, guideOpen, closeGuide } = usePwaInstall();
 
   const [setPasswordMutation, { isLoading: isSettingPassword }] = useSetPasswordMutation();
   const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
@@ -276,6 +282,30 @@ const ProfilePage = () => {
               );
             })}
           </div>
+        </Card>
+
+        <Card icon={Smartphone} title={t('install_app')} subtitle={t('install_app_hint')}>
+          {isInstalled ? (
+            <p className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-green-200 bg-green-50 text-sm font-medium text-green-800">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              {t('app_installed_hint')}
+            </p>
+          ) : canInstall ? (
+            <button
+              type="button"
+              onClick={install}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90"
+            >
+              <Smartphone className="h-4 w-4" />
+              {t('install_app')}
+            </button>
+          ) : (
+            /* Chrome only fires `beforeinstallprompt` once it is satisfied the app is
+               installable and not already installed, so there is nothing to click yet —
+               say why rather than showing a dead button. */
+            <p className="text-sm text-gray-500">{t('install_not_available_hint')}</p>
+          )}
+          {isIos && <IosInstallGuide open={guideOpen} onClose={closeGuide} />}
         </Card>
 
         <Card icon={Bell} title={t('notifications')} subtitle={t('push_notifications_hint')}>

@@ -8,7 +8,6 @@ const initialState = {
   isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
   serviceWorker: null,
   updateAvailable: false,
-  deferredPrompt: null,
 
   /**
    * How the flat list is laid out on the house detail page.
@@ -105,14 +104,6 @@ const uiSlice = createSlice({
       state.updateAvailable = action.payload;
     },
     
-    setDeferredPrompt: (state, action) => {
-      state.deferredPrompt = action.payload;
-    },
-    
-    clearDeferredPrompt: (state) => {
-      state.deferredPrompt = null;
-    },
-    
     resetNewNotificationCount: (state) => {
       state.newNotificationCount = 0;
     },
@@ -128,8 +119,6 @@ export const {
   setOnlineStatus,
   setServiceWorker,
   setUpdateAvailable,
-  setDeferredPrompt,
-  clearDeferredPrompt,
   resetNewNotificationCount,
 } = uiSlice.actions;
 

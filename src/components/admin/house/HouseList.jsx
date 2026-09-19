@@ -8,6 +8,7 @@ import { useAuth } from '../../../hooks';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import Table from '../../common/Table';
+import { bariBg } from '../../../assets';
 
 const HouseList = () => {
   const navigate = useNavigate();
@@ -177,10 +178,12 @@ const HouseList = () => {
 
       {/* Stats Cards */}
       {data?.stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className={`grid gap-3 sm:gap-4 ${isHouseOwner ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'}`}>
           <StatCard icon={<Home />} label={t('total_properties')} value={data.stats.total} color="blue" />
           <StatCard icon={<Layers />} label={t('total_flats')} value={data.stats.flats} color="green" />
-          <StatCard icon={<Users />} label={t('active_properties')} value={data.stats.active} color="purple" />
+          {!isHouseOwner && (
+            <StatCard icon={<Users />} label={t('active_properties')} value={data.stats.active} color="purple" />
+          )}
         </div>
       )}
 
@@ -199,16 +202,18 @@ const HouseList = () => {
       )}
 
       {/* Search Bar */}
-      <div className="relative group">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-subdued group-focus-within:text-primary transition-colors" />
-        <input
-          type="text"
-          placeholder={t('search_by_address_or_name')}
-          value={filters.search}
-          onChange={handleSearch}
-          className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all shadow-sm"
-        />
-      </div>
+      {!isHouseOwner && (
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-subdued group-focus-within:text-primary transition-colors" />
+          <input
+            type="text"
+            placeholder={t('search_by_address_or_name')}
+            value={filters.search}
+            onChange={handleSearch}
+            className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all shadow-sm"
+          />
+        </div>
+      )}
 
       {/* Main Content Area */}
       {viewMode === 'grid' ? (
@@ -261,13 +266,13 @@ const HouseList = () => {
 // --- Sub-Components ---
 
 const StatCard = ({ icon, label, value, color }) => (
-  <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-    <div className={`p-3 rounded-xl bg-${color}-50 text-${color}-600`}>
+  <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3 sm:gap-4">
+    <div className={`p-2.5 sm:p-3 rounded-xl shrink-0 bg-${color}-50 text-${color}-600`}>
       {React.cloneElement(icon, { size: 24 })}
     </div>
-    <div>
-      <p className="text-xs font-bold text-subdued uppercase tracking-wider">{label}</p>
-      <p className="text-2xl font-black text-text">{value}</p>
+    <div className="min-w-0">
+      <p className="text-[10px] sm:text-xs font-bold text-subdued uppercase tracking-wider">{label}</p>
+      <p className="text-xl sm:text-2xl font-black text-text">{value}</p>
     </div>
   </div>
 );
@@ -275,8 +280,11 @@ const StatCard = ({ icon, label, value, color }) => (
 const HouseCard = ({ house, t, onDelete, canDelete, onClick, navigate }) => (
   <div 
     onClick={() => navigate(`/houses/${house.id}`)}
-    className="group bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden"
+    className="group relative bg-white border z-10 border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
   >
+    <img src={bariBg} alt=""
+      className='absolute inset-0 w-full min-h-full object-cover -z-10'
+    />
     <div className="flex justify-between items-start mb-4">
       <div className="w-12 h-12 bg-primary/5 text-primary rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
         <Home size={24} />
@@ -289,14 +297,14 @@ const HouseCard = ({ house, t, onDelete, canDelete, onClick, navigate }) => (
     </div>
 
     <h3 className="text-xl font-bold text-text truncate group-hover:text-primary transition-colors">{house.name}</h3>
-    <div className="flex items-center text-subdued text-sm mt-1 mb-6">
-      <MapPin className="w-3.5 h-3.5 mr-1 shrink-0" />
-      <span className="truncate">{house.address}</span>
+    <div className="flex items-start text-subdued text-sm mt-1 bg-white/10 w-max max-w-full pr-3 py-1 rounded-2xl backdrop-blur-[3px]">
+      <MapPin className="w-3.5 h-3.5 mr-1 mt-0.5 shrink-0" />
+      <span className="line-clamp-2 wrap-break-word min-w-0">{house.address}</span>
     </div>
 
     <div className="flex items-center justify-between pt-4 border-t border-gray-50">
       <div className="flex gap-4 flex-1">
-        <div onClick={(e)=>{e.stopPropagation(); navigate(`/houses/${house.id}/flats`)}} className="cursor-pointer bg-gray-200 hover:bg-gray-300 transition-colors px-2 py-1 rounded-lg text-center pt-2 flex-1 relative">
+        <div onClick={(e)=>{e.stopPropagation(); navigate(`/houses/${house.id}/flats`)}} className="cursor-pointer bg-white/20 border border-black/10 backdrop-blur-[3px] hover:bg-white/50 transition-colors px-2 py-1 rounded-lg text-center pt-2 flex-1 relative">
           <p className="text-[10px] text-subdued uppercase font-bold leading-none mb-1">{t('flats')}</p>
           <p className="text-sm font-black text-text">{house?.stats?.flats || 0}</p>
           {
@@ -307,7 +315,7 @@ const HouseCard = ({ house, t, onDelete, canDelete, onClick, navigate }) => (
             : null
           }
         </div>
-        <div onClick={(e)=>{e.stopPropagation(); navigate(`/caretakers`)}} className='bg-gray-200 hover:bg-gray-300 transition-colors px-2 py-1 rounded-lg text-center pt-2 flex-1'>
+        <div onClick={(e)=>{e.stopPropagation(); navigate(`/caretakers`)}} className='bg-white/20 border border-black/10 backdrop-blur-[3px] transition-colors px-2 py-1 rounded-lg text-center pt-2 flex-1'>
           <p className="text-[10px] text-subdued uppercase font-bold leading-none mb-1">{t('caretakers')}</p>
           <p className="text-sm font-black text-text">{house?.stats?.caretakers || 0}</p>
         </div>

@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover lets the page paint under the iPhone notch and home indicator,
+         which is what makes env(safe-area-inset-*) report anything but 0. The insets are
+         then applied in index.css (.pt-safe and friends) and in components/Layout.jsx. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Bari Porichalona - House Rent Management</title>
 
     <meta name="theme-color" content="#f9873c" />

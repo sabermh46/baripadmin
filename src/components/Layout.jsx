@@ -28,7 +28,7 @@ const AppHeader = memo(function AppHeader({ isMobileMenuOpen, onToggleMobileMenu
   const isBengali = i18n.language?.startsWith('bn');
 
   return (
-    <header className="h-16 bg-surface/30 border-b border-gray-200 flex items-center justify-between fixed w-full left-0 right-0 top-0 backdrop-blur-[3px] z-40 px-4">
+    <header className="h-header pt-safe bg-surface/30 border-b border-gray-200 flex items-center justify-between fixed w-full left-0 right-0 top-0 backdrop-blur-[3px] z-40 px-4 pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))]">
       <div className="flex gap-2 items-center">
         <Link
           to="/"
@@ -114,7 +114,7 @@ const Layout = () => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col bg-background overflow-auto relative pt-16">
+      <main className="flex-1 flex flex-col bg-background overflow-auto relative pt-header">
         <AppHeader isMobileMenuOpen={isMobileMenuOpen} onToggleMobileMenu={toggleMobileMenu} />
 
         {/* Subscription banner. Three distinct states, because "expiring in 5 days",
@@ -123,7 +123,7 @@ const Layout = () => {
             whose subscription was still perfectly valid. */}
         {showWarning && (isHouseOwner || isCaretaker) && (
           <div
-            className={`fixed max-w-[90%] w-[28rem] mx-auto top-6 z-50 left-0 right-0 rounded-2xl border shadow-sm ${
+            className={`fixed max-w-[90%] w-[28rem] mx-auto top-[calc(1.5rem+env(safe-area-inset-top))] z-50 left-0 right-0 rounded-2xl border shadow-sm ${
               isBlocked
                 ? 'bg-red-50 border-red-300'
                 : inGracePeriod
@@ -174,7 +174,7 @@ const Layout = () => {
         {/* Suspense sits here, not around the whole <Routes>, so a lazy route chunk
             renders its loader inside the content column — the sidebar and header stay
             mounted and stop flashing away on every navigation. */}
-        <div className="flex-1 p-4 max-w-full overflow-x-clip relative">
+        <div className="flex-1 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] max-w-full overflow-x-clip relative">
           {/* The app-fee page stays reachable while blocked — it is the way out, and the
               server's gate allow-lists it for exactly that reason. Everything else is
               replaced rather than covered over, so no doomed request fires behind it. */}
@@ -203,7 +203,7 @@ const Layout = () => {
           onClick={(e) => e.stopPropagation()}
           className={`md:hidden max-w-80 w-[80%] !min-w-[250px] bg-surface z-50 ${
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          } fixed top-0 left-0 w-full duration-300 transition-transform flex-1 h-full grid grid-rows-[4rem_1fr_auto]`}
+          } fixed top-0 left-0 w-full duration-300 transition-transform flex-1 h-full pt-safe pb-safe grid grid-rows-[4rem_1fr_auto]`}
         >
           <SideNav isMobileMenuOpen={isMobileMenuOpen} onClicked={setIsMobileMenuOpen} />
         </div>

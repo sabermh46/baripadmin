@@ -141,6 +141,37 @@ button {
 }
 
 
+/* iPhone safe areas.
+ *
+ * Standalone (home-screen) mode has no browser chrome to keep content clear of the notch,
+ * the rounded corners and the home indicator, so anything pinned to an edge — the fixed
+ * header, the install banner, the bottom of the scrolling column — has to inset itself.
+ * These read 0 everywhere else, including in Safari tabs, so they are safe to apply
+ * unconditionally. Requires viewport-fit=cover on the viewport meta (see index.html).
+ *
+ * Tailwind v4 @utility rather than plain classes: this way they compose with variants
+ * (`md:pt-safe`) and lose to a later conflicting utility the same way built-ins do.
+ */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* The app header is fixed and h-16, so it has to grow by the top inset rather than pad
+   inside a fixed height — and whatever sits below it has to be pushed down by the same
+   amount, hence the pair. */
+@utility h-header {
+  height: calc(4rem + env(safe-area-inset-top, 0px));
+}
+
+@utility pt-header {
+  padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+}
+
+
 /* The NProgress overrides (#nprogress .bar/.peg/.spinner, .nprogress-custom and its
    @keyframes glow) that used to sit here are gone along with the nprogress package —
    the top progress bar was driven by fixed 200 ms/600 ms timers unrelated to actual

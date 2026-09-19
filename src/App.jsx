@@ -5,8 +5,8 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './store';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from './hooks';
-import { setOnlineStatus, setDeferredPrompt, clearDeferredPrompt } from './store/slices/uiSlice';
+import { useAppDispatch } from './hooks';
+import { setOnlineStatus } from './store/slices/uiSlice';
 import AppRoutes from './routes/AppRoutes';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -15,40 +15,36 @@ import { AuthInitializer } from './components/common/AuthInitializer.jsx';
 import usePushNotifications from './hooks/usePushNotifications.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
 import { useTranslation } from 'react-i18next';
+import usePwaInstall from './hooks/usePwaInstall.js';
+import IosInstallGuide from './components/common/IosInstallGuide.jsx';
 
-// The `beforeinstallprompt` event object is not serialisable, so it cannot live in Redux.
-// Redux holds a boolean; the event itself stays here.
-let globalDeferredPrompt = null;
-
-const PwaInstallPrompt = ({ isPromptAvailable }) => {
-    const dispatch = useAppDispatch();
+const PwaInstallPrompt = () => {
     const [isVisible, setIsVisible] = useState(true);
     const { t } = useTranslation();
+    // iOS gets the same banner: it has no install event to wait for, so `canInstall` is true
+    // there from the start and Install opens the Add to Home Screen walkthrough instead.
+    const { canInstall, isIos, install, guideOpen, closeGuide } = usePwaInstall();
 
     const handleInstall = useCallback(async () => {
-        const promptEvent = globalDeferredPrompt;
-        if (!promptEvent) return;
-
-        promptEvent.prompt();
-        await promptEvent.userChoice;
-
-        globalDeferredPrompt = null;
-        dispatch(clearDeferredPrompt());
+        await install();
+        // The iOS guide has to stay on screen after the banner goes, so it is rendered
+        // outside the `isVisible` branch below.
         setIsVisible(false);
-    }, [dispatch]);
+    }, [install]);
 
     const handleDismiss = useCallback(() => {
-        globalDeferredPrompt = null;
-        dispatch(clearDeferredPrompt());
         setIsVisible(false);
         localStorage.setItem('installPromptDismissed', 'true');
-    }, [dispatch]);
+    }, []);
 
-    if (!isPromptAvailable || !isVisible) return null;
-    if (localStorage.getItem('installPromptDismissed') === 'true') return null;
+    const showBanner =
+        canInstall && isVisible && localStorage.getItem('installPromptDismissed') !== 'true';
+
+    if (!showBanner) return isIos ? <IosInstallGuide open={guideOpen} onClose={closeGuide} /> : null;
 
     return (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 w-[90%] max-w-lg bg-white rounded-xl shadow-2xl z-[1000] transition-all duration-300 ease-out">
+      <>
+        <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[90%] max-w-lg bg-white rounded-xl shadow-2xl z-[1000] transition-all duration-300 ease-out">
             <div className="flex items-center p-4 gap-4 sm:flex-row sm:text-left flex-col text-center">
                 <div className="text-3xl">📱</div>
 
@@ -72,12 +68,13 @@ const PwaInstallPrompt = ({ isPromptAvailable }) => {
                 </div>
             </div>
         </div>
+        {isIos && <IosInstallGuide open={guideOpen} onClose={closeGuide} />}
+      </>
     );
 };
 
 const AppContent = () => {
     const dispatch = useAppDispatch();
-    const { deferredPrompt: isPromptAvailable } = useAppSelector((state) => state.ui);
 
     // Single instance — handles auto-subscribe after login and state tracking.
     usePushNotifications();
@@ -100,18 +97,6 @@ const AppContent = () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
-    }, [dispatch]);
-
-    // PWA install prompt
-    useEffect(() => {
-        const handleBeforeInstallPrompt = (e) => {
-            e.preventDefault();
-            globalDeferredPrompt = e;
-            dispatch(setDeferredPrompt(true));
-        };
-
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     }, [dispatch]);
 
     /**
@@ -237,7 +222,7 @@ const AppContent = () => {
             <AuthInitializer />
             <AppRoutes />
 
-            <PwaInstallPrompt isPromptAvailable={isPromptAvailable} />
+            <PwaInstallPrompt />
 
             <ToastContainer
                 position="bottom-center"
