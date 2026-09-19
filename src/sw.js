@@ -108,8 +108,8 @@ self.addEventListener('push', (event) => {
   const title = payload.title || 'Bari Porichalona';
   const options = {
     body: payload.body || 'You have a new notification',
-    icon: '/android-chrome-192x192.png',
-    badge: '/favicon-32x32.png',
+    icon: '/web-app-manifest-192x192.png',
+    badge: '/favicon-96x96.png',
     data: payload.data || {},
     vibrate: [100, 50, 100],
     // Collapses repeats: a second notification with the same tag replaces the first

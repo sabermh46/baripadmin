@@ -22,10 +22,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Bari Porichalona" />
 
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <!-- One brand icon set, generated together. The SVG is what modern browsers actually
+         use (it stays sharp at any tab size and follows the OS dark theme); the 96px PNG and
+         the .ico are the fallbacks for everything older. The 16/32px PNGs and the
+         android-chrome-* pair that used to be listed here are gone — the manifest icons
+         below cover Android, and Safari uses apple-touch-icon. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
     <!-- Fonts moved out of index.css. As an `@import` at the top of the bundled stylesheet
          the browser could not discover them until the CSS had downloaded and parsed, which

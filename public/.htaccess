@@ -27,7 +27,7 @@
 # MultiViews content-negotiates /dashboard to any dashboard.* file *before* the
 # rewrite above runs, which quietly defeats the SPA fallback. Indexes matters
 # because that rewrite deliberately skips real directories (!-d), leaving
-# /assets/, /ios/, /android/ and /windows11/ to mod_autoindex as open listings.
+# /assets/ and any other real folder to mod_autoindex as an open listing.
 Options -Indexes
 <IfModule mod_negotiation.c>
   Options -MultiViews

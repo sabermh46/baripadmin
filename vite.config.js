@@ -26,7 +26,7 @@ export default defineConfig({
       // inline, App.jsx registered it in a useEffect, and usePushNotifications registered
       // it a third time — all three are gone.
       injectRegister: 'auto',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon-16x16.png', 'favicon-32x32.png'],
+      includeAssets: ['favicon.ico', 'favicon.svg', 'favicon-96x96.png', 'apple-touch-icon.png'],
       // Serve the real service worker in `vite dev` too, so push is testable without a
       // production build. `type: 'module'` is required for injectManifest in dev.
       devOptions: {
@@ -36,11 +36,11 @@ export default defineConfig({
         suppressWarnings: true,
       },
       injectManifest: {
-        // Precache was 185 entries / 4.3 MB because the glob swept in the whole
-        // windows11/ + ios/ icon folders (hundreds of unused tile PNGs) and the 59 KB
+        // Precache was 185 entries / 4.3 MB because the glob swept in whole folders of
+        // unused tile PNGs (windows11/, ios/, android/ — since deleted) and the 59 KB
         // notification sound. Only the app shell needs precaching.
         globPatterns: ['**/*.{js,css,html,woff2}'],
-        globIgnores: ['**/node_modules/**', 'windows11/**', 'ios/**', 'android/**'],
+        globIgnores: ['**/node_modules/**'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       // Single source of truth for the web app manifest. public/manifest.json is gone:
@@ -91,19 +91,19 @@ export default defineConfig({
             name: 'Dashboard',
             short_name: 'Dashboard',
             url: '/dashboard?source=pwa-shortcut',
-            icons: [{ src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' }],
+            icons: [{ src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' }],
           },
           {
             name: 'Houses',
             short_name: 'Houses',
             url: '/houses?source=pwa-shortcut',
-            icons: [{ src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' }],
+            icons: [{ src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' }],
           },
           {
             name: 'Notifications',
             short_name: 'Alerts',
             url: '/notification?source=pwa-shortcut',
-            icons: [{ src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' }],
+            icons: [{ src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' }],
           },
         ],
         // Every icon below is a file that actually exists in public/. The previous list
@@ -113,12 +113,13 @@ export default defineConfig({
         //
         // Android needs both a plain and a `maskable` icon: without a maskable one the
         // launcher letterboxes the plain icon inside a white square instead of filling the
-        // adaptive-icon shape.
+        // adaptive-icon shape. Same two files serve both purposes — they are drawn with the
+        // logo inside the maskable safe zone, so nothing important is lost to the crop.
         icons: [
-          { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
         // NOTE: `screenshots` is deliberately absent — it needs real captures of the app
         // (with `form_factor: 'narrow'` / `'wide'`), and inventing them is not something
@@ -154,7 +155,7 @@ export default defineConfig({
           // part of the initial payload regardless.
           if (id.includes('vite/preload-helper')) return 'react-core'
 
-          // Rollup's CommonJS interop helper (` commonjsHelpers.js`) — the same class of
+          // Rollup's CommonJS interop helper (`commonjsHelpers.js`) — the same class of
           // bug, and this one shipped a WHITE SCREEN.
           //
           // React is CJS, so react-core needs this helper. Left unpinned, Rollup hoisted it
