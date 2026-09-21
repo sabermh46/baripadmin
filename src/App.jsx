@@ -4,7 +4,7 @@ import { tagsForPush } from './store/notificationTags';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './store';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, useNavigate } from 'react-router-dom';
 import { useAppDispatch } from './hooks';
 import { setOnlineStatus } from './store/slices/uiSlice';
 import AppRoutes from './routes/AppRoutes';
@@ -75,6 +75,10 @@ const PwaInstallPrompt = () => {
 
 const AppContent = () => {
     const dispatch = useAppDispatch();
+    // Used only by the NOTIFICATION_CLICK branch below, to route an already-open tab to
+    // wherever the clicked push points. Stable identity in react-router 7, so it is a safe
+    // dependency for that effect.
+    const navigate = useNavigate();
 
     // Single instance — handles auto-subscribe after login and state tracking.
     usePushNotifications();
@@ -163,6 +167,16 @@ const AppContent = () => {
                     // storage disabled — cross-tab sync degrades, this tab still updates
                 }
                 triggerRefresh({ withAlert: true });
+            } else if (type === 'NOTIFICATION_CLICK') {
+                // When a tab is already open the worker focuses it and hands the destination
+                // over here rather than opening a second window. Nothing listened for this,
+                // so clicking a push focused the tab and left it exactly where it was — the
+                // click read as doing nothing at all.
+                //
+                // Internal paths only. An absolute URL arriving in a push payload has no
+                // business steering the SPA; the worker's openWindow covers the cold case.
+                const url = event.data?.url;
+                if (typeof url === 'string' && url.startsWith('/')) navigate(url);
             } else if (type === 'REFRESH_NOTIFICATIONS') {
                 triggerRefresh();
             }
@@ -211,7 +225,7 @@ const AppContent = () => {
             broadcastChannel?.close();
             clearTimeout(refreshTimeout);
         };
-    }, [dispatch]);
+    }, [dispatch, navigate]);
 
     useEffect(() => {
         window.history.scrollRestoration = 'manual';

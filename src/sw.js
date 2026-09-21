@@ -144,7 +144,13 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const target = event.notification.data?.url || '/notification';
+  // The push payload's `data` IS the server's notification metadata, and the server names
+  // the destination `redirectLink` (see InAppNotificationService::notifyUser). This read
+  // `data.url` alone — a key no server code has ever set — so every push click fell back to
+  // the bell page no matter what the notification was about. `url` is kept as a second
+  // choice for the handful of client-side templates in utils/notifications.js that do set it.
+  const data = event.notification.data || {};
+  const target = data.redirectLink || data.url || '/notification';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

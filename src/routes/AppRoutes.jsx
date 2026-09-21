@@ -47,6 +47,8 @@ const LoansPage            = lazy(() => import('../pages/Loans'));
 const LandingPageEditor    = lazy(() => import('../pages/Admin/LandingPageEditor'));
 const EmailTemplates       = lazy(() => import('../pages/Admin/EmailTemplates'));
 const SmsAllowances        = lazy(() => import('../pages/Admin/SmsAllowances'));
+const DeveloperPanel       = lazy(() => import('../pages/Developer'));
+const DeveloperPushEvents  = lazy(() => import('../pages/Developer/PushNotifications'));
 
 
 
@@ -400,6 +402,22 @@ const AppRoutes = () => {
             <Route path="admin/sms-allowance" element={
               <RoleGuard roles={['web_owner', 'developer', 'staff']}>
                 <SmsAllowances />
+              </RoleGuard>
+            } />
+
+            {/* The developer panel. Operational surface only — configuration, counts and
+                health, never business data. Staff are deliberately absent: these screens
+                change platform-wide behaviour, and there is no permission key that means
+                "may reshape notification delivery for everybody". Mirrored server-side by
+                role:developer,web_owner on routes/api/developer.php. */}
+            <Route path="developer" element={
+              <RoleGuard roles={['developer', 'web_owner']}>
+                <DeveloperPanel />
+              </RoleGuard>
+            } />
+            <Route path="developer/push-notifications" element={
+              <RoleGuard roles={['developer', 'web_owner']}>
+                <DeveloperPushEvents />
               </RoleGuard>
             } />
         </Route>

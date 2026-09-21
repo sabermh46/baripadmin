@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Receipt,
   Settings,
+  Terminal,
   UserCheck,
   UserCog,
   Users,
@@ -160,6 +161,16 @@ const NAV_ITEMS = [
   { path: "/admin/landing-editor", labelKey: "landing_editor", icon: LayoutTemplate, group: "admin", roles: ["web_owner"] },
   { path: "/admin/email-templates", labelKey: "email_templates", icon: Mail, group: "admin", roles: ["web_owner", "developer"] },
   { path: "/admin/sms-allowance", labelKey: "sms_allowance", icon: MessageSquare, group: "admin", roles: ["web_owner", "developer"] },
+  // Last in the group on purpose: a maintenance surface, not something anybody reaches for
+  // daily. toMatch so the sub-pages under it keep the parent entry highlighted.
+  {
+    path: "/developer",
+    labelKey: "developer_panel",
+    icon: Terminal,
+    group: "admin",
+    roles: ["developer", "web_owner"],
+    toMatch: ["/developer/push-notifications"],
+  },
 ];
 
 /**

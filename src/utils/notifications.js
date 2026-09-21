@@ -1,8 +1,20 @@
 import axios from 'axios';
 
-/** Get visit link for a notification (e.g. system_common with redirectLink). */
+/**
+ * Where clicking a notification should take you, or null to stay put.
+ *
+ * Four places because the same notification reaches the UI by different routes: the API
+ * lifts `redirectLink` to the top level (NotificationController::toJson), a push delivers it
+ * inside `data`, and the stored row keeps it in `metadata`. `metadata.redirectLink` was the
+ * one missing — the resolver reached into metadata but only ever looked for `url`, a key the
+ * server does not write, so anything relying on metadata alone silently had no link.
+ */
 export const getNotificationRedirectLink = (notification) =>
-  notification?.redirectLink || notification?.data?.redirectLink || notification?.metadata?.url || null;
+  notification?.redirectLink ||
+  notification?.data?.redirectLink ||
+  notification?.metadata?.redirectLink ||
+  notification?.metadata?.url ||
+  null;
 
 class NotificationUtils {
   constructor() {
