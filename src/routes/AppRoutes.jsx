@@ -1,5 +1,8 @@
-import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, Link, useParams } from 'react-router-dom';
+import React, { Suspense } from 'react';
+// Not React.lazy directly: a page chunk that fails to load (offline, flaky network, a tab
+// that outlived a deploy) must not take the app down. See utils/lazyWithRetry.js.
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { Routes, Route, Navigate, Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks';
 import { ContentLoader } from '../components/common/RouteLoader';
 
@@ -7,54 +10,55 @@ import { ContentLoader } from '../components/common/RouteLoader';
 import Layout from '../components/Layout';
 
 // Lazy-loaded pages — each gets its own chunk, loaded only when visited
-const LoginPage            = lazy(() => import('../pages/Login'));
-const SignupPage           = lazy(() => import('../pages/Signup'));
-const Dashboard            = lazy(() => import('../pages/Dashboard'));
+const LoginPage            = lazyWithRetry(() => import('../pages/Login'));
+const SignupPage           = lazyWithRetry(() => import('../pages/Signup'));
+const Dashboard            = lazyWithRetry(() => import('../pages/Dashboard'));
 // Eager on purpose — it IS the fallback while the lazy chunk above downloads, so it
 // cannot live inside that chunk.
 import DashboardSkeleton from '../components/houseowner/DashboardSkeleton';
-const ProfilePage          = lazy(() => import('../pages/Profile'));
-const AuthSuccess          = lazy(() => import('../pages/AuthSuccess'));
-const PublicHome           = lazy(() => import('../pages/PublicHome'));
-const NotificationPage     = lazy(() => import('../pages/Notification'));
-const ComingSoonPage       = lazy(() => import('../pages/utility/ComingSoonPage'));
-const AccessDeniedPage     = lazy(() => import('../pages/utility/AccessDeniedPage'));
-const GenerateToken        = lazy(() => import('../pages/Admin/userBased/GenerateToken'));
-const ViewAllStaff         = lazy(() => import('../pages/Admin/staff/ViewAllStaff'));
-const UserApprovals        = lazy(() => import('../pages/Admin/UserApprovals'));
-const NotificationSettings = lazy(() => import('../pages/Admin/NotificationSettings'));
-const StaffDetail          = lazy(() => import('../pages/Admin/staff/StaffDetail'));
-const AuditLogs            = lazy(() => import('../pages/Admin/audit/AuditLogs'));
-const SystemSettings       = lazy(() => import('../pages/Admin/SystemSettings'));
-const HouseOwnersPage      = lazy(() => import('../pages/Admin/HouseOwnersPage'));
-const ArchivedHouses       = lazy(() => import('../components/admin/house/ArchivedHouses'));
-const HouseOwnerDetailPage = lazy(() => import('../pages/Admin/HouseOwnerDetail'));
-const HousesPage           = lazy(() => import('../pages/House'));
-const CreateHouseForm      = lazy(() => import('../components/admin/house/CreateHouseForm'));
-const HouseDetails         = lazy(() => import('../components/admin/house/HouseDetails'));
-const HouseEditForm        = lazy(() => import('../components/admin/house/HouseEditForm'));
-const FlatDetails          = lazy(() => import('../components/flats/FlatDetails'));
-const RenterList           = lazy(() => import('../components/renters/RenterList'));
-const CareTakerPage        = lazy(() => import('../pages/Caretaker'));
-const CaretakerDetails     = lazy(() => import('../components/caretaker/CaretakerDetails'));
-const ReportGenPage        = lazy(() => import('../pages/report/ReportGenPage').then(m => ({ default: m.ReportGenPage })));
-const ForgotPassword       = lazy(() => import('../pages/auth/ForgotPassword'));
-const ResetPassword        = lazy(() => import('../pages/auth/ResetPassword'));
-const ChangePassword       = lazy(() => import('../pages/auth/ChangePassword'));
-const HouseOwnerExpensesPage = lazy(() => import('../pages/Expenses'));
-const AppFeePage           = lazy(() => import('../pages/AppFee/AppFeePage'));
-const LoansPage            = lazy(() => import('../pages/Loans'));
-const LandingPageEditor    = lazy(() => import('../pages/Admin/LandingPageEditor'));
-const EmailTemplates       = lazy(() => import('../pages/Admin/EmailTemplates'));
-const SmsAllowances        = lazy(() => import('../pages/Admin/SmsAllowances'));
-const DeveloperPanel       = lazy(() => import('../pages/Developer'));
-const DeveloperPushEvents  = lazy(() => import('../pages/Developer/PushNotifications'));
+const ProfilePage          = lazyWithRetry(() => import('../pages/Profile'));
+const AuthSuccess          = lazyWithRetry(() => import('../pages/AuthSuccess'));
+const PublicHome           = lazyWithRetry(() => import('../pages/PublicHome'));
+const NotificationPage     = lazyWithRetry(() => import('../pages/Notification'));
+const ComingSoonPage       = lazyWithRetry(() => import('../pages/utility/ComingSoonPage'));
+const AccessDeniedPage     = lazyWithRetry(() => import('../pages/utility/AccessDeniedPage'));
+const GenerateToken        = lazyWithRetry(() => import('../pages/Admin/userBased/GenerateToken'));
+const ViewAllStaff         = lazyWithRetry(() => import('../pages/Admin/staff/ViewAllStaff'));
+const UserApprovals        = lazyWithRetry(() => import('../pages/Admin/UserApprovals'));
+const NotificationSettings = lazyWithRetry(() => import('../pages/Admin/NotificationSettings'));
+const StaffDetail          = lazyWithRetry(() => import('../pages/Admin/staff/StaffDetail'));
+const AuditLogs            = lazyWithRetry(() => import('../pages/Admin/audit/AuditLogs'));
+const SystemSettings       = lazyWithRetry(() => import('../pages/Admin/SystemSettings'));
+const HouseOwnersPage      = lazyWithRetry(() => import('../pages/Admin/HouseOwnersPage'));
+const ArchivedHouses       = lazyWithRetry(() => import('../components/admin/house/ArchivedHouses'));
+const HouseOwnerDetailPage = lazyWithRetry(() => import('../pages/Admin/HouseOwnerDetail'));
+const HousesPage           = lazyWithRetry(() => import('../pages/House'));
+const CreateHouseForm      = lazyWithRetry(() => import('../components/admin/house/CreateHouseForm'));
+const HouseDetails         = lazyWithRetry(() => import('../components/admin/house/HouseDetails'));
+const HouseEditForm        = lazyWithRetry(() => import('../components/admin/house/HouseEditForm'));
+const FlatDetails          = lazyWithRetry(() => import('../components/flats/FlatDetails'));
+const RenterList           = lazyWithRetry(() => import('../components/renters/RenterList'));
+const CareTakerPage        = lazyWithRetry(() => import('../pages/Caretaker'));
+const CaretakerDetails     = lazyWithRetry(() => import('../components/caretaker/CaretakerDetails'));
+const ReportGenPage        = lazyWithRetry(() => import('../pages/report/ReportGenPage').then(m => ({ default: m.ReportGenPage })));
+const ForgotPassword       = lazyWithRetry(() => import('../pages/auth/ForgotPassword'));
+const ResetPassword        = lazyWithRetry(() => import('../pages/auth/ResetPassword'));
+const ChangePassword       = lazyWithRetry(() => import('../pages/auth/ChangePassword'));
+const HouseOwnerExpensesPage = lazyWithRetry(() => import('../pages/Expenses'));
+const AppFeePage           = lazyWithRetry(() => import('../pages/AppFee/AppFeePage'));
+const LoansPage            = lazyWithRetry(() => import('../pages/Loans'));
+const LandingPageEditor    = lazyWithRetry(() => import('../pages/Admin/LandingPageEditor'));
+const EmailTemplates       = lazyWithRetry(() => import('../pages/Admin/EmailTemplates'));
+const SmsAllowances        = lazyWithRetry(() => import('../pages/Admin/SmsAllowances'));
+const DeveloperPanel       = lazyWithRetry(() => import('../pages/Developer'));
+const DeveloperPushEvents  = lazyWithRetry(() => import('../pages/Developer/PushNotifications'));
 
 
 
 // Protected route wrapper
 const ProtectedRoute = ({ children, roles = [], permissions = [] }) => {
   const { isAuthenticated, user, isLoading, hasPermission } = useAuth();
+  const location = useLocation();
   
   if (isLoading) {
     return (
@@ -62,8 +66,11 @@ const ProtectedRoute = ({ children, roles = [], permissions = [] }) => {
     );
   }
   
+  // `replace`, and remember where they were going. Without replace this pushed /login on
+  // top of the protected URL, so after logging out, Back landed on that URL, which pushed
+  // /login again: Back could never get past it. `from` lets login finish the trip.
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
   }
   
   // Check role-based access

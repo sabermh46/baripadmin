@@ -1,5 +1,6 @@
 // src/store/api/notificationApi.js
 import { baseApi } from './baseApi';
+import { setAppFeeNoticeAt } from '../slices/uiSlice';
 
 /**
  * Notification cache, with every mutation applied optimistically.
@@ -97,12 +98,20 @@ export const notificationApi = baseApi.injectEndpoints({
     // The badge. Cheap on the server (two indexed COUNTs) and the only notification query
     // that runs on every page, so it is the one worth polling — see useNotifications for
     // the interval and the focus rule.
+    //
+    // The response also carries `appFeeAt`, the time of this user's latest app-fee
+    // notification. It goes to the ui slice rather than into this cache entry so the entry
+    // stays a bare number — every optimistic recipe in this file patches it as one.
+    // useAdminPendingAppFee watches it: for a user without push, this poll is the only
+    // way to learn an app-fee notice arrived.
     getUnreadCount: builder.query({
-      query: () => ({
-        url: '/api/notifications/unread-count',
-        method: 'GET',
-      }),
-      transformResponse: (response) => response.unread || 0,
+      async queryFn(_arg, { dispatch }, _extraOptions, baseQuery) {
+        const result = await baseQuery({ url: '/api/notifications/unread-count', method: 'GET' });
+        if (result.error) return { error: result.error };
+
+        dispatch(setAppFeeNoticeAt(result.data?.appFeeAt ?? null));
+        return { data: result.data?.unread || 0 };
+      },
       providesTags: [{ type: 'Notification', id: 'UNREAD_COUNT' }],
     }),
 

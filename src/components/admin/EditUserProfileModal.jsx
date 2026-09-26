@@ -51,11 +51,16 @@ const EditProfileModalBody = ({ profile, onClose, isSelf }) => {
     status: profile.status || 'active',
     locale: profile.locale || 'en',
   });
+  // Only asked for when you change your OWN email. The API requires it then, because the
+  // email is where password resets go: with just an access token, changing it was a
+  // permanent takeover.
+  const [currentPassword, setCurrentPassword] = useState('');
   const [error, setError] = useState(null);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const emailChanged = form.email.trim() !== (profile.email || '');
+  const needsPassword = isSelf && form.email.trim().toLowerCase() !== (profile.email || '').toLowerCase();
 
   const submit = async (e) => {
     e.preventDefault();
@@ -68,6 +73,7 @@ const EditProfileModalBody = ({ profile, onClose, isSelf }) => {
         phone: form.phone.trim(),
         status: form.status,
         locale: form.locale,
+        ...(needsPassword ? { currentPassword } : {}),
       }).unwrap();
 
       const changed = res?.data?.changed ?? [];
@@ -105,6 +111,19 @@ const EditProfileModalBody = ({ profile, onClose, isSelf }) => {
           >
             <input type="email" value={form.email} onChange={set('email')} required className={inputClass(false)} />
           </Field>
+
+          {needsPassword && (
+            <Field label="Your current password" hint="Required to change your own sign-in email.">
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className={inputClass(false)}
+              />
+            </Field>
+          )}
 
           <Field label="Phone" hint="Used for SMS. Leave blank to remove it.">
             <input value={form.phone} onChange={set('phone')} maxLength={50} className={inputClass(false)} />

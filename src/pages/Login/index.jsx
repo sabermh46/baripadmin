@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { apiErrorMessage } from '../../utils/apiError';
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useLoginMutation } from "../../store/api/authApi"; // your original version
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useGoogleLoginMutation, useLoginMutation } from "../../store/api/authApi";
 import { useAppDispatch } from "../../hooks";
 import { setCredentials } from "../../store/slices/authSlice";
 import GoogleButton from "../../components/common/GoogleButton";
@@ -9,26 +9,35 @@ import { buildingShade } from "../../assets";
 import TextField from "../../components/common/TextField";
 import SmartFrom from "../../components/common/SmartForm";
 import { ChevronLeft } from "lucide-react";
-
-const GOOGLE_ERROR_MESSAGES = {
-  registration_disabled: 'New registrations are currently closed. Please contact an administrator to get access.',
-  google_auth_failed: 'Google sign-in failed. Please try again or use email and password.',
-};
+import { GOOGLE_ERROR_MESSAGES, safeInternalPath, startGoogleSignIn } from "../../utils/googleAuth";
 
 export default function LoginPage() {
 
-  const [error, setError] = useState("");
+  // An error the Google redirect put on the URL (/login?error=…), read once as the initial
+  // value rather than copied in by an effect after the first render.
+  const [error, setError] = useState(() => {
+    const code = new URLSearchParams(window.location.search).get('error');
+    return code ? GOOGLE_ERROR_MESSAGES[code] || 'An error occurred. Please try again.' : "";
+  });
   const [loginMutation, { isLoading }] = useLoginMutation();
+  const [googleLogin] = useGoogleLoginMutation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
 
-  useEffect(() => {
-    const errorCode = searchParams.get('error');
-    if (errorCode) {
-      setError(GOOGLE_ERROR_MESSAGES[errorCode] || 'An error occurred. Please try again.');
-    }
-  }, []);
+  // Where the user was headed when ProtectedRoute sent them here, so signing in finishes
+  // the trip instead of always landing on the dashboard.
+  const destination = safeInternalPath(location.state?.from);
+
+  // `replace`, never push: this login entry is swapped for where the user is going. With
+  // push, Back from the dashboard returned to /login, which PublicRoute bounced straight
+  // back to the dashboard, so Back appeared to do nothing and the history kept growing.
+  const enterApp = (payload) => {
+    dispatch(setCredentials(payload));
+    navigate(destination, { replace: true });
+  };
+
+
 
     const fields = [
       {
@@ -56,19 +65,31 @@ export default function LoginPage() {
 
     try {
       const result = await loginMutation({ email: formData.email, password: formData.password }).unwrap();
-      dispatch(setCredentials(result));
-      navigate("/dashboard");
+      enterApp(result);
     } catch (err) {
       setError(apiErrorMessage(err, "Invalid email or password"));
     }
   };
 
   // ---- GOOGLE AUTH ----
-  const googleAuth = () => {
-    window.open(
-      `${import.meta.env.VITE_APP_API_URL}/auth/google?prompt=select_account&token=abcdxyz`,
-      "_self"
-    );
+  // In a popup, so this tab's history never gains Google's pages (see utils/googleAuth.js).
+  // The old URL also carried `token=abcdxyz`, a placeholder the API took for a real invite
+  // token. Any NEW user pressing Google on the login page was therefore checked against an
+  // invite that did not exist and refused with "registrations are closed", even when public
+  // registration was open.
+  const googleAuth = async () => {
+    setError("");
+    try {
+      const result = await startGoogleSignIn();
+      if (result.redirected) return;
+      if (result.error) {
+        setError(GOOGLE_ERROR_MESSAGES[result.error] || GOOGLE_ERROR_MESSAGES.google_auth_failed);
+        return;
+      }
+      enterApp(await googleLogin().unwrap());
+    } catch {
+      setError(GOOGLE_ERROR_MESSAGES.google_auth_failed);
+    }
   };
 
   return (

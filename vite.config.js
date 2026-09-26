@@ -39,7 +39,11 @@ export default defineConfig({
         // Precache was 185 entries / 4.3 MB because the glob swept in whole folders of
         // unused tile PNGs (windows11/, ios/, android/ — since deleted) and the 59 KB
         // notification sound. Only the app shell needs precaching.
-        globPatterns: ['**/*.{js,css,html,woff2}'],
+        // Plus the shell's own small images: SVG icons used by the layout and dashboards,
+        // and the favicons / app icons at the root. Raster images under assets/ (the
+        // landing page's photos, mostly) are cached on first view instead; see the
+        // `images` route in src/sw.js.
+        globPatterns: ['**/*.{js,css,html,woff2,svg,ico}', '*.png'],
         globIgnores: ['**/node_modules/**'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },

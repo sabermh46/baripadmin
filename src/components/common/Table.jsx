@@ -43,7 +43,7 @@ const Table = ({
   return (
     <div className={`overflow-x-auto rounded-xl max-w-full ${className}`}>
       <div className="inline-block align-middle w-full">
-        <div className="overflow-hidden shadow-sm bg-white  p-4">
+        <div className="overflow-hidden shadow-sm bg-white p-1">
           <div className="overflow-x-auto rounded-lg">
             <table className="min-w-full max-w-full">
               <thead className="bg-primary-500">
@@ -53,10 +53,10 @@ const Table = ({
                       key={column.key || index}
                       scope="col"
                       className={`
-                        px-${compact ? '1' : '2'} py-${compact ? '2' : '3'} 
+                        px-${compact ? '1' : '2'} py-${compact ? '0' : '1'} 
                         text-center text-base font-medium text-white uppercase whitespace-nowrap tracking-wider border-l-2 border-r-2 border-white/30
                         ${column.className || ''}
-                        ${index === 0 ? "rounded-l-lg border-l-0!" : index === columns?.length - 1 ? "rounded-r-lg border-r-0!" : "rounded-none"}
+                        ${index === 0 ? "rounded-tl-lg border-l-0!" : index === columns?.length - 1 ? "rounded-tr-lg border-r-0!" : "rounded-none"}
                       `}
                     >
                       {column.title}
@@ -64,7 +64,16 @@ const Table = ({
                   ))}
                 </tr>
             </thead>
-            <div className='h-1'></div>
+            {/* The 4px gap between the header and the first row. A <div> cannot be a child
+                of <table> (React warns, and the browser's parser would move it out of the
+                table entirely), so the gap is a real row in its own <tbody>. Its own body so
+                the data body's `divide-y` does not draw a line above it; aria-hidden so
+                screen readers do not announce an empty row. */}
+            <tbody aria-hidden="true">
+              <tr>
+                <td colSpan={columns.length} className="h-1 p-0" />
+              </tr>
+            </tbody>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 // Loading skeleton
@@ -98,7 +107,7 @@ const Table = ({
                       <td
                         key={`${row[rowKey] || rowIndex}-${colIndex}`}
                         className={`
-                          px-${compact ? '2' : '4'} py-${compact ? '2' : '3'} 
+                          px-${compact ? '2' : '4'} py-1 
                           whitespace-nowrap
                           ${column.cellClassName || ''}
                         `}

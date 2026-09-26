@@ -7,7 +7,8 @@ import {
   Smartphone, Type, UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../hooks';
-import { useLinkGoogleAccountMutation, useSetPasswordMutation, useUploadAvatarMutation } from '../../store/api/authApi';
+import { useGetGoogleLinkTicketMutation, useSetPasswordMutation, useUploadAvatarMutation } from '../../store/api/authApi';
+import { useSearchParams } from 'react-router-dom';
 import { setUser } from '../../store/slices/authSlice';
 import push from '../../services/push';
 import Btn from '../../components/common/Button';
@@ -67,7 +68,54 @@ const ProfilePage = () => {
   const [setPasswordMutation, { isLoading: isSettingPassword }] = useSetPasswordMutation();
   const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
   const [avatarOptimizing, setAvatarOptimizing] = useState(false);
-  useLinkGoogleAccountMutation();
+  const [getGoogleLinkTicket, { isLoading: isStartingLink }] = useGetGoogleLinkTicketMutation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  /**
+   * Linking goes through Google's consent screen, a full-page navigation that cannot carry
+   * our Authorization header. So ask the API for a one-time ticket first and hand that to
+   * the redirect; the callback attaches the Google identity to whoever the ticket names.
+   *
+   * The old button sent `?link=true`, which the API ignored. It started an ordinary Google
+   * sign-in, so "linking" never linked anything unless the two emails happened to match.
+   */
+  const linkGoogle = async () => {
+    try {
+      const { ticket } = await getGoogleLinkTicket().unwrap();
+      window.location.assign(`${import.meta.env.VITE_APP_API_URL}/auth/google?link=${encodeURIComponent(ticket)}`);
+    } catch (error) {
+      toast.error(showMessageInLanguage(apiErrorMessage(error, 'Could not start Google linking')));
+    }
+  };
+
+  // The callback comes back to /profile?google=<result>. Show it once, then drop the
+  // parameter (replace) so a reload or Back does not show it again.
+  useEffect(() => {
+    const result = searchParams.get('google');
+    if (!result) return;
+
+    const messages = {
+      linked: ['success', 'Google account linked. You can now sign in with Google.'],
+      link_in_use: ['error', 'That Google account is already linked to a different user.'],
+      link_expired: ['error', 'The linking request expired. Please try again.'],
+      google_email_unverified: ['error', 'That Google account has no verified email, so it cannot be linked.'],
+      link_failed: ['error', 'Google linking failed. Please try again.'],
+    };
+    const [kind, text] = messages[result] ?? messages.link_failed;
+    toast[kind](text);
+
+    // The linked flag in the stored user is only refreshed at the next sign-in; update it
+    // now so the card flips to "linked" immediately. Only truthiness is read.
+    if (result === 'linked' && user && !user.googleId) {
+      dispatch(setUser({ ...user, googleId: 'linked' }));
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('google');
+    setSearchParams(next, { replace: true });
+    // Reacting to the parameter once is the point.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -246,9 +294,7 @@ const ProfilePage = () => {
               {t('google_account_linked')}
             </p>
           ) : (
-            <GoogleButton
-              onClick={() => window.open(`${import.meta.env.VITE_APP_API_URL}/auth/google?link=true`, '_self')}
-            />
+            <GoogleButton onClick={linkGoogle} disabled={isStartingLink} />
           )}
         </Card>
 

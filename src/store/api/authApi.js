@@ -35,12 +35,14 @@ export const authApi = baseApi.injectEndpoints({
       providesTags: ['Settings'],
     }),
 
-    googleLogin: builder.query({
+    // Redeems the one-time bridge the Google callback left in the API session, and returns
+    // the session like /auth/login does. A mutation, not a query: it can only succeed once,
+    // and a query's result is cached (and persisted to IndexedDB), access token included.
+    googleLogin: builder.mutation({
       query: () => ({
         url: '/auth/login/success',
         method: 'GET',
       }),
-      providesTags: ['Auth'],
     }),
 
     setPassword: builder.mutation({
@@ -51,11 +53,12 @@ export const authApi = baseApi.injectEndpoints({
       }),
     }),
 
-    linkGoogleAccount: builder.mutation({
-      query: (data) => ({
-        url: '/auth/link-google',
+    // A one-time ticket that lets the Google redirect know which signed-in user to link.
+    // Replaces POST /auth/link-google, which stored whatever Google id the body contained.
+    getGoogleLinkTicket: builder.mutation({
+      query: () => ({
+        url: '/auth/google/link-ticket',
         method: 'POST',
-        data,
       }),
     }),
 
@@ -111,10 +114,12 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ['Auth'],
     }),
 
+    // POST: logout now revokes this session's tokens, and a state-changing GET can be fired
+    // by any page that embeds the URL. The API still answers GET for old cached clients.
     logout: builder.mutation({
       query: () => ({
         url: '/auth/logout',
-        method: 'GET', 
+        method: 'POST',
       }),
     }),
 
@@ -140,6 +145,19 @@ export const authApi = baseApi.injectEndpoints({
         url: '/auth/managed-users',
         method: 'GET',
         params: { role, expand, userId },
+      }),
+      providesTags: ['ManagedUsers'],
+    }),
+
+    // One page of one history list on the admin house-owner page (app fees, rent, advances,
+    // expenses, loans, loan payments). Those used to ride along in `expand: 'dna'` above,
+    // 50 rows each on every open; each section now fetches its own page when it scrolls
+    // into view. Same tag as the owner, so anything that refreshes the owner refreshes these.
+    getOwnerHistory: builder.query({
+      query: ({ ownerId, section, page = 1, limit }) => ({
+        url: `/auth/managed-users/${ownerId}/history/${section}`,
+        method: 'GET',
+        params: { page, limit },
       }),
       providesTags: ['ManagedUsers'],
     }),
@@ -173,9 +191,9 @@ export const authApi = baseApi.injectEndpoints({
 export const {
   useLoginMutation,
   useRegisterMutation,
-  useGoogleLoginQuery,
+  useGoogleLoginMutation,
   useSetPasswordMutation,
-  useLinkGoogleAccountMutation,
+  useGetGoogleLinkTicketMutation,
   useUpdateUserMutation,
   useForgotPasswordMutation, // Exported
   useResetPasswordMutation,   // Exported
@@ -189,5 +207,6 @@ export const {
   useGetPublicRegistrationStatusQuery,
   useCreateUserMutation,
   useGetManagedUsersQuery,
+  useGetOwnerHistoryQuery,
   useUploadAvatarMutation,
 } = authApi;

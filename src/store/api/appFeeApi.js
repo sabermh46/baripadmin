@@ -149,6 +149,13 @@ export const appFeeApi = baseApi.injectEndpoints({
      * Separate endpoint rather than a parameter on the existing one so the app-fee page
      * keeps its own full-shape cache entry untouched. It carries the same `ME` tag, so the
      * push-driven invalidation in App.jsx still refreshes both.
+     *
+     * useAdminPendingAppFee decides when this refetches (see nextCheckAt there) and turns
+     * off focus/reconnect refetching on its subscription. That has to happen on the hook:
+     * RTK Query 2.x reads refetchOnFocus / refetchOnReconnect / refetchOnMountOrArgChange
+     * only from subscription options and createApi, never from an endpoint definition. The
+     * same applies to those three keys in LIVE above. Only keepUnusedDataFor takes effect
+     * there.
      */
     getMyAppFeeStatus: builder.query({
       ...LIVE,

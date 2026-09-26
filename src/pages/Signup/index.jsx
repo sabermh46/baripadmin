@@ -3,6 +3,7 @@ import { apiErrorMessage } from '../../utils/apiError';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   useRegisterMutation,
+  useGoogleLoginMutation,
   useValidateTokenMutation,
   useGetPublicRegistrationStatusQuery 
 } from '../../store/api/authApi';
@@ -13,6 +14,7 @@ import SmartForm from '../../components/common/SmartForm';
 import GoogleButton from '../../components/common/GoogleButton';
 import { buildingShade } from '../../assets';
 import { ChevronLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { GOOGLE_ERROR_MESSAGES, startGoogleSignIn } from '../../utils/googleAuth';
 
 const SignupPage = () => {
   const [searchParams] = useSearchParams();
@@ -24,6 +26,7 @@ const SignupPage = () => {
   
   const [registerMutation, { isLoading }] = useRegisterMutation();
   const [validateToken] = useValidateTokenMutation();
+  const [googleLogin] = useGoogleLoginMutation();
   const { data: publicRegStatus } = useGetPublicRegistrationStatusQuery();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -179,8 +182,10 @@ const SignupPage = () => {
       const result = await registerMutation(registrationData).unwrap();
       dispatch(setCredentials(result));
       
-      // Redirect with success message
+      // `replace`: the signup entry is swapped for the dashboard, so Back does not return to
+      // a form for an account that now exists.
       navigate('/dashboard', {
+        replace: true,
         state: {
           welcomeMessage: `Welcome ${result.user.name}!`,
           ...(tokenInfo && { role: tokenInfo.roleSlug })
@@ -191,11 +196,24 @@ const SignupPage = () => {
     }
   };
 
-  const googleAuth = () => {
-    // Include token in Google auth if present
-    const googleAuthUrl = `${import.meta.env.VITE_APP_API_URL}/auth/google`;
-    
-    window.open(googleAuthUrl, "_self");
+  // The invite token goes along, as the comment here always said it did. It was never
+  // actually added to the URL, so signing up with Google from an invitation ignored the
+  // invitation: the account got the public default role (or was refused outright when
+  // public registration was closed) instead of the role and owner the invite named.
+  const googleAuth = async () => {
+    setError('');
+    try {
+      const result = await startGoogleSignIn({ token: token || undefined });
+      if (result.redirected) return;
+      if (result.error) {
+        setError(GOOGLE_ERROR_MESSAGES[result.error] || GOOGLE_ERROR_MESSAGES.google_auth_failed);
+        return;
+      }
+      dispatch(setCredentials(await googleLogin().unwrap()));
+      navigate('/dashboard', { replace: true });
+    } catch {
+      setError(GOOGLE_ERROR_MESSAGES.google_auth_failed);
+    }
   };
 
   // Render token status badge

@@ -160,9 +160,13 @@ const AppContent = () => {
                 // now refreshes houses, one about a caretaker refreshes caretakers, and an
                 // unannotated one falls back to a broad sweep rather than doing nothing.
                 dispatch(baseApi.util.invalidateTags(tagsForPush(event.data?.data)));
-                // Lets other open tabs know without each needing its own push delivery.
+                // Lets other open tabs know without each needing its own push delivery. The
+                // entity goes along so they invalidate the same narrow set this tab did.
                 try {
-                    localStorage.setItem('notification_update', Date.now().toString());
+                    localStorage.setItem(
+                        'notification_update',
+                        JSON.stringify({ at: Date.now(), entity: event.data?.data?.entity ?? null })
+                    );
                 } catch {
                     // storage disabled — cross-tab sync degrades, this tab still updates
                 }
@@ -182,11 +186,20 @@ const AppContent = () => {
             }
         };
 
-        // Cross-tab wake-ups carry no payload — the tab that received the push already
-        // invalidated precisely; this one only knows that something changed, so it sweeps.
+        // Cross-tab wake-ups carry the entity the push named, so this tab invalidates what
+        // the receiving tab did. They used to carry only a timestamp, which meant a broad
+        // sweep here on every push, including a refetch of the app-fee status that
+        // useAdminPendingAppFee otherwise avoids. An unreadable or missing entity still
+        // sweeps (tagsForPush falls back to BROAD).
         const handleStorageChange = (event) => {
             if (event.key === 'notification_update') {
-                dispatch(baseApi.util.invalidateTags(tagsForPush()));
+                let entity;
+                try {
+                    entity = JSON.parse(event.newValue)?.entity ?? undefined;
+                } catch {
+                    // an older tab wrote a bare timestamp
+                }
+                dispatch(baseApi.util.invalidateTags(tagsForPush(entity ? { entity } : undefined)));
                 triggerRefresh();
             }
         };

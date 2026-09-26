@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, Suspense } from 'react';
+import React, { useState, useCallback, useMemo, memo, Suspense } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ContentLoader } from './common/RouteLoader';
 import { useAuth } from '../hooks';
@@ -10,6 +10,8 @@ import LanguageSwitcher from './common/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useAdminPendingAppFee } from '../hooks/useAdminPendingAppFee';
 import SubscriptionBlocked from './common/SubscriptionBlocked';
+import RouteErrorBoundary from './common/RouteErrorBoundary';
+import OfflineBanner from './common/OfflineBanner';
 import { useAppSelector } from '../hooks';
 import { format } from 'date-fns';
 
@@ -24,9 +26,7 @@ import { format } from 'date-fns';
  */
 const AppHeader = memo(function AppHeader({ isMobileMenuOpen, onToggleMobileMenu }) {
   const { user } = useAuth();
-  const { t, i18n } = useTranslation();
-  const isBengali = i18n.language?.startsWith('bn');
-
+  const { t } = useTranslation();
   return (
     <header className="h-header pt-safe bg-surface/30 border-b border-gray-200 flex items-center justify-between fixed w-full left-0 right-0 top-0 backdrop-blur-[3px] z-40 px-4 pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))]">
       <div className="flex gap-2 items-center">
@@ -61,13 +61,56 @@ const AppHeader = memo(function AppHeader({ isMobileMenuOpen, onToggleMobileMenu
   );
 });
 
+/**
+ * The blue "renews in N days" notice is a heads-up, not an obstacle, and it sits fixed over
+ * the top of every page, covering the header and the page title for the whole last week.
+ * So it can be dismissed. The dismissal is keyed to the user and the subscription period
+ * (`expiresAt`): renewing starts a new period, so the next cycle warns again. Amber (grace)
+ * and red (blocked) stay non-dismissible, because by then access is at stake.
+ *
+ * localStorage only makes this survive a reload. If it is unavailable the dismissal
+ * still holds for the session, and the worst case is the notice returning on reload.
+ */
+const DISMISS_KEY = 'appFeeRenewalNoticeDismissed';
+
+const readDismissed = () => {
+  try {
+    return localStorage.getItem(DISMISS_KEY);
+  } catch {
+    return null;
+  }
+};
+
 const Layout = () => {
   const { t } = useTranslation();
-  const { isHouseOwner, isCaretaker } = useAuth();
+  const { user, isHouseOwner, isCaretaker } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { status, showWarning, isBlocked, inGracePeriod, daysRemaining, graceDaysRemaining, loseAccessAt, validThrough } =
+  const { status, showWarning, isBlocked, inGracePeriod, daysRemaining, graceDaysRemaining, loseAccessAt, validThrough, expiresAt } =
     useAdminPendingAppFee();
+
+  const [dismissedFor, setDismissedFor] = useState(readDismissed);
+  const renewalNoticeId = user?.id && expiresAt ? `${user.id}:${expiresAt}` : null;
+  const isRenewalNotice = !isBlocked && !inGracePeriod;
+  const renewalDismissed = isRenewalNotice && !!renewalNoticeId && dismissedFor === renewalNoticeId;
+  const dismissRenewalNotice = useCallback(() => {
+    if (!renewalNoticeId) return;
+    setDismissedFor(renewalNoticeId);
+    try {
+      localStorage.setItem(DISMISS_KEY, renewalNoticeId);
+    } catch {
+      // storage blocked: dismissed for this session only
+    }
+  }, [renewalNoticeId]);
+
+  // The same warning, for the App Fee entry in the nav. Memoized because SideNav is, and a
+  // fresh object each render would re-render both sidebars on every navigation.
+  const appFeeNotice = useMemo(() => {
+    if (!showWarning || !(isHouseOwner || isCaretaker)) return null;
+    if (isBlocked) return { tone: 'blocked' };
+    if (inGracePeriod) return { tone: 'grace', days: graceDaysRemaining };
+    return { tone: 'renewal', days: daysRemaining };
+  }, [showWarning, isHouseOwner, isCaretaker, isBlocked, inGracePeriod, graceDaysRemaining, daysRemaining]);
   const location = useLocation();
 
   // Two independent signals, deliberately OR'd. The status query says "this account is
@@ -109,7 +152,7 @@ const Layout = () => {
       {/* Sidebar */}
       <div className="hidden md:flex md:sticky top-0 w-64 bg-surface border-r border-gray-200 flex-col h-screen!">
         <nav className="flex-1 h-full grid grid-rows-[4rem_1fr_auto]">
-          <SideNav onClicked={closeMobileMenu} />
+          <SideNav onClicked={closeMobileMenu} appFeeNotice={appFeeNotice} />
         </nav>
       </div>
 
@@ -121,7 +164,7 @@ const Layout = () => {
             "expired but still usable" and "access withdrawn" call for different urgency —
             the previous single red bar said "overdue" for all of them, including to owners
             whose subscription was still perfectly valid. */}
-        {showWarning && (isHouseOwner || isCaretaker) && (
+        {showWarning && !renewalDismissed && (isHouseOwner || isCaretaker) && (
           <div
             className={`fixed max-w-[90%] w-[28rem] mx-auto top-[calc(1.5rem+env(safe-area-inset-top))] z-50 left-0 right-0 rounded-2xl border shadow-sm ${
               isBlocked
@@ -131,7 +174,11 @@ const Layout = () => {
                   : 'bg-blue-50 border-blue-300'
             }`}
           >
-            <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div
+              className={`px-4 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 ${
+                isRenewalNotice && renewalNoticeId ? 'pr-9' : ''
+              }`}
+            >
               <div className="text-xs sm:text-sm">
                 {isBlocked ? (
                   <span className="text-red-900">
@@ -168,6 +215,17 @@ const Layout = () => {
                 {isBlocked || inGracePeriod ? t('pay_now') : t('view_app_fee')}
               </button>
             </div>
+            {isRenewalNotice && renewalNoticeId && (
+              <button
+                type="button"
+                onClick={dismissRenewalNotice}
+                aria-label={t('dismiss')}
+                title={t('dismiss')}
+                className="absolute top-1.5 right-1.5 p-1 rounded-full text-blue-700 hover:bg-blue-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
 
@@ -178,6 +236,8 @@ const Layout = () => {
           {/* The app-fee page stays reachable while blocked — it is the way out, and the
               server's gate allow-lists it for exactly that reason. Everything else is
               replaced rather than covered over, so no doomed request fires behind it. */}
+          {/* Offline, or showing a saved copy: said once here for every page. */}
+          <OfflineBanner />
           {paywalled && !location.pathname.startsWith('/app-fee') ? (
             <SubscriptionBlocked
               validThrough={validThrough}
@@ -185,9 +245,15 @@ const Layout = () => {
               isCaretaker={isCaretaker}
             />
           ) : (
-            <Suspense fallback={<ContentLoader />}>
-              <Outlet />
-            </Suspense>
+            // Keyed by path, so moving to another page clears a failure here. Inside the
+            // content column, so a page that cannot load (offline, or code from a build that
+            // has since been replaced) leaves the header and sidebar working. With no
+            // boundary at all, one failed page unmounted everything: the white screen.
+            <RouteErrorBoundary key={location.pathname}>
+              <Suspense fallback={<ContentLoader />}>
+                <Outlet />
+              </Suspense>
+            </RouteErrorBoundary>
           )}
         </div>
       </main>
@@ -205,7 +271,7 @@ const Layout = () => {
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           } fixed top-0 left-0 w-full duration-300 transition-transform flex-1 h-full pt-safe pb-safe grid grid-rows-[4rem_1fr_auto]`}
         >
-          <SideNav isMobileMenuOpen={isMobileMenuOpen} onClicked={setIsMobileMenuOpen} />
+          <SideNav isMobileMenuOpen={isMobileMenuOpen} onClicked={setIsMobileMenuOpen} appFeeNotice={appFeeNotice} />
         </div>
       </div>
     </div>

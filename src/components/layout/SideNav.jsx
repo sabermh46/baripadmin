@@ -3,6 +3,7 @@ import {
   BellRing,
   BookUser,
   ChartColumnBig,
+  CircleAlert,
   CircleUser,
   Wallet,
   FileClock,
@@ -255,6 +256,41 @@ const AppFeeBadges = ({ counts, collapsed }) => {
 };
 
 /**
+ * The owner/caretaker side of the App Fee entry: a red warning plus the countdown.
+ *
+ * The blue renewal banner can be dismissed, and once it is, nothing on screen says the
+ * subscription is about to run out. This keeps the signal in the nav without covering the
+ * page. It shows through grace and after blocking too, so the entry reads the same way
+ * whichever banner is up.
+ *
+ * `notice` comes from Layout, which owns the single status subscription and its countdown
+ * clock (useAdminPendingAppFee), rather than from a second copy of that hook here.
+ */
+const OwnerAppFeeBadge = ({ notice }) => {
+  const { t } = useTranslation();
+
+  if (!notice) return null;
+
+  const isExpired = notice.tone === 'blocked';
+  const label = isExpired ? t('app_fee_badge_expired') : t('app_fee_badge_days_left', { count: notice.days });
+  const title = isExpired
+    ? t('your_subscription_has_expired')
+    : notice.tone === 'grace'
+      ? t('app_fee_badge_grace_title', { count: notice.days })
+      : t('subscription_renews_in', { count: notice.days });
+
+  return (
+    <span
+      title={title}
+      className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-red-100 px-1.5 h-5 text-[11px] font-semibold text-red-700 tabular-nums"
+    >
+      <CircleAlert size={13} strokeWidth={2.5} aria-hidden="true" />
+      {label}
+    </span>
+  );
+};
+
+/**
  * One nav row.
  *
  * The active row used to carry three competing signals at once — a slate-100 ground, an
@@ -309,7 +345,7 @@ const NavRow = ({ item, isActive, onClicked, badges, t }) => {
   );
 };
 
-export const SideNav = ({ onClicked }) => {
+export const SideNav = ({ onClicked, appFeeNotice = null }) => {
   const { user, hasPermission } = useAuth();
   const { t } = useTranslation();
   const [googleAvatarError, setGoogleAvatarError] = useState(false);
@@ -339,18 +375,32 @@ export const SideNav = ({ onClicked }) => {
     skipPollingIfUnfocused: true,
   });
 
+  /**
+   * The server calls are best-effort; signing out on this device is not. It all sat in one
+   * try, so if the push unsubscribe or the logout request failed (offline, API restarting),
+   * the catch logged it and the user simply stayed signed in, with their data on screen.
+   * On a shared phone that is the one failure logout must not have.
+   *
+   * The logout request runs BEFORE local state is cleared, because it needs the access
+   * token in the header and the refresh cookie to revoke both server-side.
+   */
   const handleLogout = async () => {
     try {
       await push.unsubscribeUser();
-      await logoutMutation().unwrap();
-      // A saved dashboard is one household's finances. The next person to sign in on a
-      // shared phone must not be shown it.
-      clearOffline();
-      dispatch(logoutAction());
-      navigate('/login');
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('Push unsubscribe failed during logout:', error);
     }
+    try {
+      await logoutMutation().unwrap();
+    } catch (error) {
+      console.error('Server logout failed; signing out locally anyway:', error);
+    }
+    // A saved dashboard is one household's finances. The next person to sign in on a
+    // shared phone must not be shown it.
+    clearOffline();
+    dispatch(logoutAction());
+    // `replace`, so Back cannot return to the signed-in page just left.
+    navigate('/login', { replace: true });
   };
 
   // Items may also name a permission. The nav could only filter by role before, so a staff
@@ -413,7 +463,11 @@ export const SideNav = ({ onClicked }) => {
                 onClicked={onClicked}
                 t={t}
                 badges={
-                  item.path === '/app-fee' && isAdmin ? <AppFeeBadges counts={appFeeBadges} /> : null
+                  item.path !== '/app-fee'
+                    ? null
+                    : isAdmin
+                      ? <AppFeeBadges counts={appFeeBadges} />
+                      : <OwnerAppFeeBadge notice={appFeeNotice} />
                 }
               />
             ))}

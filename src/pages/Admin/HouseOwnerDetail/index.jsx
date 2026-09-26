@@ -12,7 +12,6 @@ import LoanPaymentsSection from './sections/LoanPaymentsSection';
 
 // Module-level so the identity is stable across renders and across sections.
 const EMPTY_ARRAY = Object.freeze([]);
-const EMPTY_OBJECT = Object.freeze({});
 
 const HouseOwnerDetailPage = () => {
   const { ownerId } = useParams();
@@ -75,12 +74,9 @@ const HouseOwnerDetailPage = () => {
   const profile = dna.profile || owner;
   const houses = dna.houses ?? EMPTY_ARRAY;
   const archivedHouses = dna.archivedHouses ?? EMPTY_ARRAY;
-  const flats = dna.flats ?? EMPTY_ARRAY;
-  const appFeePayments = dna.appFeePayments ?? EMPTY_ARRAY;
-  const income = dna.income ?? EMPTY_OBJECT;
-  const expenses = dna.expenses ?? EMPTY_ARRAY;
-  const loans = dna.loans ?? EMPTY_ARRAY;
-  const loanPayments = dna.loanPayments ?? EMPTY_ARRAY;
+  // The history below the houses is not in `dna` any more. Each section fetches its own
+  // pages when it scrolls into view (sections/HistorySection.jsx), so opening this page
+  // costs the same in year five as in week one.
 
   return (
     <div className="space-y-6 bg-background min-h-screen">
@@ -105,16 +101,15 @@ const HouseOwnerDetailPage = () => {
         <HousesSection
           houses={houses}
           archivedHouses={archivedHouses}
-          flats={flats}
           ownerId={ownerId}
           ownerName={owner?.name}
           onSuccess={handleSectionSuccess}
         />
-        <AppFeePaymentsSection appFeePayments={appFeePayments} onSuccess={handleSectionSuccess} />
-        <IncomeSection income={income} onSuccess={handleSectionSuccess} />
-        <ExpensesSection expenses={expenses} onSuccess={handleSectionSuccess} />
-        <LoansSection loans={loans} onSuccess={handleSectionSuccess} />
-        <LoanPaymentsSection loanPayments={loanPayments} onSuccess={handleSectionSuccess} />
+        <AppFeePaymentsSection ownerId={ownerId} />
+        <IncomeSection ownerId={ownerId} />
+        <ExpensesSection ownerId={ownerId} />
+        <LoansSection ownerId={ownerId} />
+        <LoanPaymentsSection ownerId={ownerId} />
       </div>
     </div>
   );

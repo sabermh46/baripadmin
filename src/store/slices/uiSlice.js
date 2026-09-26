@@ -43,6 +43,23 @@ const initialState = {
    * paid-up owner out of their own app until something happened to clear it.
    */
   subscriptionBlocked: false,
+
+  /**
+   * When the signed-in user was last sent an app-fee notification (ISO string), as reported
+   * by the unread-count poll. useAdminPendingAppFee refetches the subscription status when
+   * this moves, which is how a user without push still hears about a payment verified or a
+   * reminder sent. Not persisted, for the same reason as subscriptionBlocked.
+   */
+  appFeeNoticeAt: null,
+
+  /**
+   * Which cached queries are currently showing a saved offline copy rather than a live
+   * answer: { [queryCacheKey]: savedAt (epoch ms) }. Written by baseApi when it answers from
+   * store/offlineApiCache.js, cleared as each one is fetched live again. The layout reads it
+   * to say "showing saved data from …", and offlineCacheMiddleware refetches every key here
+   * the moment the connection returns. Not persisted: it describes this session's screens.
+   */
+  offlineStale: {},
 };
 
 const uiSlice = createSlice({
@@ -59,6 +76,25 @@ const uiSlice = createSlice({
 
     setSubscriptionBlocked: (state, action) => {
       state.subscriptionBlocked = !!action.payload;
+    },
+
+    setAppFeeNoticeAt: (state, action) => {
+      state.appFeeNoticeAt = action.payload ?? null;
+    },
+
+    markServedOffline: (state, action) => {
+      const { queryCacheKey, at } = action.payload ?? {};
+      if (!queryCacheKey) return;
+      if (!state.offlineStale) state.offlineStale = {};
+      state.offlineStale[queryCacheKey] = at ?? Date.now();
+    },
+
+    markFresh: (state, action) => {
+      if (state.offlineStale) delete state.offlineStale[action.payload];
+    },
+
+    clearOfflineStale: (state) => {
+      state.offlineStale = {};
     },
 
     addNotification: (state, action) => {
@@ -114,6 +150,10 @@ export const {
   setFlatViewMode,
   setRenterViewMode,
   setSubscriptionBlocked,
+  setAppFeeNoticeAt,
+  markServedOffline,
+  markFresh,
+  clearOfflineStale,
   addNotification,
   markNotificationAsRead,
   setOnlineStatus,

@@ -17,6 +17,7 @@ import authReducer from './slices/authSlice';
 import uiReducer from './slices/uiSlice';
 import indexedDBStorage from './storage/indexedDBStorage';
 import { notificationApi } from './api/notificationApi';
+import { offlineCacheMiddleware } from './offlineCacheMiddleware';
 
 const storage = indexedDBStorage;
 
@@ -53,12 +54,17 @@ const authPersistConfig = {
 // which defeats the point of taking these endpoints off the cache in the first place.
 const isAppFeeQuery = (key = '') => key.startsWith('getAppFee') || key.startsWith('getMyAppFee');
 
+// Kept: every entry that HAS data, whatever its status. Filtering on `status === 'fulfilled'`
+// dropped an entry the moment a refetch failed (rejected) or was still in flight (pending),
+// both of which keep the previous data in memory. Offline, a failed refetch is the normal
+// case, so the last good answer was deleted from disk exactly when it was needed. Restored
+// as `fulfilled` with its original timestamp, so the usual staleness rules still refetch it.
 const apiCacheTransform = createTransform(
   (inbound) => ({
     queries: Object.fromEntries(
-      Object.entries(inbound?.queries ?? {}).filter(
-        ([key, e]) => e?.status === 'fulfilled' && !isAppFeeQuery(key)
-      )
+      Object.entries(inbound?.queries ?? {})
+        .filter(([key, e]) => e?.data !== undefined && e?.fulfilledTimeStamp && !isAppFeeQuery(key))
+        .map(([key, e]) => [key, { ...e, status: 'fulfilled', error: undefined }])
     ),
   }),
   (outbound) => ({ ...outbound, mutations: {}, provided: {}, subscriptions: {} }),
@@ -74,7 +80,12 @@ const apiCacheTransform = createTransform(
 const uiPersistConfig = {
   key: 'ui',
   storage,
-  blacklist: ['subscriptionBlocked'],
+  // appFeeNoticeAt likewise: a restored value would read as "a notice arrived" on boot.
+  // isOnline: restoring it overwrote navigator.onLine with whatever the last session ended
+  // on, so a device that went offline, closed and came back online booted believing it was
+  // still offline until the next online/offline event. offlineStale describes this
+  // session's screens only.
+  blacklist: ['subscriptionBlocked', 'appFeeNoticeAt', 'isOnline', 'offlineStale'],
 };
 
 const persistConfig = {
@@ -147,7 +158,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }).concat(authApi.middleware)
+    }).concat(authApi.middleware, offlineCacheMiddleware)
 });
 
 /**

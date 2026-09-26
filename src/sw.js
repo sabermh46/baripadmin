@@ -86,6 +86,21 @@ registerRoute(
   })
 );
 
+// Same-origin raster images (the built assets/ folder and public/): cached the first time
+// they are shown, so a page opened once online still has its pictures offline. Not in the
+// precache because most of their weight is the landing page's photos, which an installed
+// app that opens on the dashboard may never show.
+registerRoute(
+  ({ request, url }) => request.destination === 'image' && url.origin === self.location.origin,
+  new CacheFirst({
+    cacheName: 'images',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 60 }),
+    ],
+  })
+);
+
 // Deliberately NOT caching /api responses here. RTK Query already persists them to
 // IndexedDB, scoped to the logged-in user and purged on logout; a second copy in the
 // service worker's HTTP cache would outlive logout and could serve one user's data to
@@ -109,7 +124,11 @@ self.addEventListener('push', (event) => {
   const options = {
     body: payload.body || 'You have a new notification',
     icon: '/web-app-manifest-192x192.png',
-    badge: '/favicon-96x96.png',
+    // The small status-bar / header icon. Android uses only its ALPHA channel and paints
+    // every opaque pixel in the system accent colour, so it must be a silhouette on
+    // transparency. It was the full-colour favicon, which is opaque edge to edge, so Android
+    // drew a solid rounded square. badge-96x96.png is the logo's shape in white.
+    badge: '/badge-96x96.png',
     data: payload.data || {},
     vibrate: [100, 50, 100],
     // Collapses repeats: a second notification with the same tag replaces the first

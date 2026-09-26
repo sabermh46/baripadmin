@@ -27,7 +27,7 @@ const ResetPassword = () => {
       // it was only the client that disagreed.
       await resetPassword({ token, newPassword: password }).unwrap();
       toast.success("Password reset successful! Please login.");
-      navigate('/login');
+      navigate('/login', { replace: true });
     } catch (err) {
       toast.error(apiErrorMessage(err, "Failed to reset password"));
     }

@@ -124,6 +124,14 @@ const useNotifications = (options = {}) => {
     }
   }, [pagination.hasNextPage]);
 
+  // Pages are fetched one at a time (each is its own cache entry), so the page view steps
+  // between them rather than appending. Selection is per page: ids from a page no longer
+  // on screen must not ride along into a bulk delete.
+  const goToPage = useCallback((page) => {
+    setSelectedNotifications([]);
+    setFilters((prev) => ({ ...prev, page: Math.max(1, page) }));
+  }, []);
+
   /**
    * A push arrived, or another tab changed something. App.jsx fans every source
    * (service-worker message, BroadcastChannel, storage event, tab regaining focus) into
@@ -261,6 +269,7 @@ const useNotifications = (options = {}) => {
     refresh: sync,
     updateFilters,
     loadMore,
+    goToPage,
 
     markAsRead: handleMarkAsRead,
     markAllAsRead: handleMarkAllAsRead,

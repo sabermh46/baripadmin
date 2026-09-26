@@ -11,6 +11,7 @@ import {
   PlusCircle,
 } from 'lucide-react';
 import TkSymbol from '../../common/TkSymbol';
+import Table from '../../common/Table';
 import { advanceStatusLabel, advanceStatusToneClass } from '../../../utils/advanceStatus';
 
 
@@ -332,50 +333,18 @@ const AdvanceTab = ({
           )}
         </div>
 
-        {/* Desktop table.
-            Hand-rolled rather than the shared <Table>, which has no notion of an expanded row -
-            and the whole point here is that each advance opens to show what it was spent on. */}
-        {/* Desktop table.
-            Back to a flat list: the deduction history was an expanded row here, which meant a
-            table inside a table and an outer row carrying columns that only mattered once you
-            were already investigating one advance. It lives in the details modal now. */}
-        <div className="hidden overflow-x-auto sm:block">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-primary">
-              <tr>
-                {tableColumns.map((column) => (
-                  <th
-                    key={column.key}
-                    scope="col"
-                    className={`px-6 py-3 text-xs font-bold uppercase tracking-wider text-black ${
-                      column.key === 'actions' ? 'text-right' : 'text-left'
-                    }`}
-                  >
-                    {column.title}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredAdvancePayments.length === 0 ? (
-                <tr>
-                  <td colSpan={tableColumns.length} className="px-6 py-8 text-center text-subdued">
-                    {t('no_advance_payments_recorded') || 'No advance payments recorded.'}
-                  </td>
-                </tr>
-              ) : (
-                filteredAdvancePayments.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50">
-                    {tableColumns.map((column) => (
-                      <td key={column.key} className="whitespace-nowrap px-6 py-4">
-                        {column.render(row)}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        {/* Desktop: the shared <Table>, like the Payments tab beside it, so the two history
+            lists on this page look and behave the same. It was hand-rolled only because the
+            deduction history used to be an expanded row; that lives in the details modal now,
+            so this is a flat list. A row click opens the same details the button does. */}
+        <div className="hidden sm:block">
+          <Table
+            columns={tableColumns}
+            data={filteredAdvancePayments}
+            rowKey="id"
+            onRowClick={handleView}
+            emptyMessage={t('no_advance_payments_recorded') || 'No advance payments recorded.'}
+          />
         </div>
       </div>
     </div>

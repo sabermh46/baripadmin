@@ -115,20 +115,8 @@ const RenterCard = ({ flat, house }) => (
   </>
 );
 
-const HousesSection = ({ houses = [], archivedHouses = [], flats = [], ownerId, ownerName, onSuccess }) => {
+const HousesSection = ({ houses = [], archivedHouses = [], ownerId, ownerName, onSuccess }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  const flatByHouseId = React.useMemo(() => {
-    const map = {};
-    (flats || []).forEach((f) => {
-      const hid = f.house_id ?? f.houseId;
-      if (hid) {
-        if (!map[hid]) map[hid] = [];
-        map[hid].push(f);
-      }
-    });
-    return map;
-  }, [flats]);
 
   // There used to be an effect here firing onSuccess({section:'houses'}) whenever `houses`
   // or `flats` changed. The parent answers that by refetching the owner — so the effect
@@ -185,7 +173,7 @@ const HousesSection = ({ houses = [], archivedHouses = [], flats = [], ownerId, 
           </p>
         ) : (
           houses.map((house) => {
-            const houseFlats = house.flats ?? flatByHouseId[house.id] ?? [];
+            const houseFlats = house.flats ?? [];
             const occupied = house.occupiedFlats ?? houseFlats.filter((f) => f.renterId).length;
             const vacant = house.vacantFlats ?? houseFlats.length - occupied;
 

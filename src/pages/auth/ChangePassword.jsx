@@ -6,11 +6,15 @@ import { toast } from 'react-toastify';
 import { apiErrorMessage } from '../../utils/apiError';
 import NavigateBack from '../../components/common/NavigateBack';
 import { useTranslation } from 'react-i18next';
+import { useAppDispatch, useAuth } from '../../hooks';
+import { setCredentials } from '../../store/slices/authSlice';
 
 const ChangePassword = () => {
   const {t} = useTranslation();
   const [formData, setFormData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [changePassword, { isLoading }] = useChangePasswordMutation();
+  const dispatch = useAppDispatch();
+  const { user } = useAuth();
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -19,10 +23,16 @@ const ChangePassword = () => {
     }
 
     try {
-      await changePassword({ 
+      const res = await changePassword({ 
         oldPassword: formData.oldPassword, 
         newPassword: formData.newPassword 
       }).unwrap();
+      // Changing the password ends every session, this one included, and the response
+      // carries this device's replacement (the refresh half arrives as the cookie). Adopting
+      // it here means the next request does not 401 first.
+      if (res?.accessToken) {
+        dispatch(setCredentials({ user, accessToken: res.accessToken, expiresIn: res.expiresIn }));
+      }
       toast.success(t("password_updated_successfully"));
       setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {

@@ -13,7 +13,7 @@ import { bariBg } from '../../../assets';
 const HouseList = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { isWebOwner, isHouseOwner, isCaretaker, hasPermission } = useAuth();
+  const { isWebOwner, isHouseOwner, hasPermission } = useAuth();
 
   // Gate on the PERMISSION, not the role.
   //
@@ -56,6 +56,7 @@ const HouseList = () => {
         await deleteHouse(id).unwrap();
         toast.success(t('house_deleted'));
         refetch();
+      // eslint-disable-next-line no-unused-vars
       } catch (error) {
         toast.error(t('delete_failed'));
       }
@@ -126,17 +127,16 @@ const HouseList = () => {
     {
       title: t('actions'),
       key: 'actions',
-      className: 'text-right',
       render: (row) => (
-        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => navigate(`/houses/${row?.id}`)} className="p-2 text-subdued hover:text-primary hover:bg-primary/5 rounded-lg transition-colors">
+        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => navigate(`/houses/${row?.id}`)} className="p-2 cursor-pointer text-subdued hover:text-primary hover:bg-primary/30 bg-primary/15 rounded-lg transition-colors">
             <Eye className="w-4 h-4" />
           </button>
-          <button onClick={() => navigate(`/houses/${row?.id}/edit`)} className="p-2 text-subdued hover:text-secondary hover:bg-secondary/5 rounded-lg transition-colors">
+          <button onClick={() => navigate(`/houses/${row?.id}/edit`)} className="p-2 cursor-pointer text-subdued hover:text-secondary hover:bg-secondary/30 bg-secondary/15 rounded-lg transition-colors">
             <Edit className="w-4 h-4" />
           </button>
           {canDeleteHouse && (
-            <button onClick={(e) => handleDelete(e, row?.id, row?.address)} className="p-2 text-subdued hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+            <button onClick={(e) => handleDelete(e, row?.id, row?.address)} className="p-2 cursor-pointer text-subdued hover:text-red-600 hover:bg-red-300 bg-red-100 rounded-lg transition-colors">
               <Trash2 className="w-4 h-4" />
             </button>
           )}
@@ -277,6 +277,7 @@ const StatCard = ({ icon, label, value, color }) => (
   </div>
 );
 
+// eslint-disable-next-line no-unused-vars
 const HouseCard = ({ house, t, onDelete, canDelete, onClick, navigate }) => (
   <div 
     onClick={() => navigate(`/houses/${house.id}`)}

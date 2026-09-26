@@ -1,6 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { REHYDRATE } from 'redux-persist';
 import axios from 'axios';
+import { requestKey, readResponse, saveResponse, currentGeneration } from '../offlineApiCache';
 
 // Store is injected after creation to avoid circular imports.
 let store;
@@ -177,8 +178,61 @@ const warnOnMissingPathParam = (args) => {
   );
 };
 
+/**
+ * Which requests get an offline copy (see store/offlineApiCache.js).
+ *
+ * Queries only (`api.type`), so a GET-method mutation such as the Google sign-in redeem,
+ * which returns tokens, is never stored. Plain JSON GETs only: no uploads, and no binary
+ * downloads (PDFs, exports), which set a responseType. The auth and push paths are
+ * excluded outright; nothing under them is page data.
+ */
+const OFFLINE_DENYLIST = /\/auth\/(login|logout|refresh|google|register)|\/push\//;
+
+const isOfflineCacheable = (args, api) => {
+  if (api?.type !== 'query') return false;
+  const url = typeof args === 'string' ? args : args?.url;
+  if (typeof url !== 'string' || OFFLINE_DENYLIST.test(url)) return false;
+  if (typeof args === 'object') {
+    if (args.method && args.method.toUpperCase() !== 'GET') return false;
+    if (args.body instanceof FormData || args.responseType) return false;
+  }
+  return true;
+};
+
+/**
+ * "The network could not answer", as opposed to "the server said no". No response at all
+ * (offline, DNS, timeout, connection reset), or a gateway saying the app server is
+ * unreachable. A real answer, including a 500, is never papered over with a saved copy.
+ */
+const isNetworkFailure = (err) => !err?.response || [502, 503, 504].includes(err.response.status);
+
 const axiosBaseQuery = () => async (args, api) => {
   if (import.meta.env.DEV) warnOnMissingPathParam(args);
+
+  const cacheable = isOfflineCacheable(args, api);
+  const userId = cacheable ? api.getState()?.auth?.user?.id : undefined;
+  const key = cacheable ? requestKey(args) : null;
+  const startedGeneration = currentGeneration();
+
+  // The saved copy, returned exactly as a live answer would be, so every screen renders it
+  // with no changes of its own. It is marked in the ui slice so the layout can say the
+  // screen is showing saved data, and so reconnecting refetches it (offlineCacheMiddleware).
+  const serveSaved = async () => {
+    const saved = await readResponse(userId, key);
+    if (!saved) return null;
+    if (api.queryCacheKey) {
+      api.dispatch({ type: 'ui/markServedOffline', payload: { queryCacheKey: api.queryCacheKey, at: saved.at } });
+    }
+    return { data: saved.data, meta: { fromOfflineCache: true, savedAt: saved.at } };
+  };
+
+  // Known offline: do not wait on a request that cannot succeed.
+  if (cacheable && typeof navigator !== 'undefined' && navigator.onLine === false) {
+    const hit = await serveSaved();
+    if (hit) return hit;
+    // A string payload is what apiErrorMessage reads as "no connection".
+    return { error: { status: 'OFFLINE', data: 'offline' } };
+  }
 
   try {
     // If body is FormData, we need to handle it specially
@@ -196,8 +250,24 @@ const axiosBaseQuery = () => async (args, api) => {
     
     // Normal request handling
     const result = await axiosInstance(args);
+
+    if (cacheable) {
+      saveResponse(userId, key, result.data, startedGeneration);
+      // This screen had been showing a saved copy; it is live again.
+      if (api.queryCacheKey && api.getState()?.ui?.offlineStale?.[api.queryCacheKey]) {
+        api.dispatch({ type: 'ui/markFresh', payload: api.queryCacheKey });
+      }
+    }
+
     return { data: result.data };
   } catch (err) {
+    // The network failed (rather than the server refusing): answer with the last saved copy
+    // if there is one, instead of an error that blanks the screen.
+    if (cacheable && isNetworkFailure(err)) {
+      const hit = await serveSaved();
+      if (hit) return hit;
+    }
+
     // Log out only when the session is genuinely finished:
     //   - isAuthError: the refresh itself was rejected 401/403 (now only set in that case,
     //     so a request that never reached the server no longer triggers a logout), or
