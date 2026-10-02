@@ -105,7 +105,7 @@ const HouseOwnerDetailPage = () => {
           ownerName={owner?.name}
           onSuccess={handleSectionSuccess}
         />
-        <AppFeePaymentsSection ownerId={ownerId} />
+        <AppFeePaymentsSection ownerId={ownerId} ownerName={owner?.name} />
         <IncomeSection ownerId={ownerId} />
         <ExpensesSection ownerId={ownerId} />
         <LoansSection ownerId={ownerId} />

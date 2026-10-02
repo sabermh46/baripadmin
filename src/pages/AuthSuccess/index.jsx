@@ -4,6 +4,8 @@ import { useAppDispatch, useAuth } from '../../hooks';
 import { setCredentials } from '../../store/slices/authSlice';
 import { useGoogleLoginMutation } from '../../store/api/authApi';
 import { reportGoogleResultAndClose } from '../../utils/googleAuth';
+import { returnFromExternalTrip } from '../../utils/externalRedirect';
+import { persistor } from '../../store';
 
 /**
  * Where the API sends the browser after Google.
@@ -62,11 +64,20 @@ const AuthSuccess = () => {
 
     googleLogin()
       .unwrap()
-      .then((data) => {
+      .then(async (data) => {
         dispatch(setCredentials(data));
-        navigate('/dashboard', { replace: true });
+        // A redirect trip left Google's pages in this tab's history. Jump back over them
+        // (utils/externalRedirect.js) rather than pushing the dashboard on top, where Back
+        // would reach Google. The jump reloads the page it lands on, so the session has to
+        // be on disk first: redux-persist writes on a throttle, and flush() forces it.
+        await persistor.flush();
+        if (!returnFromExternalTrip('/dashboard')) navigate('/dashboard', { replace: true });
       })
-      .catch(() => navigate('/login?error=google_auth_failed', { replace: true }));
+      .catch(() => {
+        if (!returnFromExternalTrip('/login?error=google_auth_failed')) {
+          navigate('/login?error=google_auth_failed', { replace: true });
+        }
+      });
 
     return undefined;
     // Runs once per landing by design (see `started`).

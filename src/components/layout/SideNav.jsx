@@ -7,10 +7,12 @@ import {
   CircleUser,
   Wallet,
   FileClock,
+  Headset,
   House,
   Landmark,
   LayoutDashboard,
   LayoutTemplate,
+  LifeBuoy,
   LogOut,
   Mail,
   MessageSquare,
@@ -85,6 +87,8 @@ const NAV_ITEMS = [
     roles: ["developer", "web_owner", "staff", "house_owner"],
   },
   { path: "/profile", labelKey: "profile", icon: CircleUser, group: "main" },
+  // The people support is for. Admins reach the same page from Support channels.
+  { path: "/support", labelKey: "support", icon: LifeBuoy, group: "main", roles: ["house_owner", "caretaker"] },
   { path: "/admin/staff", labelKey: "staffs", icon: UserCog, group: "people", roles: ["developer", "web_owner"] },
   {
     path: "/staff/user-approvals",
@@ -162,6 +166,15 @@ const NAV_ITEMS = [
   { path: "/admin/landing-editor", labelKey: "landing_editor", icon: LayoutTemplate, group: "admin", roles: ["web_owner"] },
   { path: "/admin/email-templates", labelKey: "email_templates", icon: Mail, group: "admin", roles: ["web_owner", "developer"] },
   { path: "/admin/sms-allowance", labelKey: "sms_allowance", icon: MessageSquare, group: "admin", roles: ["web_owner", "developer"] },
+  {
+    path: "/admin/support-channels",
+    labelKey: "support_channels",
+    icon: Headset,
+    group: "admin",
+    roles: ["developer", "web_owner", "staff"],
+    // Same permission the route and the API check; web_owner and developer pass it by role.
+    permission: "support.manage",
+  },
   // Last in the group on purpose: a maintenance surface, not something anybody reaches for
   // daily. toMatch so the sub-pages under it keep the parent entry highlighted.
   {

@@ -51,7 +51,7 @@ const PagerButton = ({ label, onClick, disabled, children }) => (
  * One paginated list. `columns` is [{ header, cell: (row) => node, className? }].
  * Renders its own heading when `title` is given, so a section can stack several of these.
  */
-export const HistoryList = ({ ownerId, section, columns, emptyText, title, icon: Icon, subheading }) => {
+export const HistoryList = ({ ownerId, section, columns, emptyText, title, icon: Icon, subheading, action }) => {
   const [ref, seen] = useSeen();
   const [page, setPage] = useState(1);
 
@@ -66,10 +66,14 @@ export const HistoryList = ({ ownerId, section, columns, emptyText, title, icon:
   const totalPages = meta?.totalPages ?? 1;
 
   const heading = title ? (
-    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-3">
-      {Icon && <Icon className="h-4 w-4" />}
-      {title} {total != null && `(${total.toLocaleString()})`}
-    </h3>
+    <div className="mb-3 flex items-center justify-between gap-2">
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+        {Icon && <Icon className="h-4 w-4" />}
+        {title} {total != null && `(${total.toLocaleString()})`}
+      </h3>
+      {/* An optional control beside the heading, e.g. the app-fee timeline. */}
+      {action}
+    </div>
   ) : subheading ? (
     <div className="text-xs font-medium text-gray-600 uppercase mb-2">
       {subheading} {total != null && `(${total.toLocaleString()})`}

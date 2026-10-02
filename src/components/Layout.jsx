@@ -238,7 +238,9 @@ const Layout = () => {
               replaced rather than covered over, so no doomed request fires behind it. */}
           {/* Offline, or showing a saved copy: said once here for every page. */}
           <OfflineBanner />
-          {paywalled && !location.pathname.startsWith('/app-fee') ? (
+          {/* /support too: someone whose access has lapsed is the person most likely to need
+              to ask for help, and the support API is outside the subscription gate as well. */}
+          {paywalled && !location.pathname.startsWith('/app-fee') && !location.pathname.startsWith('/support') ? (
             <SubscriptionBlocked
               validThrough={validThrough}
               daysSinceExpiry={status?.daysSinceExpiry ?? 0}

@@ -27,9 +27,12 @@
  * --------
  * A full-page redirect when a popup cannot work: blocked by the browser, or an installed
  * PWA (iOS standalone mode opens popups in a separate browser with separate storage, so the
- * result could never reach this tab). Those users still get the history fixes on our side:
- * /auth/success replaces itself and /login redirects signed-in users away.
+ * result could never reach this tab). That trip does put Google's pages in this tab's
+ * history, so it is recorded first (markExternalTripStart) and /auth/success jumps back over
+ * it on return. See utils/externalRedirect.js.
  */
+
+import { markExternalTripStart } from './externalRedirect';
 
 const CHANNEL = 'bp-google-auth';
 // One attempt at a time. A popup the user closes never reports, so its promise never
@@ -56,6 +59,7 @@ export const googleAuthUrl = ({ token, popup = false } = {}) => {
  */
 export const startGoogleSignIn = ({ token } = {}) => {
   if (isStandalonePwa()) {
+    markExternalTripStart();
     window.location.assign(googleAuthUrl({ token }));
     return Promise.resolve({ redirected: true });
   }
@@ -71,6 +75,7 @@ export const startGoogleSignIn = ({ token } = {}) => {
   );
 
   if (!popup) {
+    markExternalTripStart();
     window.location.assign(googleAuthUrl({ token }));
     return Promise.resolve({ redirected: true });
   }

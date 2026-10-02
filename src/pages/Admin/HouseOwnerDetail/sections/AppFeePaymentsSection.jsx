@@ -1,5 +1,7 @@
-import React from 'react';
-import { Banknote } from 'lucide-react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Banknote, CalendarRange } from 'lucide-react';
+import SubscriptionTimelineModal from '../../../AppFee/SubscriptionTimelineModal';
 import { invoicePeriod } from '../../../../utils/appFeePeriod';
 import { HistoryCard, HistoryList } from './HistorySection';
 import { formatAmount, formatDate } from './historyFormat';
@@ -21,17 +23,40 @@ const COLUMNS = [
   { header: 'Paid', cell: (p) => formatDate(p.paid_date) },
 ];
 
-const AppFeePaymentsSection = ({ ownerId }) => (
-  <HistoryCard>
-    <HistoryList
-      ownerId={ownerId}
-      section="app_fees"
-      title="App Fee Payments"
-      icon={Banknote}
-      columns={COLUMNS}
-      emptyText="No app fee payments"
-    />
-  </HistoryCard>
-);
+// The table is the raw invoice list; the timeline is the same owner's subscription day by
+// day, exactly as they see it on their own app-fee page.
+const AppFeePaymentsSection = ({ ownerId, ownerName }) => {
+  const { t } = useTranslation();
+  const [timelineOpen, setTimelineOpen] = useState(false);
+
+  return (
+    <HistoryCard>
+      <HistoryList
+        ownerId={ownerId}
+        section="app_fees"
+        title="App Fee Payments"
+        icon={Banknote}
+        columns={COLUMNS}
+        emptyText="No app fee payments"
+        action={
+          <button
+            type="button"
+            onClick={() => setTimelineOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50"
+          >
+            <CalendarRange className="h-3.5 w-3.5" />
+            {t('tl_title')}
+          </button>
+        }
+      />
+      <SubscriptionTimelineModal
+        houseOwnerId={ownerId ? Number(ownerId) : null}
+        ownerName={ownerName}
+        isOpen={timelineOpen}
+        onClose={() => setTimelineOpen(false)}
+      />
+    </HistoryCard>
+  );
+};
 
 export default AppFeePaymentsSection;

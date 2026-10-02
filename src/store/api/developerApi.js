@@ -39,6 +39,31 @@ export const developerApi = baseApi.injectEndpoints({
       query: () => ({ url: '/developer/push-events/reset', method: 'POST' }),
       invalidatesTags: [{ type: 'PushEvent', id: 'ALL' }],
     }),
+
+    // App-fee notifications: bell and push per event, the reminder schedule, and how a
+    // payment confirmed with the next invoice is announced. See AppFeeNotificationSettings.
+    getAppFeeNotificationSettings: builder.query({
+      ...LIVE,
+      query: () => ({ url: '/developer/app-fee-notifications', method: 'GET' }),
+      providesTags: [{ type: 'PushEvent', id: 'APP_FEE' }],
+    }),
+
+    updateAppFeeNotificationSettings: builder.mutation({
+      query: (body) => ({ url: '/developer/app-fee-notifications', method: 'PUT', data: body }),
+      invalidatesTags: [{ type: 'PushEvent', id: 'APP_FEE' }, { type: 'PushEvent', id: 'APP_FEE_PREVIEW' }],
+    }),
+
+    resetAppFeeNotificationSettings: builder.mutation({
+      query: () => ({ url: '/developer/app-fee-notifications/reset', method: 'POST' }),
+      invalidatesTags: [{ type: 'PushEvent', id: 'APP_FEE' }, { type: 'PushEvent', id: 'APP_FEE_PREVIEW' }],
+    }),
+
+    // Counts only: how many owners the next reminder run would reach, per stage.
+    getAppFeeReminderPreview: builder.query({
+      ...LIVE,
+      query: () => ({ url: '/developer/app-fee-notifications/preview', method: 'GET' }),
+      providesTags: [{ type: 'PushEvent', id: 'APP_FEE_PREVIEW' }],
+    }),
   }),
 });
 
@@ -47,4 +72,8 @@ export const {
   useGetPushEventsQuery,
   useUpdatePushEventMutation,
   useResetPushEventsMutation,
+  useGetAppFeeNotificationSettingsQuery,
+  useUpdateAppFeeNotificationSettingsMutation,
+  useResetAppFeeNotificationSettingsMutation,
+  useGetAppFeeReminderPreviewQuery,
 } = developerApi;

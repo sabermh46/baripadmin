@@ -136,8 +136,28 @@ button {
   word-spacing: 0.09em;
 }
 
+/* The white block under the last card on phones.
+ *
+ * The signed-in shell (Layout) is `h-dvh`, one DYNAMIC viewport tall, and scrolls inside
+ * <main>. #root was `min-height: 100vh`, and on mobile Chrome 100vh is the LARGE viewport
+ * (address bar hidden) while 100dvh tracks the current one. With the bar showing, #root was
+ * therefore taller than the shell by the bar's height, so the document itself had that much
+ * room to scroll. Scrolling into it (or the bar hiding while the shell's dvh height catches
+ * up) exposed the strip below the shell. Nothing painted there, so it showed the browser's
+ * default white canvas.
+ *
+ * Fixed from both sides: #root is at most as tall as the shell (dvh, with vh kept as the
+ * fallback for browsers without dynamic units), and the document is painted the app's
+ * background colour, so any moment the strip is exposed it matches the page instead of
+ * flashing white. */
+html,
+body {
+  background-color: var(--color-background);
+}
+
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 

@@ -54,6 +54,13 @@ export const notificationSettingsApi = baseApi.injectEndpoints({
       // A live test stamps last_test_result on the row.
       invalidatesTags: (r, e, { dryRun }) => (dryRun ? [] : [{ type: 'SmsProvider', id: 'LIST' }]),
     }),
+
+    // Credit on the gateway account (bulksmsbd only). Lazy, and never cached: it is a call
+    // to somebody else's server, made when the web owner asks and current when it answers.
+    getSmsProviderBalance: builder.query({
+      keepUnusedDataFor: 0,
+      query: (id) => ({ url: `/admin/notification-settings/sms-providers/${id}/balance`, method: 'GET' }),
+    }),
   }),
 });
 
@@ -64,4 +71,5 @@ export const {
   useSaveSmsProviderMutation,
   useDeleteSmsProviderMutation,
   useTestSmsProviderMutation,
+  useLazyGetSmsProviderBalanceQuery,
 } = notificationSettingsApi;

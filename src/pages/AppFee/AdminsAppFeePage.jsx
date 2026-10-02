@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Search, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Eye, Pencil, Trash2, CalendarRange, BellRing } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../hooks';
 import Table from '../../components/common/Table';
 import Btn from '../../components/common/Button';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
@@ -16,6 +18,8 @@ import AppFeeDetailsModal from './AppFeeDetailsModal';
 import AppFeeOverview from './AppFeeOverview';
 import AppFeeMetricModal from './AppFeeMetricModal';
 import VerifyClaimModal from './VerifyClaimModal';
+
+import SubscriptionTimelineModal from './SubscriptionTimelineModal';
 import { toast } from 'react-toastify';
 import { apiErrorMessage } from '../../utils/apiError';
 import { useTranslation } from 'react-i18next';
@@ -41,6 +45,8 @@ const buildPaymentMethodOptions = (t) => [
 
 const AdminsAppFeePage = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const canManageNotifications = ['web_owner', 'developer'].includes(user?.role?.slug);
   const STATUS_OPTIONS = buildStatusOptions(t);
   const PAYMENT_METHOD_OPTIONS = buildPaymentMethodOptions(t);
   const [page, setPage] = useState(1);
@@ -69,6 +75,9 @@ const AdminsAppFeePage = () => {
   const [openMetric, setOpenMetric] = useState(null);
   // The claim currently being checked against a bank/wallet statement.
   const [verifyClaimFor, setVerifyClaimFor] = useState(null);
+  // The owner whose subscription timeline is open: { id, name }, or null. Kept while an
+  // invoice opened from it is being looked at, so closing that returns to the timeline.
+  const [timelineFor, setTimelineFor] = useState(null);
   const [deletePayment, { isLoading: isDeleting }] = useDeleteAppFeePaymentMutation();
   const [updatePayment, { isLoading: isUpdating }] = useUpdateAppFeePaymentMutation();
 
@@ -262,6 +271,18 @@ const AdminsAppFeePage = () => {
       cellClassName: 'whitespace-nowrap',
       render: (row) => (
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          {/* The owner's whole subscription: the same overview and timeline they see. */}
+          {row.house_owner_id && (
+            <button
+              type="button"
+              onClick={() => setTimelineFor({ id: row.house_owner_id, name: row.house_owner_name })}
+              className="p-1.5 text-sky-700 hover:bg-sky-50 rounded"
+              title={t('tl_title')}
+              aria-label={t('tl_title')}
+            >
+              <CalendarRange className="h-4 w-4" />
+            </button>
+          )}
           {/* The eye and the pencil both called setViewEditId — two buttons, one behaviour,
               and no way to simply look at an invoice. The eye is now the Details column and
               this one is the editor it always was. */}
@@ -288,9 +309,22 @@ const AdminsAppFeePage = () => {
 
   return (
     <div className="">
-      <div className="mb-4">
-        <h1 className="text-xl font-semibold text-gray-900">{t('app_fee_and_subscriptions')}</h1>
-        <p className="text-sm text-gray-500 mt-0.5">{t('app_fee_admin_subtitle')}</p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">{t('app_fee_and_subscriptions')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('app_fee_admin_subtitle')}</p>
+        </div>
+        {/* Same audience as the developer panel route it opens; staff would only hit the guard. */}
+        {canManageNotifications && (
+          <Link
+            to="/developer/app-fee-notifications"
+            title={t('afn_title')}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <BellRing className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t('afn_title')}</span>
+          </Link>
+        )}
       </div>
 
       <AppFeeOverview
@@ -438,6 +472,16 @@ const AdminsAppFeePage = () => {
         // so an admin who opened details to check the reference does not have to close it,
         // find the row again and click a different button.
         onVerify={(payment) => { setDetailsId(null); setVerifyClaimFor(payment); }}
+      />
+
+      {/* Hidden, not closed, while an invoice opened from it is shown, so the two dialogs
+          never stack and closing the invoice brings the timeline back where it was. */}
+      <SubscriptionTimelineModal
+        houseOwnerId={timelineFor?.id}
+        ownerName={timelineFor?.name}
+        isOpen={!!timelineFor && !detailsId && !viewEditId && !verifyClaimFor}
+        onClose={() => setTimelineFor(null)}
+        onOpenInvoice={(id) => setDetailsId(id)}
       />
 
       <VerifyClaimModal

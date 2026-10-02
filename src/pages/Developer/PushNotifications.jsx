@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   BellRing,
   ChevronLeft,
+  ChevronRight,
   Info,
   Lock,
   RotateCcw,
@@ -192,6 +193,18 @@ const PushNotifications = () => {
         <Info className="mt-px h-4 w-4 shrink-0 text-blue-500" />
         {t('push_events_scope_note')}
       </p>
+
+      {/* App fee left this grid: it needed the bell and the schedule too, not just push. */}
+      <Link
+        to="/developer/app-fee-notifications"
+        className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+      >
+        <span>{t('push_events_app_fee_moved')}</span>
+        <span className="inline-flex shrink-0 items-center gap-0.5 font-medium text-primary">
+          {t('push_events_app_fee_link')}
+          <ChevronRight className="h-4 w-4" />
+        </span>
+      </Link>
 
       {health && !health.vapidConfigured && (
         <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">

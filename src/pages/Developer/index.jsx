@@ -6,6 +6,7 @@ import {
   BellRing,
   ChevronRight,
   Database,
+  Receipt,
   Server,
   Terminal,
 } from 'lucide-react';
@@ -13,6 +14,7 @@ import { useGetDeveloperOverviewQuery } from '../../store/api/developerApi';
 
 const MODULE_ICON = {
   'push-notifications': BellRing,
+  'app-fee-notifications': Receipt,
 };
 
 /** A key/value line in one of the environment cards. */

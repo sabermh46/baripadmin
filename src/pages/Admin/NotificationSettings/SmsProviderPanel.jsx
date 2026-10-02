@@ -2,18 +2,36 @@ import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import {
-  AlertTriangle, Check, Loader2, Plus, Send, Terminal, Trash2, X,
+  AlertTriangle, Check, Eye, EyeOff, KeyRound, Loader2, Plus, RefreshCw, Send, Terminal, Trash2, Wallet, X,
 } from 'lucide-react';
 import {
   useDeleteSmsProviderMutation,
   useGetSmsProvidersQuery,
+  useLazyGetSmsProviderBalanceQuery,
   useSaveSmsProviderMutation,
   useTestSmsProviderMutation,
 } from '../../../store/api/notificationSettingsApi';
 import { apiErrorMessage } from '../../../utils/apiError';
 import { showMessageInLanguage } from '../../../utils/showMessageInLanguage';
 
+const BULKSMSBD = 'bulksmsbd';
+
+/**
+ * bulksmsbd.com has its request shape built into the API, so the form is only what the
+ * owner gets from their BulkSMSBD account. The key is write-only: it is never sent back, so
+ * `api_key` stays blank on edit and blank means "keep the saved one".
+ */
+const BLANK_BULKSMSBD = {
+  driver: BULKSMSBD,
+  name: 'BulkSMSBD',
+  sender_id: '',
+  api_key: '',
+  savedKeyHint: '',
+  is_active: false,
+};
+
 const BLANK = {
+  driver: 'generic',
   name: '',
   api_url: '',
   http_method: 'GET',
@@ -35,6 +53,31 @@ const pairsToObject = (pairs) =>
   Object.fromEntries((pairs ?? []).filter((p) => p.k?.trim()).map((p) => [p.k.trim(), p.v ?? '']));
 
 const objectToPairs = (obj) => Object.entries(obj ?? {}).map(([k, v]) => ({ k, v: String(v ?? '') }));
+
+/** A provider from the API, as the edit form holds it. */
+const toForm = (p) => (p.driver === BULKSMSBD
+  ? {
+    ...BLANK_BULKSMSBD,
+    id: p.id,
+    name: p.name,
+    sender_id: p.sender_id ?? '',
+    // Masked by the server (••••••••abcd) — a hint at which key is saved, never the key.
+    savedKeyHint: p.auth_params?.api_key ?? '',
+    credentialsUnreadable: !!p.credentialsUnreadable,
+    is_active: !!p.is_active,
+  }
+  : {
+    ...p,
+    sender_param: p.sender_param ?? '',
+    sender_id: p.sender_id ?? '',
+    // Values arrive masked; sending a mask back unchanged keeps the stored value.
+    auth_params: objectToPairs(p.auth_params),
+    extra_params: objectToPairs(p.extra_params),
+    headers: objectToPairs(p.headers),
+    success_rule: { mode: 'http_status', value: '', path: '', equals: '', ...(p.success_rule ?? {}) },
+  });
+
+const formatBalance = (n) => Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
 
 /** A repeating key/value editor — the shape every part of these gateways is described in. */
 const PairEditor = ({ label, hint, pairs, onChange }) => (
@@ -81,6 +124,63 @@ const PairEditor = ({ label, hint, pairs, onChange }) => (
   </div>
 );
 
+/** Name, sender ID and API key — everything else about bulksmsbd is fixed on the server. */
+const BulkSmsBdFields = ({ editing, setEditing, t }) => {
+  const [reveal, setReveal] = useState(false);
+  const set = (key) => (e) => setEditing((p) => ({ ...p, [key]: e.target.value }));
+  const hasSavedKey = !!editing.savedKeyHint && !editing.credentialsUnreadable;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+        {t('bulksmsbd_form_hint')}
+      </p>
+
+      <div className="grid sm:grid-cols-2 gap-3">
+        <label className="block">
+          <span className="block text-xs font-medium text-gray-700 mb-1">{t('sms_gateway_name')}</span>
+          <input type="text" value={editing.name} onChange={set('name')} className={input} />
+        </label>
+        <label className="block">
+          <span className="block text-xs font-medium text-gray-700 mb-1">{t('sender_id')}</span>
+          <input type="text" value={editing.sender_id} onChange={set('sender_id')} className={`${input} font-mono`} placeholder="8809617xxxxxx" />
+          <span className="block text-[11px] text-gray-400 mt-1">{t('bulksmsbd_sender_id_hint')}</span>
+        </label>
+      </div>
+
+      <label className="block">
+        <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-1">
+          <KeyRound className="h-3.5 w-3.5 text-gray-400" />
+          {t('api_key')}
+        </span>
+        <div className="relative">
+          <input
+            type={reveal ? 'text' : 'password'}
+            value={editing.api_key}
+            onChange={set('api_key')}
+            // Keeps the browser's password manager from offering the admin's login here.
+            autoComplete="new-password"
+            spellCheck={false}
+            placeholder={hasSavedKey ? editing.savedKeyHint : t('bulksmsbd_api_key_placeholder')}
+            className={`${input} font-mono pr-10`}
+          />
+          <button
+            type="button"
+            onClick={() => setReveal((r) => !r)}
+            aria-label={reveal ? t('hide') : t('show')}
+            className="absolute inset-y-0 right-0 px-3 text-gray-400 hover:text-gray-600"
+          >
+            {reveal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+        <span className="block text-[11px] text-gray-400 mt-1">
+          {hasSavedKey ? t('api_key_saved_hint') : t('api_key_encrypted_hint')}
+        </span>
+      </label>
+    </div>
+  );
+};
+
 /**
  * Describe an SMS gateway as an HTTP call, then try it.
  *
@@ -91,6 +191,9 @@ const PairEditor = ({ label, hint, pairs, onChange }) => (
  * The test defaults to a dry run, which shows the exact URL that would be called and sends
  * nothing. Getting a gateway's parameter names right is trial and error, and in live mode
  * every wrong guess costs a real message.
+ *
+ * bulksmsbd.com is the exception to "the form is the integration": its shape is built in, so
+ * it gets a three-field form and a balance check instead.
  */
 const SmsProviderPanel = () => {
   const { t } = useTranslation();
@@ -98,31 +201,48 @@ const SmsProviderPanel = () => {
   const [save, { isLoading: isSaving }] = useSaveSmsProviderMutation();
   const [remove] = useDeleteSmsProviderMutation();
   const [runTest, { isLoading: isTesting }] = useTestSmsProviderMutation();
+  const [fetchBalance] = useLazyGetSmsProviderBalanceQuery();
 
   const [editing, setEditing] = useState(null);
   const [testTo, setTestTo] = useState('');
   const [result, setResult] = useState(null);
+  // { [providerId]: { loading, balance, error } } — asked on demand, never on page load.
+  const [balances, setBalances] = useState({});
 
   const providers = data?.data ?? [];
 
-  const openNew = () => { setEditing({ ...BLANK }); setResult(null); };
-  const openEdit = (p) => {
-    setEditing({
-      ...p,
-      sender_param: p.sender_param ?? '',
-      sender_id: p.sender_id ?? '',
-      auth_params: objectToPairs(p.auth_params),
-      extra_params: objectToPairs(p.extra_params),
-      headers: objectToPairs(p.headers),
-      success_rule: { mode: 'http_status', value: '', path: '', equals: '', ...(p.success_rule ?? {}) },
-    });
+  const openNew = (driver) => {
+    // The first gateway should carry traffic without a second click; a later one should
+    // not silently take over from the gateway that already does.
+    const is_active = !providers.some((p) => p.is_active);
+    setEditing(driver === BULKSMSBD ? { ...BLANK_BULKSMSBD, is_active } : { ...BLANK, is_active });
     setResult(null);
   };
+  const openEdit = (p) => { setEditing(toForm(p)); setResult(null); };
 
   const set = (key) => (e) => setEditing((p) => ({ ...p, [key]: e.target.value }));
 
-  const payload = () => ({
+  const checkBalance = async (id) => {
+    setBalances((b) => ({ ...b, [id]: { loading: true } }));
+    try {
+      const res = await fetchBalance(id).unwrap();
+      setBalances((b) => ({ ...b, [id]: { loading: false, ...res.data } }));
+    } catch (err) {
+      setBalances((b) => ({ ...b, [id]: { loading: false, ok: false, error: showMessageInLanguage(apiErrorMessage(err, t('balance_check_failed'))) } }));
+    }
+  };
+
+  const payload = () => (editing.driver === BULKSMSBD ? {
     id: editing.id,
+    driver: BULKSMSBD,
+    name: editing.name,
+    sender_id: editing.sender_id,
+    // Blank keeps the saved key; the server never sends it back to resend.
+    api_key: editing.api_key?.trim() || null,
+    is_active: !!editing.is_active,
+  } : {
+    id: editing.id,
+    driver: 'generic',
     name: editing.name,
     api_url: editing.api_url,
     http_method: editing.http_method,
@@ -142,7 +262,8 @@ const SmsProviderPanel = () => {
     try {
       const res = await save(payload()).unwrap();
       toast.success(t('provider_saved'));
-      setEditing({ ...res.data, auth_params: objectToPairs(res.data.auth_params), extra_params: objectToPairs(res.data.extra_params), headers: objectToPairs(res.data.headers), success_rule: { mode: 'http_status', value: '', path: '', equals: '', ...(res.data.success_rule ?? {}) } });
+      // Rebuilt from the response, which also drops the typed key from memory.
+      setEditing(toForm(res.data));
     } catch (err) {
       toast.error(showMessageInLanguage(apiErrorMessage(err, t('failed_to_save_provider'))));
     }
@@ -166,14 +287,24 @@ const SmsProviderPanel = () => {
           <h3 className="text-sm font-semibold text-gray-900">{t('sms_gateways')}</h3>
           <p className="text-xs text-gray-500">{t('sms_gateways_hint')}</p>
         </div>
-        <button
-          type="button"
-          onClick={openNew}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          {t('new_provider')}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => openNew(BULKSMSBD)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            {t('add_bulksmsbd')}
+          </button>
+          <button
+            type="button"
+            onClick={() => openNew('generic')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Plus className="h-4 w-4" />
+            {t('add_custom_gateway')}
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -185,20 +316,42 @@ const SmsProviderPanel = () => {
         </p>
       ) : (
         <div className="space-y-2">
-          {providers.map((p) => (
-            <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5">
+          {providers.map((p) => {
+            const bal = balances[p.id];
+            return (
+            <div key={p.id} className="bg-white border border-gray-200 rounded-xl px-3 py-2.5 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900 flex flex-wrap items-center gap-2">
                   {p.name}
+                  {p.driver === BULKSMSBD && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">
+                      BulkSMSBD
+                    </span>
+                  )}
                   {p.is_active && (
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700">
                       {t('active')}
                     </span>
                   )}
                 </p>
-                <p className="text-[11px] text-gray-500 font-mono truncate">{p.http_method} {p.api_url}</p>
+                <p className="text-[11px] text-gray-500 font-mono truncate">
+                  {p.http_method} {p.api_url}
+                  {p.driver === BULKSMSBD && p.sender_id && <span className="text-gray-400"> · {p.sender_id}</span>}
+                </p>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                {p.supportsBalance && !p.credentialsUnreadable && (
+                  <button
+                    type="button"
+                    onClick={() => checkBalance(p.id)}
+                    disabled={bal?.loading}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gray-300 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {bal?.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : bal ? <RefreshCw className="h-3.5 w-3.5" /> : <Wallet className="h-3.5 w-3.5" />}
+                    {t('check_balance')}
+                  </button>
+                )}
                 {p.lastTestResult && (
                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${p.lastTestResult.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {p.lastTestResult.ok ? t('last_test_passed') : t('last_test_failed')}
@@ -216,12 +369,36 @@ const SmsProviderPanel = () => {
                 </button>
               </div>
             </div>
-          ))}
+
+            {p.credentialsUnreadable && (
+              <p className="text-[11px] text-red-700 bg-red-50 border border-red-100 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
+                {t('credentials_unreadable')}
+              </p>
+            )}
+
+            {bal && !bal.loading && (
+              bal.ok ? (
+                <p className="text-xs text-gray-700 flex items-center gap-1.5">
+                  <Wallet className="h-3.5 w-3.5 text-green-600" />
+                  {t('gateway_balance')}: <span className="font-semibold tabular-nums">{formatBalance(bal.balance)}</span>
+                </p>
+              ) : (
+                <p className="text-[11px] text-red-700">{t('balance_check_failed')}{bal.error ? ` — ${bal.error}` : ''}</p>
+              )
+            )}
+            </div>
+            );
+          })}
         </div>
       )}
 
       {editing && (
         <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4">
+          {editing.driver === BULKSMSBD ? (
+            <BulkSmsBdFields editing={editing} setEditing={setEditing} t={t} />
+          ) : (
+          <>
           <div className="grid sm:grid-cols-2 gap-3">
             <label className="block">
               <span className="block text-xs font-medium text-gray-700 mb-1">{t('sms_gateway_name')}</span>
@@ -271,7 +448,7 @@ const SmsProviderPanel = () => {
             </label>
           </div>
 
-          <PairEditor label={t('auth_parameters')} hint={t('auth_parameters_hint')} pairs={editing.auth_params} onChange={(v) => setEditing((p) => ({ ...p, auth_params: v }))} />
+          <PairEditor label={t('auth_parameters')} hint={`${t('auth_parameters_hint')} ${t('auth_parameters_masked_hint')}`} pairs={editing.auth_params} onChange={(v) => setEditing((p) => ({ ...p, auth_params: v }))} />
           <PairEditor label={t('extra_parameters')} pairs={editing.extra_params} onChange={(v) => setEditing((p) => ({ ...p, extra_params: v }))} />
           <PairEditor label={t('custom_headers')} pairs={editing.headers} onChange={(v) => setEditing((p) => ({ ...p, headers: v }))} />
 
@@ -306,6 +483,8 @@ const SmsProviderPanel = () => {
               )}
             </div>
           </div>
+          </>
+          )}
 
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={!!editing.is_active} onChange={(e) => setEditing((p) => ({ ...p, is_active: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/40" />
@@ -343,6 +522,12 @@ const SmsProviderPanel = () => {
                   <>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('would_call')}</p>
                     <pre className="text-[11px] font-mono text-gray-800 whitespace-pre-wrap break-all">{result.request?.preview}</pre>
+                    {/* A POST preview line has no parameters in it; the body is the part worth checking. Keys arrive masked. */}
+                    {result.request?.method === 'POST' && (
+                      <pre className="text-[11px] font-mono text-gray-600 whitespace-pre-wrap break-all">
+                        {JSON.stringify(result.request.params, null, 2)}
+                      </pre>
+                    )}
                     {Object.keys(result.request?.headers ?? {}).length > 0 && (
                       <pre className="text-[11px] font-mono text-gray-600 whitespace-pre-wrap break-all">
                         {JSON.stringify(result.request.headers, null, 2)}

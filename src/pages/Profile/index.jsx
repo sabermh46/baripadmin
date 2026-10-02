@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../hooks';
 import { useGetGoogleLinkTicketMutation, useSetPasswordMutation, useUploadAvatarMutation } from '../../store/api/authApi';
 import { useSearchParams } from 'react-router-dom';
+import { markExternalTripStart, returnFromExternalTrip } from '../../utils/externalRedirect';
 import { setUser } from '../../store/slices/authSlice';
 import push from '../../services/push';
 import Btn from '../../components/common/Button';
@@ -82,6 +83,8 @@ const ProfilePage = () => {
   const linkGoogle = async () => {
     try {
       const { ticket } = await getGoogleLinkTicket().unwrap();
+      // Recorded so the return can jump back over Google's pages (utils/externalRedirect.js).
+      markExternalTripStart();
       window.location.assign(`${import.meta.env.VITE_APP_API_URL}/auth/google?link=${encodeURIComponent(ticket)}`);
     } catch (error) {
       toast.error(showMessageInLanguage(apiErrorMessage(error, 'Could not start Google linking')));
@@ -93,6 +96,10 @@ const ProfilePage = () => {
   useEffect(() => {
     const result = searchParams.get('google');
     if (!result) return;
+
+    // Back from Google: jump over its pages to the profile entry the trip started from. That
+    // landing reloads with this same ?google=… and the trip record gone, so it continues below.
+    if (returnFromExternalTrip(`/profile?google=${encodeURIComponent(result)}`)) return;
 
     const messages = {
       linked: ['success', 'Google account linked. You can now sign in with Google.'],

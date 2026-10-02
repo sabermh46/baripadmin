@@ -46,8 +46,9 @@ const TYPE_STYLE = {
     system_common: { Icon: Bell, className: 'bg-slate-100 text-slate-600' },
 };
 
-// The header is fixed over the scrolling <main>, so "stuck to the top" has to mean just
-// below it. Same height as the h-header utility in index.css.
+// No header offset needed: <main> carries `pt-header`, and sticky insets are measured from
+// inside that padding, so `top-0` already parks the toolbar right under the fixed header
+// (the same as FlatDetails' sticky tabs). Adding the header height again left a gap.
 const STICKY_TOP = 'top-[calc(env(safe-area-inset-top,0px))]';
 
 const IconButton = ({ label, onClick, children, danger = false, disabled = false }) => (

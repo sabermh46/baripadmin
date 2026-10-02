@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { apiErrorMessage } from '../../utils/apiError';
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useGoogleLoginMutation, useLoginMutation } from "../../store/api/authApi";
@@ -10,6 +10,7 @@ import TextField from "../../components/common/TextField";
 import SmartFrom from "../../components/common/SmartForm";
 import { ChevronLeft } from "lucide-react";
 import { GOOGLE_ERROR_MESSAGES, safeInternalPath, startGoogleSignIn } from "../../utils/googleAuth";
+import { returnFromExternalTrip } from "../../utils/externalRedirect";
 
 export default function LoginPage() {
 
@@ -19,6 +20,15 @@ export default function LoginPage() {
     const code = new URLSearchParams(window.location.search).get('error');
     return code ? GOOGLE_ERROR_MESSAGES[code] || 'An error occurred. Please try again.' : "";
   });
+
+  // A failed Google redirect lands here (/login?error=…) with Google's pages behind it in
+  // history. Jump back over them to the login entry the trip started from, and show the
+  // error there. Only runs when a trip was recorded, and consumes the record, so it cannot
+  // repeat on the landing load.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('error');
+    if (code) returnFromExternalTrip(`/login?error=${encodeURIComponent(code)}`);
+  }, []);
   const [loginMutation, { isLoading }] = useLoginMutation();
   const [googleLogin] = useGoogleLoginMutation();
   const dispatch = useAppDispatch();

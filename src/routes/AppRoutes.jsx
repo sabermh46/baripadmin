@@ -50,8 +50,11 @@ const LoansPage            = lazyWithRetry(() => import('../pages/Loans'));
 const LandingPageEditor    = lazyWithRetry(() => import('../pages/Admin/LandingPageEditor'));
 const EmailTemplates       = lazyWithRetry(() => import('../pages/Admin/EmailTemplates'));
 const SmsAllowances        = lazyWithRetry(() => import('../pages/Admin/SmsAllowances'));
+const SupportPage          = lazyWithRetry(() => import('../pages/Support'));
+const SupportChannels      = lazyWithRetry(() => import('../pages/Admin/SupportChannels'));
 const DeveloperPanel       = lazyWithRetry(() => import('../pages/Developer'));
 const DeveloperPushEvents  = lazyWithRetry(() => import('../pages/Developer/PushNotifications'));
+const DeveloperAppFeeNotifications = lazyWithRetry(() => import('../pages/Developer/AppFeeNotifications'));
 
 
 
@@ -411,6 +414,18 @@ const AppRoutes = () => {
                 <SmsAllowances />
               </RoleGuard>
             } />
+            {/* Everyone can ask for help; the paywall in Layout lets this page through too. */}
+            <Route path="support" element={
+              <RoleGuard roles={ALL_ROLES}>
+                <SupportPage />
+              </RoleGuard>
+            } />
+            {/* Same rule as the API: web_owner / developer, or staff holding support.manage. */}
+            <Route path="admin/support-channels" element={
+              <RoleGuard roles={['web_owner', 'developer', 'staff']} permissions={['support.manage']}>
+                <SupportChannels />
+              </RoleGuard>
+            } />
 
             {/* The developer panel. Operational surface only — configuration, counts and
                 health, never business data. Staff are deliberately absent: these screens
@@ -425,6 +440,11 @@ const AppRoutes = () => {
             <Route path="developer/push-notifications" element={
               <RoleGuard roles={['developer', 'web_owner']}>
                 <DeveloperPushEvents />
+              </RoleGuard>
+            } />
+            <Route path="developer/app-fee-notifications" element={
+              <RoleGuard roles={['developer', 'web_owner']}>
+                <DeveloperAppFeeNotifications />
               </RoleGuard>
             } />
         </Route>
