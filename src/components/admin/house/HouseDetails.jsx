@@ -16,6 +16,7 @@ import FlatForm from '../../flats/FlatForm';
 import HouseFlatsSection from './HouseFlatsSection';
 import HouseRentersSection from './HouseRentersSection';
 import HouseCaretakersSection from './HouseCaretakersSection';
+import HouseBuilding3D from './HouseBuilding3D';
 import RenterForm from '../../renters/RenterForm';
 import AssignRenterModal from '../../flats/AssignRenterModal';
 import { useDeleteRenterMutation } from '../../../store/api/renterApi';
@@ -73,7 +74,7 @@ const HouseDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { hasPermission, isWebOwner, user } = useAuth();
+  const { hasPermission, isWebOwner, isHouseOwner, user } = useAuth();
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [addFlatOpen, setAddFlatOpen] = useState(false);
@@ -153,6 +154,9 @@ const HouseDetails = () => {
   const ownsThisHouse = house.owner?.id === user?.id;
   const canEdit = can('houses.edit') || (ownsThisHouse && can('houses.edit.own'));
   const canDelete = can('houses.delete');
+  // The flats drawn as the building: for the owner, since it is their building. Only when
+  // there are flats to draw (the component draws nothing otherwise).
+  const showBuilding = isHouseOwner && (house?.flats?.length ?? 0) > 0;
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto">
@@ -261,13 +265,15 @@ const HouseDetails = () => {
             value={money(fin.expensesThisYear)}
             sub={t('net_amount', { amount: money(fin.netThisYear) })}
           />
-          <Stat
-            icon={Wallet}
-            tone={fin.outstanding > 0 ? 'danger' : 'neutral'}
-            label={t('outstanding_rent')}
-            value={money(fin.outstanding)}
-            sub={t('overdue_count', { count: fin.overdueCount ?? 0 })}
-          />
+          {!showBuilding && (
+            <Stat
+              icon={Wallet}
+              tone={fin.outstanding > 0 ? 'danger' : 'neutral'}
+              label={t('outstanding_rent')}
+              value={money(fin.outstanding)}
+              sub={t('overdue_count', { count: fin.overdueCount ?? 0 })}
+            />
+          )}
           <Stat
             icon={Banknote}
             tone="info"
@@ -275,20 +281,25 @@ const HouseDetails = () => {
             value={money(fin.monthlyPotential)}
             sub={t('if_every_flat_let')}
           />
+          {showBuilding && <Stat icon={ShieldCheck} label={t('caretakers')} value={stats.caretakers ?? 0} />}
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-          <Stat
-            icon={Users}
-            tone={stats.occupancyRate >= 80 ? 'positive' : stats.occupancyRate > 0 ? 'warning' : 'neutral'}
-            label={t('occupancy')}
-            value={`${stats.occupancyRate ?? 0}%`}
-            sub={t('occupied_of_total', { occupied: stats.occupiedFlats ?? 0, total: stats.totalFlats ?? 0 })}
-          />
-          <Stat icon={Building2} label={t('total_flats')} value={stats.totalFlats ?? 0} />
-          <Stat icon={Building2} tone={stats.vacantFlats > 0 ? 'warning' : 'neutral'} label={t('vacant')} value={stats.vacantFlats ?? 0} />
-          <Stat icon={ShieldCheck} label={t('caretakers')} value={stats.caretakers ?? 0} />
-        </div>
+        {/* Occupancy, flat count, vacancies and rent owed are what the building view shows,
+            flat by flat, so where it is drawn these cards would only repeat it. */}
+        {!showBuilding && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+            <Stat
+              icon={Users}
+              tone={stats.occupancyRate >= 80 ? 'positive' : stats.occupancyRate > 0 ? 'warning' : 'neutral'}
+              label={t('occupancy')}
+              value={`${stats.occupancyRate ?? 0}%`}
+              sub={t('occupied_of_total', { occupied: stats.occupiedFlats ?? 0, total: stats.totalFlats ?? 0 })}
+            />
+            <Stat icon={Building2} label={t('total_flats')} value={stats.totalFlats ?? 0} />
+            <Stat icon={Building2} tone={stats.vacantFlats > 0 ? 'warning' : 'neutral'} label={t('vacant')} value={stats.vacantFlats ?? 0} />
+            <Stat icon={ShieldCheck} label={t('caretakers')} value={stats.caretakers ?? 0} />
+          </div>
+        )}
 
         {(house.metadata?.description || house.metadata?.amenities?.length > 0) && (
           <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
@@ -304,6 +315,12 @@ const HouseDetails = () => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {showBuilding && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <HouseBuilding3D house={house} canCustomize={canEdit} embedded />
           </div>
         )}
       </section>
