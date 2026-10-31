@@ -216,6 +216,50 @@ body {
   animation-delay: 1s;
 }
 
+/* Landing showcase (pages/PublicHome/Showcase.jsx): when the scroll hands over to the next tab,
+   the copy and the mockup slide in from opposite sides. The stage and the teal panel both clip
+   their overflow, so the start offset never widens the page. */
+@keyframes showcase-from-left {
+  from { opacity: 0; transform: translateX(-64px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes showcase-from-right {
+  from { opacity: 0; transform: translateX(64px); }
+  to { opacity: 1; transform: none; }
+}
+
+.animate-showcase-from-left {
+  animation: showcase-from-left 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-showcase-from-right {
+  animation: showcase-from-right 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-showcase-from-left,
+  .animate-showcase-from-right { animation: none; }
+}
+
+/* The showcase is pinned at one screen tall, so on a short screen something has to give.
+   The mockup shrinks to fit on its own; these drop the secondary copy before it gets too small. */
+@media (max-height: 700px) {
+  .showcase-short-hide { display: none; }
+}
+
+@media (max-width: 1023.98px) and (max-height: 640px) {
+  .showcase-compact-hide { display: none; }
+}
+
+/* The other way round: on a tall phone the mockup's panel has more height than the mockup, and
+   the teal showed through as an empty band. The panel is a size container (FitBox), so a mockup
+   can add detail rows as the room grows — `room-380:flex` shows a row once the panel is 380px tall. */
+@custom-variant room-340 (@container showcase (min-height: 340px));
+@custom-variant room-380 (@container showcase (min-height: 380px));
+@custom-variant room-420 (@container showcase (min-height: 420px));
+@custom-variant room-460 (@container showcase (min-height: 460px));
+
 input:disabled {
   color: gray;
   background: #c9c9c9;

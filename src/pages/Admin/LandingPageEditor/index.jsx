@@ -208,6 +208,72 @@ const FeaturesEditor = ({ data, onChange }) => {
   );
 };
 
+// One entry per mockup drawn in PublicHome/Showcase.jsx (its MOCKUPS map) — keep the two in step.
+const MOCKUP_LABELS = {
+  overview: 'Overview — totals + this month\'s rent',
+  receipt: 'Rent receipt email',
+  status: 'Paid / due list',
+  reminder: 'Renter profile + reminder',
+  expenses: 'Expense breakdown',
+  devices: 'Phone + laptop',
+};
+
+const ShowcaseEditor = ({ data, onChange }) => {
+  const setField = (key, val) => onChange({ ...data, [key]: val });
+  const updateTab = (idx, key, val) => {
+    const tabs = [...(data.tabs || [])];
+    tabs[idx] = { ...tabs[idx], [key]: val };
+    setField('tabs', tabs);
+  };
+  const addTab = () => setField('tabs', [...(data.tabs || []), { mockup: 'overview', tab: '', title: '', subtitle: '', points: [] }]);
+  const removeTab = (idx) => setField('tabs', (data.tabs || []).filter((_, i) => i !== idx));
+  return (
+    <div>
+      <Field
+        label="Section name"
+        hint="Not shown on the page — each tab's headline is the heading. Screen readers announce this as the name of the tab list."
+        value={data.title}
+        onChange={(v) => setField('title', v)}
+      />
+      <Field label="Sample-data note (below the section)" value={data.sample_note} onChange={(v) => setField('sample_note', v)} />
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Tabs</label>
+        {(data.tabs || []).map((tab, idx) => (
+          <div key={idx} className="border border-gray-200 rounded-lg p-4 mb-3 bg-gray-50">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-semibold text-gray-500 uppercase">Tab {idx + 1}</span>
+              <button onClick={() => removeTab(idx)} className="p-1 text-red-400 hover:text-red-600">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+            <label className="block text-xs text-gray-500 mb-1">Mockup shown beside the text</label>
+            <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary/40" value={tab.mockup ?? 'overview'} onChange={(e) => updateTab(idx, 'mockup', e.target.value)}>
+              {Object.entries(MOCKUP_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <input type="text" placeholder="Tab label" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-primary/40" value={tab.tab ?? ''} onChange={(e) => updateTab(idx, 'tab', e.target.value)} />
+            <input type="text" placeholder="Headline" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-primary/40" value={tab.title ?? ''} onChange={(e) => updateTab(idx, 'title', e.target.value)} />
+            <textarea placeholder="Subtitle" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-y min-h-[56px] mb-2 focus:outline-none focus:ring-2 focus:ring-primary/40" value={tab.subtitle ?? ''} onChange={(e) => updateTab(idx, 'subtitle', e.target.value)} />
+            <StringListEditor label="Points" items={tab.points || []} onChange={(v) => updateTab(idx, 'points', v)} />
+            {/* The reminder card's heading and pill are claims about the product, so they are copy,
+                not part of the drawing — editable here alongside the points. */}
+            {tab.mockup === 'reminder' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input type="text" placeholder="Reminder card heading" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={tab.mockup_label ?? ''} onChange={(e) => updateTab(idx, 'mockup_label', e.target.value)} />
+                <input type="text" placeholder="Reminder card pill (blank to hide)" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" value={tab.mockup_badge ?? ''} onChange={(e) => updateTab(idx, 'mockup_badge', e.target.value)} />
+              </div>
+            )}
+          </div>
+        ))}
+        <button onClick={addTab} className="flex items-center gap-1 text-sm text-primary hover:text-primary-700 mt-1">
+          <Plus className="w-4 h-4" /> Add tab
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const PersonasEditor = ({ data, onChange }) => {
   const setField = (key, val) => onChange({ ...data, [key]: val });
   const updateItem = (idx, key, val) => {
@@ -466,6 +532,20 @@ const CtaEditor = ({ data, onChange }) => {
   );
 };
 
+// The video file and its chapters are not here: they are tied to the video's own timing, so they
+// live with it (public/media/promo, PublicHome/PromoVideo.jsx). Only the words around it are.
+const PromoVideoEditor = ({ data, onChange }) => {
+  const setField = (key, val) => onChange({ ...data, [key]: val });
+  return (
+    <div>
+      <Field label="Badge" value={data.badge} onChange={(v) => setField('badge', v)} />
+      <Field label="Title" value={data.title} onChange={(v) => setField('title', v)} />
+      <Field label="Subtitle" value={data.subtitle} onChange={(v) => setField('subtitle', v)} textarea />
+      <Field label="Sound button label (shown while the video plays muted)" value={data.sound_label} onChange={(v) => setField('sound_label', v)} />
+    </div>
+  );
+};
+
 const FooterEditor = ({ data, onChange }) => {
   const setField = (key, val) => onChange({ ...data, [key]: val });
   return (
@@ -483,8 +563,10 @@ const FooterEditor = ({ data, onChange }) => {
 const SECTION_EDITORS = {
   nav:          { label: 'Navigation',      Editor: NavEditor },
   hero:         { label: 'Hero',            Editor: HeroEditor },
-  why:          { label: 'Why Section',     Editor: WhyEditor },
+  promo_video:  { label: 'Promo Video',     Editor: PromoVideoEditor },
+  why:         { label: 'Why Section',     Editor: WhyEditor },
   features:     { label: 'Features',        Editor: FeaturesEditor },
+  showcase:     { label: 'Showcase',        Editor: ShowcaseEditor },
   personas:     { label: 'Personas',        Editor: PersonasEditor },
   how_it_works: { label: 'How It Works',    Editor: HowItWorksEditor },
   pricing:      { label: 'Pricing',         Editor: PricingEditor },
@@ -494,7 +576,7 @@ const SECTION_EDITORS = {
   footer:       { label: 'Footer',          Editor: FooterEditor },
 };
 
-const SECTION_ORDER = ['nav', 'hero', 'why', 'features', 'personas', 'how_it_works', 'pricing', 'demo_slider', 'testimonials', 'cta', 'footer'];
+const SECTION_ORDER = ['nav', 'hero', 'promo_video', 'why', 'features', 'showcase', 'personas', 'how_it_works', 'pricing', 'demo_slider', 'testimonials', 'cta', 'footer'];
 
 /** Kept out of the strip's own overflow so it stays pinned while the tabs move under it. */
 const ScrollArrow = ({ direction, disabled, onClick }) => (

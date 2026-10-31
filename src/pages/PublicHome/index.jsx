@@ -29,9 +29,10 @@ import {
   Heart,
   Award,
 } from 'lucide-react';
-import LanguageSwitcher from '../../components/common/LanguageSwitcher';
 import TkSymbol from '../../components/common/TkSymbol';
 import { useGetLandingPageQuery } from '../../store/api/landingApi';
+import Showcase from './Showcase';
+import PromoVideo from './PromoVideo';
 
 // Icon registry — maps string names stored in DB to Lucide components
 const ICON_MAP = {
@@ -192,6 +193,8 @@ const PublicHome = () => {
   const hero         = lp.hero         || {};
   const why          = lp.why          || {};
   const features     = lp.features     || {};
+  const showcase     = lp.showcase     || {};
+  const promoVideo   = lp.promo_video  || {};
   const personas     = lp.personas     || {};
   const howItWorks   = lp.how_it_works || {};
   const pricing      = lp.pricing      || {};
@@ -209,11 +212,12 @@ const PublicHome = () => {
     <div className="min-h-screen bg-linear-to-b from-gray-50 via-white to-gray-50">
 
       {/* Navigation Bar */}
-      <nav className="sticky top-0 bg-white shadow-md z-50 py-4">
-        <div className="max-w-7xl mx-auto px-5 flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2">
+      <nav data-landing-nav className="sticky top-0 bg-white shadow-md z-50 py-4">
+        <div className="max-w-7xl mx-auto px-5 flex justify-between items-center gap-3">
+          <Link to="/" className="flex items-center gap-2 shrink-0">
             <img src={appLogo} alt="Bari Porichalona Logo" className="h-full w-auto max-h-12 p-0" />
-            <h1 className="text-sm md:text-xl font-extrabold bg-clip-text text-transparent bg-linear-to-r from-primary-600 via-primary-400 to-red-400 font-oswald">
+            {/* Under 360px the name and both buttons do not fit one row; the logo carries the brand there. */}
+            <h1 className="max-[359px]:hidden whitespace-nowrap text-sm md:text-xl font-extrabold bg-clip-text text-transparent bg-linear-to-r from-primary-600 via-primary-400 to-red-400 font-oswald">
               {nav.brand_name || t('bari_porichalona')}
             </h1>
           </Link>
@@ -234,7 +238,7 @@ const PublicHome = () => {
             }
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {isAuthenticated ? (
               <>
                 <span className="text-gray-600 font-medium hidden sm:inline">
@@ -244,7 +248,6 @@ const PublicHome = () => {
               </>
             ) : (
               <>
-                <LanguageSwitcher />
                 <Btn type="outline" href="/login">{nav.cta_login || t('landing_login')}</Btn>
                 <Btn type="primary" href="/signup">{nav.cta_signup || t('landing_signup')}</Btn>
               </>
@@ -418,6 +421,9 @@ const PublicHome = () => {
         </div>
       </section>
 
+      {/* One-minute promo video */}
+      <PromoVideo data={promoVideo} />
+
       {/* Why Section */}
       <section className="py-20 px-5 bg-white/80">
         <div className="max-w-6xl mx-auto">
@@ -478,6 +484,9 @@ const PublicHome = () => {
           })}
         </div>
       </section>
+
+      {/* Feature showcase (the client's flyers, rebuilt) */}
+      <Showcase data={showcase} />
 
       {/* Personas Section */}
       <section className="py-24 px-5 bg-linear-to-b from-gray-50 to-white">
