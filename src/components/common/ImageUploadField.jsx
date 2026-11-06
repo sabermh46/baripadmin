@@ -18,7 +18,7 @@ import { formatBytes } from '../../utils/imageOptimizer';
  * @param {object}   props
  * @param {string}   props.label
  * @param {string}   [props.name]         input name, for plain-FormData forms
- * @param {string}   [props.preset]       'avatar' | 'document' | 'landing'
+ * @param {string}   [props.preset]       'avatar' | 'photo' | 'document' | 'landing'
  * @param {Function} props.onChange       (File|null) => void
  * @param {string}   [props.storedUrl]    an already-saved image, rendered via ProtectedImage
  * @param {string}   [props.aspect]       'wide' (default) | 'square'

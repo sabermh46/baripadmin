@@ -10,11 +10,53 @@ import {
   usePreviewEmailTemplateMutation,
 } from '../../../store/api/emailTemplateApi';
 import { apiErrorMessage } from '../../../utils/apiError';
+import TemplateList from './TemplateList';
 
 const BRAND = '#f9873c';
 
+// The `sms` slot of a template is edited on the SMS templates page, so this page works on
+// every other slot only, and saves and resets only those.
+const emailSlots = (template) =>
+  Object.fromEntries(Object.entries(template.slots).filter(([, s]) => s.type !== 'sms'));
+
+const emailCustomised = (template) => Object.values(emailSlots(template)).some((s) => s.customised);
+
+// The emails are a fixed 600px table plus the layout's 12px gutters. Narrower than that, the
+// preview is scaled down to fit rather than cropped on the right, as an inbox app does.
+const EMAIL_WIDTH = 624;
+
+/**
+ * The rendered email in an iframe, not a div: the email's table layout and inline styles
+ * would otherwise inherit from the app's stylesheet and preview something the recipient will
+ * never see. `sandbox` with no permissions blocks scripts.
+ */
+const EmailFrame = ({ html }) => {
+  const boxRef = useRef(null);
+  const [zoom, setZoom] = useState(1);
+
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return undefined;
+    const ro = new ResizeObserver(([entry]) => {
+      setZoom(Math.min(1, Math.round((entry.contentRect.width / EMAIL_WIDTH) * 100) / 100));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const doc = html
+    ? `<style>html{zoom:${zoom}}</style>${html}`
+    : '<p style="font-family:sans-serif;color:#9ca3af;padding:16px">Loading preview…</p>';
+
+  return (
+    <div ref={boxRef}>
+      <iframe title="Email preview" sandbox="" srcDoc={doc} className="block w-full h-[560px] bg-white" />
+    </div>
+  );
+};
+
 const seed = (template) =>
-  Object.fromEntries(Object.entries(template.slots).map(([k, s]) => [k, s.value]));
+  Object.fromEntries(Object.entries(emailSlots(template)).map(([k, s]) => [k, s.value]));
 
 /**
  * The fields and the preview for one template.
@@ -97,7 +139,7 @@ const TemplateEditor = ({ template, onSaved }) => {
   const handleReset = async () => {
     if (!window.confirm(`Restore "${template.name}" to the default wording? Your changes to it will be lost.`)) return;
     try {
-      await resetTemplate(template.id).unwrap();
+      await resetTemplate({ id: template.id, channel: 'email' }).unwrap();
       toast.success(`"${template.name}" restored to default.`);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Could not reset the template.'));
@@ -105,23 +147,25 @@ const TemplateEditor = ({ template, onSaved }) => {
   };
 
   return (
-    <>
-      <section className="flex-1 min-w-0">
+    // Editor and preview side by side only where both fit; below that the preview goes under
+    // the editor. minmax(0, 1fr) keeps the preview from squeezing the editor.
+    <div className="min-w-0 grid gap-4 items-start 2xl:grid-cols-[minmax(0,1fr)_420px]">
+      <section className="min-w-0">
         <div className="bg-white border border-gray-200 rounded-xl">
-          <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
+          <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 basis-64">
               <h2 className="font-bold text-gray-800 flex items-center gap-2">
                 <PencilLine size={16} style={{ color: BRAND }} /> {template.name}
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">{template.description}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               <button
                 type="button"
                 onClick={handleReset}
-                disabled={isResetting || !template.customised}
-                title={template.customised ? 'Restore the original wording' : 'This template is already the default'}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={isResetting || !emailCustomised(template)}
+                title={emailCustomised(template) ? 'Restore the original wording' : 'This template is already the default'}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isResetting ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
                 Reset to default
@@ -130,7 +174,7 @@ const TemplateEditor = ({ template, onSaved }) => {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving || !isDirty}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold whitespace-nowrap rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: BRAND }}
               >
                 {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -139,7 +183,7 @@ const TemplateEditor = ({ template, onSaved }) => {
             </div>
           </div>
 
-          <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
+          <div className="px-4 sm:px-5 py-3 bg-gray-50 border-b border-gray-100">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 flex items-center gap-1.5 mb-2">
               <Braces size={12} /> Variables — click to insert at the cursor
             </p>
@@ -158,8 +202,8 @@ const TemplateEditor = ({ template, onSaved }) => {
             </div>
           </div>
 
-          <div className="p-5 space-y-4">
-            {Object.entries(template.slots).map(([slot, meta]) => {
+          <div className="p-4 sm:p-5 space-y-4">
+            {Object.entries(emailSlots(template)).map(([slot, meta]) => {
               const value = draft[slot] ?? '';
               const error = errors[slot];
               const changedFromDefault = value !== meta.default;
@@ -206,8 +250,8 @@ const TemplateEditor = ({ template, onSaved }) => {
         </div>
       </section>
 
-      <section className="xl:w-[420px] shrink-0">
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden xl:sticky xl:top-4">
+      <section className="min-w-0">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden 2xl:sticky 2xl:top-4">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
               <Eye size={15} style={{ color: BRAND }} /> Preview
@@ -224,22 +268,17 @@ const TemplateEditor = ({ template, onSaved }) => {
           {preview?.subject && (
             <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
               <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Subject</p>
-              <p className="text-sm text-gray-800 mt-0.5 break-words">{preview.subject}</p>
+              <p className="text-sm text-gray-800 mt-0.5 wrap-break-word">{preview.subject}</p>
             </div>
           )}
 
           {/* An iframe, not a div: the email's own table layout and inline styles would
               otherwise inherit from the app's stylesheet and preview something the recipient
               will never see. `sandbox` with no permissions blocks scripts. */}
-          <iframe
-            title="Email preview"
-            sandbox=""
-            srcDoc={preview?.html || '<p style="font-family:sans-serif;color:#9ca3af;padding:16px">Loading preview…</p>'}
-            className="w-full h-[560px] bg-white"
-          />
+          <EmailFrame html={preview?.html} />
         </div>
       </section>
-    </>
+    </div>
   );
 };
 
@@ -275,8 +314,8 @@ const EmailTemplatesPage = () => {
 
   return (
     <div className="pb-6">
-      <div className="flex items-center gap-3 mb-5">
-        <Mail style={{ color: BRAND }} size={22} />
+      <div className="flex items-start gap-3 mb-5">
+        <Mail className="shrink-0 mt-0.5" style={{ color: BRAND }} size={22} />
         <div>
           <h1 className="text-xl font-bold text-gray-800">Email templates</h1>
           <p className="text-xs text-gray-500">
@@ -285,35 +324,13 @@ const EmailTemplatesPage = () => {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4">
-        <aside className="lg:w-60 shrink-0">
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            {templates.map((tpl) => {
-              const active = selected?.id === tpl.id;
-              return (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => setSelectedId(tpl.id)}
-                  className={`w-full text-left px-4 py-3 border-b border-gray-100 last:border-b-0 transition-colors ${
-                    active ? 'bg-orange-50' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className={`text-sm ${active ? 'font-semibold text-orange-800' : 'text-gray-800'}`}>
-                      {tpl.name}
-                    </span>
-                    {tpl.customised && (
-                      <span className="shrink-0 mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700 bg-orange-100 border border-orange-200 rounded px-1.5 py-0.5">
-                        Edited
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </aside>
+      <div className="grid gap-4 items-start lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <TemplateList
+          templates={templates}
+          selectedId={selected?.id}
+          onSelect={setSelectedId}
+          isEdited={emailCustomised}
+        />
 
         {selected && (
           <TemplateEditor

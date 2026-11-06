@@ -25,16 +25,24 @@ export const emailTemplateApi = baseApi.injectEndpoints({
       invalidatesTags: ['EmailTemplate'],
     }),
 
+    // `channel` ('email' | 'sms') resets only that screen's slots of the template; the SMS
+    // text and the email copy live in the same stored template.
     resetEmailTemplate: builder.mutation({
-      query: (id) => ({ url: `/admin/email-templates/${id}/reset`, method: 'POST' }),
+      query: ({ id, channel }) => ({
+        url: `/admin/email-templates/${id}/reset`,
+        method: 'POST',
+        data: { channel },
+      }),
       invalidatesTags: ['EmailTemplate'],
     }),
 
+    // channel 'sms' returns { text, encoding, characters, segments, perSegment } instead of
+    // the rendered email: the cost is measured by the same code that charges the allowance.
     previewEmailTemplate: builder.mutation({
-      query: ({ id, slots }) => ({
+      query: ({ id, slots, channel }) => ({
         url: `/admin/email-templates/${id}/preview`,
         method: 'POST',
-        data: { slots },
+        data: { slots, channel },
       }),
       transformResponse: (response) => response?.data ?? null,
     }),

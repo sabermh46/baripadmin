@@ -6,6 +6,8 @@ import { Upload, X, CheckCircle } from 'lucide-react';
 import Modal from '../common/Modal';
 import Btn from '../common/Button';
 import ProtectedImage from '../common/ProtectedImage';
+import ImageUploadField from '../common/ImageUploadField';
+import DocumentUploadField from '../common/DocumentUploadField';
 import { toast } from 'react-toastify';
 import { optimizeImage, optimizeErrorMessage, formatBytes } from '../../utils/imageOptimizer';
 
@@ -15,6 +17,8 @@ const UpdateRenterModal = ({ isOpen, onClose, renter, onSuccess }) => {
   // File objects for newly selected images (null = keep existing)
   const [nidFrontImage, setNidFrontImage] = useState(null);
   const [nidBackImage, setNidBackImage] = useState(null);
+  const [photo, setPhoto] = useState(null);
+  const [agreement, setAgreement] = useState(null);
   // Local blob preview URLs for newly selected files only
   const [previewFront, setPreviewFront] = useState(null);
   const [previewBack, setPreviewBack] = useState(null);
@@ -91,6 +95,8 @@ const UpdateRenterModal = ({ isOpen, onClose, renter, onSuccess }) => {
       });
       if (nidFrontImage) formData.append('nidFrontImage', nidFrontImage);
       if (nidBackImage) formData.append('nidBackImage', nidBackImage);
+      if (photo) formData.append('photo', photo);
+      if (agreement) formData.append('agreement', agreement);
       await updateRenter({ id: renter.id, formData }).unwrap();
       onSuccess();
     } catch (error) {
@@ -246,6 +252,25 @@ const UpdateRenterModal = ({ isOpen, onClose, renter, onSuccess }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {renderImageSlot('front')}
           {renderImageSlot('back')}
+        </div>
+
+        {/* Photo and agreement, under the same access rule as the NID scans. */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ImageUploadField
+            label="Renter Photo"
+            name="photo"
+            preset="photo"
+            aspect="square"
+            storedUrl={renter?.photoUrl}
+            onChange={setPhoto}
+          />
+          <DocumentUploadField
+            label="Rental Agreement"
+            storedUrl={renter?.agreementUrl}
+            downloadName={`agreement_${renter?.name || 'renter'}`}
+            onChange={setAgreement}
+            hint="PDF or photo, up to 10 MB."
+          />
         </div>
 
         {/* Footer */}

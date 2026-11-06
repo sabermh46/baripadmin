@@ -157,6 +157,37 @@ const ViewRenterModal = ({ isOpen, onClose, renterId }) => {
             </div>
           </div>
 
+          {/* Photo and rental agreement. The agreement is offered as a download: it is often
+              a PDF, which ProtectedImage cannot show. */}
+          {(renter.photoUrl || renter.agreementUrl) && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-medium text-gray-900 mb-3">Photo &amp; Agreement</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {renter.photoUrl && (
+                  <div className="border rounded-lg p-3 bg-white">
+                    <p className="text-xs text-gray-500 mb-2">Renter Photo</p>
+                    <ProtectedImage src={renter.photoUrl} alt={renter.name} className="w-full h-48 object-contain rounded" />
+                  </div>
+                )}
+                {renter.agreementUrl && (
+                  <div className="border rounded-lg p-3 bg-white flex flex-col">
+                    <p className="text-xs text-gray-500 mb-2">Rental Agreement</p>
+                    <div className="flex-1 flex flex-col items-center justify-center gap-3 py-6">
+                      <FileText className="h-10 w-10 text-gray-400" />
+                      <button
+                        type="button"
+                        onClick={() => downloadProtectedFile(renter.agreementUrl, `agreement_${renter.name}.${renter.agreementUrl.split('.').pop()}`)}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border rounded-lg text-sm shadow-sm hover:bg-gray-100"
+                      >
+                        <Download className="h-4 w-4 text-gray-600" /> Download
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Assigned Flats */}
           {flats.length > 0 && (
             <div className="bg-gray-50 p-4 rounded-lg">

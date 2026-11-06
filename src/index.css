@@ -37,6 +37,12 @@ html {
   --color-background: #f2f2f2;
   --color-subdued: #64748b;
   --color-text: #54575e;
+
+  /* Landing page text. Headings were near-black (#111827) at extra-bold, which in Anek Bangla
+     reads heavy; `ink` is a dark slate leaning towards the brand teal, `ink-soft` the body
+     copy under it. */
+  --color-ink: #1f2d33;
+  --color-ink-soft: #56656d;
 }
 
 /* Apply the colors to Tailwind */
@@ -67,6 +73,8 @@ html {
   --color-background: var(--color-background);
   --color-subdued: var(--color-subdued);
   --color-text: var(--color-text);
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
 
   --font-roboto: 'Roboto', sans-serif;
   --font-poppins: 'Poppins', sans-serif;

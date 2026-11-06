@@ -65,6 +65,21 @@ export const houseOwnerAnalyticsApi = baseApi.injectEndpoints({
     }),
 
     /**
+     * The Rent Collection page (dashboard "view all"): a year of rent month by month, and one
+     * month flat by flat when `month` is given. Same tags as the dashboard, so recording a
+     * payment or raising a bill refreshes it.
+     */
+    getRentCollection: builder.query({
+      query: ({ year, month, houseId }) => ({
+        url: '/house-owner-analytics/rent-collection',
+        method: 'GET',
+        params: { year, ...(month ? { month } : {}), ...(houseId ? { house_id: houseId } : {}) },
+      }),
+      transformResponse: (response) => response.data,
+      providesTags: ['HouseOwnerAnalytics', 'House', 'Flat', 'Renter', 'Payment', 'AdvancePayment'],
+    }),
+
+    /**
      * Recompute and return the dashboard as it stands right now.
      *
      * Not used by the refresh button, which simply refetches the query above — there is no
@@ -85,5 +100,6 @@ export const houseOwnerAnalyticsApi = baseApi.injectEndpoints({
 
 export const {
   useGetHouseOwnerDashboardDataQuery,
+  useGetRentCollectionQuery,
     useRefreshDashboardDataMutation
 } = houseOwnerAnalyticsApi;

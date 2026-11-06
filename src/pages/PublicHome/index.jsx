@@ -2,7 +2,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks';
 import { appLogo, buildingShade, housesImage, laptopImage, profileAvatar } from '../../assets';
-import Btn from '../../components/common/Button';
 import { useTranslation } from 'react-i18next';
 import {
   House,
@@ -13,12 +12,13 @@ import {
   BarChart3,
   UserCheck,
   Users,
+  ArrowRight,
   ChevronRight,
-  Sparkles,
-  AlertCircle,
-  CheckCircle2,
+  Check,
+  X,
   PlayCircle,
-  TrendingUp,
+  ShieldCheck,
+  CreditCard,
   Lock,
   Star,
   Globe,
@@ -28,11 +28,15 @@ import {
   Zap,
   Heart,
   Award,
+  CheckCircle2,
+  Quote,
+  Mail,
+  Phone,
 } from 'lucide-react';
-import TkSymbol from '../../components/common/TkSymbol';
-import { useGetLandingPageQuery } from '../../store/api/landingApi';
+import { LANDING_LOCALES, landingLocale, useGetLandingPageQuery } from '../../store/api/landingApi';
+import { useGetPublicRegistrationStatusQuery } from '../../store/api/authApi';
 import Showcase from './Showcase';
-import PromoVideo from './PromoVideo';
+import HeroVideo from './HeroVideo';
 
 // Icon registry — maps string names stored in DB to Lucide components
 const ICON_MAP = {
@@ -63,12 +67,29 @@ const resolveSlideImage = (slide) => {
   return SLIDE_IMAGE_MAP[slide?.image_key] || buildingShade;
 };
 
-const SLIDE_ACCENTS = [
-  'from-primary-600 to-primary-800',
-  'from-secondary-600 to-secondary-800',
-  'from-primary-500 to-secondary-600',
-  'from-secondary-500 to-primary-600',
-];
+// ── Shared pieces ──────────────────────────────────────────────────────────────
+//
+// One heading style, one card style and two button styles for the whole page. Headings are
+// semibold in `ink` rather than extra-bold near-black: Anek Bangla at 800 reads heavy, and the
+// page should feel calm. Sections alternate white and slate-50 so each reads as its own band.
+
+const BTN_PRIMARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-[15px] font-medium text-white shadow-sm shadow-primary-700/20 transition-colors hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30';
+const BTN_SECONDARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-[15px] font-medium text-ink ring-1 ring-slate-200 transition-colors hover:bg-slate-50 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200';
+const CARD = 'rounded-2xl bg-white ring-1 ring-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
+
+const Section = ({ id, muted = false, className = '', children }) => (
+  <section id={id} className={`py-20 sm:py-24 ${muted ? 'bg-slate-50' : 'bg-white'} ${className}`}>
+    <div className="max-w-6xl mx-auto px-5">{children}</div>
+  </section>
+);
+
+const SectionHeader = ({ eyebrow, title, subtitle }) => (
+  <div className="max-w-2xl mx-auto text-center">
+    {eyebrow && <p className="mb-3 text-sm font-medium text-primary-600">{eyebrow}</p>}
+    <h2 className="text-[1.75rem] sm:text-4xl font-medium leading-snug text-ink">{title}</h2>
+    {subtitle && <p className="mt-4 text-base sm:text-lg leading-relaxed text-ink-soft">{subtitle}</p>}
+  </div>
+);
 
 // ── Demo Slider ────────────────────────────────────────────────────────────────
 
@@ -102,7 +123,6 @@ const DemoSlider = ({ slides = [], sectionTitle = '', sectionSubtitle = '' }) =>
   if (!total) return null;
 
   const slide = slides[active] || {};
-  const accent = SLIDE_ACCENTS[active % SLIDE_ACCENTS.length];
   const slideImage = resolveSlideImage(slide);
 
   const translateClass = visible
@@ -112,70 +132,90 @@ const DemoSlider = ({ slides = [], sectionTitle = '', sectionSubtitle = '' }) =>
     : 'translate-x-4 opacity-0';
 
   return (
-    <section id="demo" className="py-24 px-5 bg-linear-to-b from-gray-50 to-white overflow-hidden">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <span className={`inline-flex items-center gap-2 px-4 py-1.5 mb-4 rounded-full text-sm font-semibold text-white bg-linear-to-r ${accent} shadow-md transition-all duration-500`}>
-            {slide.tag}
-          </span>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3">{sectionTitle}</h2>
-          <p className="text-gray-600 max-w-xl mx-auto">{sectionSubtitle}</p>
-        </div>
+    <Section id="demo">
+      <SectionHeader title={sectionTitle} subtitle={sectionSubtitle} />
 
-        <div
-          className="relative rounded-3xl overflow-hidden shadow-2xl bg-gray-900"
-          onMouseEnter={() => { hovered.current = true; }}
-          onMouseLeave={() => { hovered.current = false; }}
-        >
-          <div className={`transition-all duration-300 ease-out ${translateClass}`}>
-            <div className="relative">
-              <img src={slideImage} alt={slide.title} className="w-full h-[340px] sm:h-[420px] md:h-[500px] object-cover" />
-              <div className="absolute inset-0 bg-linear-to-t from-gray-950/90 via-gray-950/30 to-transparent" />
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-              <div className="max-w-2xl">
-                <h3 className="text-xl md:text-3xl font-extrabold text-white mb-2 leading-tight drop-shadow">{slide.title}</h3>
-                <p className="text-sm md:text-base text-gray-200 leading-relaxed">{slide.description}</p>
-              </div>
-            </div>
+      <div
+        className="relative mt-12 rounded-3xl overflow-hidden bg-secondary-900 shadow-xl shadow-secondary-900/15"
+        onMouseEnter={() => { hovered.current = true; }}
+        onMouseLeave={() => { hovered.current = false; }}
+      >
+        <div className={`transition-all duration-300 ease-out ${translateClass}`}>
+          <div className="relative">
+            <img src={slideImage} alt={slide.title} className="w-full h-[340px] sm:h-[420px] md:h-[480px] object-cover" />
+            <div className="absolute inset-0 bg-linear-to-t from-secondary-900/95 via-secondary-900/40 to-transparent" />
           </div>
-
-          <button onClick={prev} aria-label="Previous slide" className="absolute left-3 md:left-5 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm text-white flex items-center justify-center transition-colors border border-white/20">
-            <ChevronRight className="w-5 h-5 rotate-180" />
-          </button>
-          <button onClick={next} aria-label="Next slide" className="absolute right-3 md:right-5 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm text-white flex items-center justify-center transition-colors border border-white/20">
-            <ChevronRight className="w-5 h-5" />
-          </button>
-
-          <div className="absolute top-4 right-5 text-xs font-semibold text-white/70 tabular-nums">
-            {active + 1} / {total}
+          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
+            <div className="max-w-2xl">
+              {slide.tag && (
+                <span className="inline-block mb-3 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/20 backdrop-blur-sm">{slide.tag}</span>
+              )}
+              <h3 className="text-xl md:text-3xl font-medium text-white mb-2 leading-snug">{slide.title}</h3>
+              <p className="text-sm md:text-base text-white/80 leading-relaxed">{slide.description}</p>
+            </div>
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2">
-            {slides.map((_, i) => (
-              <button key={i} onClick={() => goTo(i, i > active ? 'next' : 'prev')} aria-label={`Slide ${i + 1}`}
-                className={`rounded-full transition-all duration-300 ${i === active ? 'w-7 h-2.5 bg-primary' : 'w-2.5 h-2.5 bg-gray-300 hover:bg-gray-400'}`}
-              />
-            ))}
-          </div>
-          <div className="hidden sm:flex items-center gap-3">
-            {slides.map((s, i) => {
-              const thumbImage = resolveSlideImage(s);
-              return (
-                <button key={i} onClick={() => goTo(i, i > active ? 'next' : 'prev')}
-                  className={`relative rounded-xl overflow-hidden border-2 transition-all duration-300 ${i === active ? 'border-primary shadow-lg shadow-primary/30 scale-105' : 'border-transparent opacity-60 hover:opacity-90 hover:border-gray-300'}`}
-                >
-                  <img src={thumbImage} alt={s.title} className="w-24 h-16 object-cover" />
-                  {i === active && <div className={`absolute bottom-0 left-0 right-0 h-1 bg-linear-to-r ${SLIDE_ACCENTS[i % SLIDE_ACCENTS.length]}`} />}
-                </button>
-              );
-            })}
-          </div>
+        <button onClick={prev} aria-label="Previous slide" className="absolute left-3 md:left-5 top-1/2 -translate-y-1/2 w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white flex items-center justify-center transition-colors ring-1 ring-white/20">
+          <ChevronRight className="w-5 h-5 rotate-180" />
+        </button>
+        <button onClick={next} aria-label="Next slide" className="absolute right-3 md:right-5 top-1/2 -translate-y-1/2 w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-sm text-white flex items-center justify-center transition-colors ring-1 ring-white/20">
+          <ChevronRight className="w-5 h-5" />
+        </button>
+
+        <div className="absolute top-4 right-5 text-xs font-medium text-white/70 tabular-nums">
+          {active + 1} / {total}
         </div>
       </div>
-    </section>
+
+      <div className="mt-6 flex flex-col items-center gap-4">
+        <div className="flex items-center gap-2">
+          {slides.map((_, i) => (
+            <button key={i} onClick={() => goTo(i, i > active ? 'next' : 'prev')} aria-label={`Slide ${i + 1}`}
+              className={`rounded-full transition-all duration-300 ${i === active ? 'w-7 h-2 bg-primary' : 'w-2 h-2 bg-slate-300 hover:bg-slate-400'}`}
+            />
+          ))}
+        </div>
+        <div className="hidden sm:flex items-center gap-3">
+          {slides.map((s, i) => (
+            <button key={i} onClick={() => goTo(i, i > active ? 'next' : 'prev')}
+              className={`rounded-xl overflow-hidden ring-2 transition-all duration-300 ${i === active ? 'ring-primary' : 'ring-transparent opacity-60 hover:opacity-90'}`}
+            >
+              <img src={resolveSlideImage(s)} alt={s.title} className="w-24 h-16 object-cover" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+};
+
+// ── Footer language switch ─────────────────────────────────────────────────────
+
+// Each name in its own script, so a visitor who cannot read the current language can still
+// find theirs.
+const LOCALE_NAMES = { bn: 'বাংলা', en: 'English' };
+
+const LanguageSwitch = () => {
+  const { t, i18n } = useTranslation();
+  const current = landingLocale(i18n.language);
+  return (
+    <div className="flex items-center gap-3">
+      <span className="inline-flex items-center gap-1.5 text-sm text-white/60">
+        <Globe className="w-4 h-4" aria-hidden /> {t('landing_footer_language')}
+      </span>
+      <div role="radiogroup" aria-label={t('landing_footer_language')} className="inline-flex rounded-full bg-white/10 p-1 ring-1 ring-white/10">
+        {LANDING_LOCALES.map((code) => (
+          <button key={code} type="button" role="radio" aria-checked={current === code} lang={code}
+            onClick={() => i18n.changeLanguage(code)}
+            className={`rounded-full px-3.5 py-1 text-sm transition-colors ${
+              current === code ? 'bg-white text-secondary-900 font-medium' : 'text-white/75 hover:text-white'
+            }`}>
+            {LOCALE_NAMES[code]}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 };
 
@@ -184,9 +224,13 @@ const DemoSlider = ({ slides = [], sectionTitle = '', sectionSubtitle = '' }) =>
 const PublicHome = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const heroVideoRef = useRef(null);
 
-  const { data: landingResponse } = useGetLandingPageQuery();
+  // The page's words come from the landing CMS in the visitor's language. Switching language
+  // keeps showing the previous one's content until the new one arrives, rather than blanking.
+  const locale = landingLocale(i18n.language);
+  const { data: landingResponse } = useGetLandingPageQuery(locale);
   const lp = landingResponse?.data || {};
 
   const nav          = lp.nav          || {};
@@ -194,7 +238,6 @@ const PublicHome = () => {
   const why          = lp.why          || {};
   const features     = lp.features     || {};
   const showcase     = lp.showcase     || {};
-  const promoVideo   = lp.promo_video  || {};
   const personas     = lp.personas     || {};
   const howItWorks   = lp.how_it_works || {};
   const pricing      = lp.pricing      || {};
@@ -203,362 +246,283 @@ const PublicHome = () => {
   const cta          = lp.cta          || {};
   const footer       = lp.footer       || {};
 
+  const brand = nav.brand_name || t('bari_porichalona');
+
+  // Sign-up is by invitation unless the web owner opens it (Admin settings): the first owners
+  // are signed up in person. While it is closed, every "get started" button leads to the
+  // contact details instead of a sign-up form that would only refuse the visitor.
+  const { data: registration } = useGetPublicRegistrationStatusQuery(undefined, { skip: isAuthenticated });
+  const signupOpen = registration?.publicRegistrationEnabled === true;
+  const startLabel = (label) => (isAuthenticated ? t('go_to_dashboard') : signupOpen ? label : t('landing_contact_us'));
+
   const handleGetStarted = () => {
     if (isAuthenticated) navigate('/dashboard');
-    else navigate('/signup');
+    else if (signupOpen) navigate('/signup');
+    else document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const navLinks = (nav.links || []).length > 0 ? nav.links : [
+    { label: t('landing_nav_home'), href: '#' },
+    { label: t('landing_nav_features'), href: '#features' },
+    { label: t('landing_nav_pricing'), href: '#pricing' },
+    { label: t('landing_nav_contact'), href: '#contact' },
+  ];
+
   return (
-    <div className="min-h-screen bg-linear-to-b from-gray-50 via-white to-gray-50">
+    <div className="min-h-screen bg-white text-ink">
 
       {/* Navigation Bar */}
-      <nav data-landing-nav className="sticky top-0 bg-white shadow-md z-50 py-4">
-        <div className="max-w-7xl mx-auto px-5 flex justify-between items-center gap-3">
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <img src={appLogo} alt="Bari Porichalona Logo" className="h-full w-auto max-h-12 p-0" />
+      <nav data-landing-nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/70">
+        <div className="max-w-7xl mx-auto px-5 h-16 flex justify-between items-center gap-3">
+          <Link to="/" className="flex items-center gap-2.5 shrink-0">
+            <img src={appLogo} alt="" className="h-9 w-auto" />
             {/* Under 360px the name and both buttons do not fit one row; the logo carries the brand there. */}
-            <h1 className="max-[359px]:hidden whitespace-nowrap text-sm md:text-xl font-extrabold bg-clip-text text-transparent bg-linear-to-r from-primary-600 via-primary-400 to-red-400 font-oswald">
-              {nav.brand_name || t('bari_porichalona')}
-            </h1>
+            <span className="max-[359px]:hidden whitespace-nowrap text-base sm:text-lg font-semibold text-secondary-800">{brand}</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            {(nav.links || []).length > 0
-              ? (nav.links || []).map((link, i) => (
-                  <a key={i} href={link.href} className="text-gray-600 font-medium hover:text-primary transition-colors">
-                    {link.label}
-                  </a>
-                ))
-              : <>
-                  <a href="#" className="text-gray-600 font-medium hover:text-primary transition-colors">{t('landing_nav_home')}</a>
-                  <a href="#features" className="text-gray-600 font-medium hover:text-primary transition-colors">{t('landing_nav_features')}</a>
-                  <a href="#pricing" className="text-gray-600 font-medium hover:text-primary transition-colors">{t('landing_nav_pricing')}</a>
-                  <a href="#contact" className="text-gray-600 font-medium hover:text-primary transition-colors">{t('landing_nav_contact')}</a>
-                </>
-            }
+            {navLinks.map((link, i) => (
+              <a key={i} href={link.href} className="text-[15px] font-medium text-ink-soft hover:text-ink transition-colors">
+                {link.label}
+              </a>
+            ))}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {isAuthenticated ? (
               <>
-                <span className="text-gray-600 font-medium hidden sm:inline">
+                <span className="hidden sm:inline mr-2 text-sm text-ink-soft">
                   {t('landing_hello_user', { name: user?.name?.split(' ')[0] || t('landing_user_fallback') })}
                 </span>
-                <Btn type="primary" href="/dashboard">{t('go_to_dashboard')}</Btn>
+                <Link to="/dashboard" className={`${BTN_PRIMARY} px-4 py-2 text-sm`}>{t('go_to_dashboard')}</Link>
               </>
             ) : (
               <>
-                <Btn type="outline" href="/login">{nav.cta_login || t('landing_login')}</Btn>
-                <Btn type="primary" href="/signup">{nav.cta_signup || t('landing_signup')}</Btn>
+                <Link to="/login" className="rounded-lg px-3 sm:px-4 py-2 text-sm font-medium text-ink hover:bg-slate-100 transition-colors">
+                  {nav.cta_login || t('landing_login')}
+                </Link>
+                {signupOpen ? (
+                  <Link to="/signup" className={`${BTN_PRIMARY} px-4 py-2 text-sm`}>{nav.cta_signup || t('landing_signup')}</Link>
+                ) : (
+                  <a href="#contact" className={`${BTN_PRIMARY} px-4 py-2 text-sm`}>{t('landing_contact_us')}</a>
+                )}
               </>
             )}
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div aria-hidden className="absolute inset-0 bg-linear-to-br from-primary-50/50 via-white to-secondary-50/30 -z-10" />
-        <div aria-hidden className="absolute -top-40 -right-32 w-[480px] h-[480px] bg-primary-200/30 rounded-full blur-3xl -z-10" />
-        <div aria-hidden className="absolute top-1/2 -left-40 w-[420px] h-[420px] bg-secondary-200/25 rounded-full blur-3xl -z-10" />
-        <div aria-hidden className="absolute inset-0 -z-10 opacity-[0.04]"
-          style={{ backgroundImage: 'linear-gradient(to right, #18243f 1px, transparent 1px), linear-gradient(to bottom, #18243f 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
+      {/* Hero: the promo video is the picture. On a phone it comes straight after the headline,
+          ahead of the buttons; on a wide screen it takes the right-hand side. */}
+      <section className="relative overflow-hidden bg-linear-to-b from-white to-slate-50">
+        <div aria-hidden className="absolute -top-48 -right-40 w-152 h-152 rounded-full bg-secondary-200/30 blur-3xl" />
+        <div aria-hidden className="absolute top-1/3 -left-48 w-120 h-120 rounded-full bg-primary-200/25 blur-3xl" />
+        <div aria-hidden className="absolute inset-0 opacity-[0.035] [mask-image:linear-gradient(to_bottom,black,transparent_75%)]"
+          style={{ backgroundImage: 'linear-gradient(to right, #1f2d33 1px, transparent 1px), linear-gradient(to bottom, #1f2d33 1px, transparent 1px)', backgroundSize: '56px 56px' }} />
 
-        <div className="max-w-7xl mx-auto pt-12 md:pt-20 pb-16 md:pb-24 px-5 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-14 items-center">
-          <div className="text-center lg:text-left">
+        <div className="relative max-w-7xl mx-auto px-5 pt-10 sm:pt-14 lg:pt-20 pb-14 lg:pb-24 grid grid-cols-1 lg:grid-cols-12 gap-x-12 gap-y-8 lg:gap-y-0">
+          <div className="lg:col-span-5 lg:row-start-1 lg:self-end text-center lg:text-left">
             {hero.badge && (
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 bg-white rounded-full shadow-sm border border-primary-100">
-                <span className="text-base leading-none">🇧🇩</span>
-                <span className="text-xs font-semibold text-primary-700 tracking-wide uppercase">{hero.badge}</span>
-              </div>
-            )}
-
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-5 text-text leading-[1.1] tracking-tight">
-              {hero.title_before || t('landing_hero_title_before')}
-              <span className="relative inline-block whitespace-nowrap">
-                <span className="relative z-10 text-primary">{hero.title_highlight || t('landing_hero_title_highlight')}</span>
-                <span aria-hidden className="absolute left-0 right-0 bottom-1 h-3 bg-primary-200/60 rounded z-0" />
+              <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[13px] font-medium text-secondary-700 ring-1 ring-secondary-200 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-hidden />
+                {hero.badge}
               </span>
-              {hero.title_after || t('landing_hero_title_after')}
+            )}
+            {/* `??`, not `||`: an empty part is deliberate (the Bengali headline ends on its
+                highlight), and `||` would fill it with the built-in English-shaped fallback. */}
+            <h1 className="mt-5 text-[2rem] sm:text-5xl lg:text-[3.25rem] font-medium leading-[1.25] text-ink">
+              {hero.title_before ?? t('landing_hero_title_before')}
+              <span className="text-primary-600">{hero.title_highlight ?? t('landing_hero_title_highlight')}</span>
+              {hero.title_after ?? t('landing_hero_title_after')}
             </h1>
-
-            <p className="text-base md:text-lg text-subdued mb-8 leading-relaxed max-w-xl mx-auto lg:mx-0">
+            <p className="mt-5 text-base sm:text-lg leading-relaxed text-ink-soft max-w-xl mx-auto lg:mx-0">
               {hero.subtitle || t('landing_hero_subtitle')}
             </p>
-
-            <div className="flex flex-wrap justify-center lg:justify-start gap-3 mb-7">
-              <button onClick={handleGetStarted}
-                className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold bg-primary text-white rounded-xl hover:bg-primary-600 transition-all shadow-lg shadow-primary-300/40 hover:shadow-xl hover:shadow-primary-300/50 hover:-translate-y-0.5">
-                {isAuthenticated ? t('go_to_dashboard') : (hero.cta_primary || t('landing_get_started_free'))}
-                <ChevronRight className="w-5 h-5" />
-              </button>
-              <a href="#demo"
-                className="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-text bg-white border-2 border-gray-200 rounded-xl hover:border-primary hover:text-primary transition-colors">
-                <PlayCircle className="w-5 h-5" />
-                {hero.cta_secondary || t('landing_watch_demo')}
-              </a>
-            </div>
-
-            <div className="flex flex-wrap justify-center lg:justify-start items-center gap-x-5 gap-y-2 text-sm mb-8">
-              <div className="inline-flex items-center gap-1.5 text-subdued">
-                <Lock className="w-4 h-4 text-green-600" />
-                <span>{hero.trust_secure || t('landing_hero_trust_secure')}</span>
-              </div>
-              <div className="inline-flex items-center gap-1.5 text-subdued">
-                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>{hero.trust_no_card || t('landing_hero_trust_no_card')}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 md:gap-6 pt-7 border-t border-gray-200/70 max-w-md mx-auto lg:mx-0">
-              {(hero.stats || []).map((stat, i) => (
-                <div key={i} className="flex flex-col items-center lg:items-start">
-                  <span className="text-2xl md:text-3xl font-extrabold text-text">{stat.value}</span>
-                  <span className="text-xs md:text-sm text-subdued mt-0.5">{stat.label}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Right: Dashboard mockup */}
-          <div className="relative hidden md:block">
-            <div aria-hidden className="absolute -inset-4 bg-linear-to-br from-primary-300/20 via-transparent to-secondary-300/20 rounded-3xl blur-2xl" />
-            <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200/80 overflow-hidden">
-              <div className="bg-gray-50 px-4 py-3 flex items-center gap-2 border-b border-gray-200">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-red-400" />
-                  <span className="w-3 h-3 rounded-full bg-yellow-400" />
-                  <span className="w-3 h-3 rounded-full bg-green-400" />
-                </div>
-                <div className="ml-3 px-3 py-1 bg-white border border-gray-200 rounded text-[11px] text-gray-500 flex-1 truncate font-mono">
-                  bariporichalona.com/dashboard
-                </div>
-              </div>
-              <div className="p-5 space-y-4 bg-linear-to-br from-gray-50/50 to-white">
-                <div className="flex items-center justify-between">
-                  <div className="text-left">
-                    <h3 className="font-bold text-text text-sm">{t('landing_hero_preview_welcome')}</h3>
-                    <p className="text-[11px] text-subdued">{t('landing_hero_preview_today')}</p>
-                  </div>
-                  <div className="w-9 h-9 rounded-full bg-linear-to-br from-primary to-primary-600 flex items-center justify-center text-white font-bold text-sm shadow-md">K</div>
-                </div>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {[
-                    { label: t('landing_hero_preview_total_rent'), value: '1,24,500', sub: <><TrendingUp className="w-3 h-3" /> 12%</>, subClass: 'text-green-600' },
-                    { label: t('landing_hero_preview_collected'), value: '98,200', sub: <div className="mt-1 h-1 rounded-full bg-gray-100 overflow-hidden"><div className="h-full w-[79%] bg-linear-to-r from-primary to-primary-600 rounded-full" /></div>, subClass: '' },
-                    { label: t('landing_hero_preview_pending'), value: '26,300', sub: t('landing_hero_preview_flats_pending'), subClass: 'text-amber-600' },
-                  ].map(({ label, value, sub, subClass }) => (
-                    <div key={label} className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                      <div className="text-[10px] text-subdued mb-0.5 font-medium uppercase tracking-wide">{label}</div>
-                      <div className="text-base font-bold text-text"><TkSymbol />{value}</div>
-                      <div className={`text-[10px] font-semibold flex items-center gap-0.5 mt-0.5 ${subClass}`}>{sub}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                  <div className="flex items-center justify-between mb-2.5">
-                    <h4 className="text-xs font-semibold text-text">{t('landing_hero_preview_activity')}</h4>
-                    <span className="text-[10px] text-primary font-semibold">{t('landing_hero_preview_see_all')}</span>
-                  </div>
-                  <div className="space-y-2.5">
-                    {[
-                      { initials: 'R', name: 'Rahim Mia', sub: t('landing_hero_preview_paid_rent'), right: <span className="text-[11px] text-green-600 font-bold">+<TkSymbol />15,000</span>, bg: 'bg-green-100', fg: 'text-green-700' },
-                      { initials: 'F', name: 'Fahim Ahmed', sub: t('landing_hero_preview_new_renter'), right: <span className="text-[10px] text-subdued">2h</span>, bg: 'bg-primary-100', fg: 'text-primary-700' },
-                    ].map(({ initials, name, sub, right, bg, fg }) => (
-                      <div key={name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-7 h-7 rounded-full ${bg} flex items-center justify-center ${fg} text-[11px] font-bold`}>{initials}</div>
-                          <div className="text-left">
-                            <div className="text-[11px] font-semibold text-text leading-tight">{name}</div>
-                            <div className="text-[10px] text-subdued leading-tight">{sub}</div>
-                          </div>
-                        </div>
-                        {right}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+          <div className="min-w-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:row-span-2 lg:self-center">
+            <HeroVideo ref={heroVideoRef} soundLabel={hero.video_sound_label} />
+          </div>
+
+          <div className="lg:col-span-5 lg:row-start-2 lg:self-start lg:pt-8 text-center lg:text-left">
+            {/* Full width and stacked on a phone, where two auto-width buttons wrapped into a
+                ragged pair; side by side from sm up. */}
+            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 [&>*]:w-full sm:[&>*]:w-auto">
+              <button type="button" onClick={handleGetStarted} className={BTN_PRIMARY}>
+                {startLabel(hero.cta_primary || t('landing_get_started_free'))}
+                <ArrowRight className="w-4 h-4" aria-hidden />
+              </button>
+              <button type="button" onClick={() => heroVideoRef.current?.playWithSound()} className={BTN_SECONDARY}>
+                <PlayCircle className="w-5 h-5 text-primary-600" aria-hidden />
+                {hero.cta_secondary || t('landing_watch_demo')}
+              </button>
             </div>
-            <div className="absolute -top-5 -right-3 lg:-right-6 bg-white rounded-xl shadow-xl border border-gray-100 p-3 flex items-center gap-2.5 max-w-[230px] animate-float">
-              <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="text-left">
-                <div className="text-[11px] font-bold text-text leading-tight">{t('landing_hero_preview_payment_received')}</div>
-                <div className="text-[10px] text-subdued mt-0.5">{t('landing_hero_preview_payment_detail')}</div>
-              </div>
+
+            <div className="mt-6 flex flex-wrap justify-center lg:justify-start items-center gap-x-6 gap-y-2 text-sm text-ink-soft">
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-secondary-600" aria-hidden />
+                {hero.trust_secure || t('landing_hero_trust_secure')}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CreditCard className="w-4 h-4 text-secondary-600" aria-hidden />
+                {hero.trust_no_card || t('landing_hero_trust_no_card')}
+              </span>
             </div>
-            <div className="absolute -bottom-6 -left-3 lg:-left-8 bg-white rounded-xl shadow-xl border border-gray-100 p-3.5 animate-float-delayed">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-linear-to-br from-primary-100 to-primary-200 flex items-center justify-center shrink-0">
-                  <BarChart3 className="w-5 h-5 text-primary-700" />
-                </div>
-                <div className="text-left">
-                  <div className="text-[10px] text-subdued">{t('landing_hero_preview_this_month')}</div>
-                  <div className="text-sm font-extrabold text-text leading-tight">{t('landing_hero_preview_collection_rate')}</div>
-                  <div className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5 mt-0.5">
-                    <TrendingUp className="w-3 h-3" /> {t('landing_hero_preview_trend')}
+
+            {(hero.stats || []).length > 0 && (
+              <div className="mt-8 grid grid-cols-3 divide-x divide-slate-200 border-t border-slate-200 pt-6 max-w-md mx-auto lg:mx-0">
+                {hero.stats.map((stat, i) => (
+                  <div key={i} className="px-2 first:pl-0 text-center lg:text-left">
+                    <div className="text-xl sm:text-2xl font-semibold text-ink">{stat.value}</div>
+                    <div className="mt-0.5 text-xs sm:text-[13px] text-ink-soft">{stat.label}</div>
                   </div>
-                </div>
+                ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
 
         {/* Trusted-by strip */}
-        <div className="border-t border-gray-200/60 bg-white/60 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-5 py-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-center">
+        <div className="relative border-t border-slate-200/70 bg-white/70 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-5 py-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-5 text-center">
             <div className="flex items-center gap-1.5">
               <div className="flex items-center">
-                {[1,2,3,4,5].map((i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
+                {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" aria-hidden />)}
               </div>
-              <span className="text-sm font-semibold text-text">4.9/5</span>
+              <span className="text-sm font-medium text-ink">4.9/5</span>
             </div>
-            <span className="hidden sm:block w-px h-5 bg-gray-300" />
-            <p className="text-sm text-subdued">{hero.trusted_by || t('landing_hero_trusted_by')}</p>
+            <span className="hidden sm:block w-px h-4 bg-slate-300" />
+            <p className="text-sm text-ink-soft">{hero.trusted_by || t('landing_hero_trusted_by')}</p>
           </div>
         </div>
       </section>
-
-      {/* One-minute promo video */}
-      <PromoVideo data={promoVideo} />
 
       {/* Why Section */}
-      <section className="py-20 px-5 bg-white/80">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-center text-3xl md:text-4xl font-extrabold mb-4 text-gray-900">
-            {why.title || t('landing_why_title')}
-          </h2>
-          <p className="text-center text-gray-600 mb-16 max-w-2xl mx-auto">
-            {why.subtitle || t('landing_why_subtitle')}
-          </p>
-          <div className="grid md:grid-cols-2 gap-10 items-stretch">
-            <div className="rounded-2xl border-2 border-red-100 bg-red-50/50 p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 rounded-lg bg-red-100"><AlertCircle className="w-6 h-6 text-red-600" /></div>
-                <h3 className="text-xl font-bold text-gray-900">{why.without_title || t('landing_why_without')}</h3>
-              </div>
-              <ul className="space-y-3 text-gray-700">
-                {(why.without_points || []).map((pt, i) => (
-                  <li key={i} className="flex gap-2"><span className="text-red-400 mt-0.5">×</span> {pt}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-2xl border-2 border-primary-200 bg-primary-50/50 p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 rounded-lg bg-primary-200"><CheckCircle2 className="w-6 h-6 text-primary-600" /></div>
-                <h3 className="text-xl font-bold text-gray-900">{why.with_title || t('landing_why_with')}</h3>
-              </div>
-              <ul className="space-y-3 text-gray-700">
-                {(why.with_points || []).map((pt, i) => (
-                  <li key={i} className="flex gap-2"><span className="text-primary-500 mt-0.5">✓</span> {pt}</li>
-                ))}
-              </ul>
-            </div>
+      <Section>
+        <SectionHeader title={why.title || t('landing_why_title')} subtitle={why.subtitle || t('landing_why_subtitle')} />
+        <div className="mt-14 grid md:grid-cols-2 gap-5 sm:gap-6">
+          <div className="rounded-2xl bg-slate-50 ring-1 ring-slate-200 p-7 sm:p-8">
+            <h3 className="flex items-center gap-3 text-lg font-semibold text-ink">
+              <span className="w-9 h-9 rounded-full bg-white ring-1 ring-slate-200 flex items-center justify-center">
+                <X className="w-4 h-4 text-slate-400" aria-hidden />
+              </span>
+              {why.without_title || t('landing_why_without')}
+            </h3>
+            <ul className="mt-6 space-y-3.5">
+              {(why.without_points || []).map((pt, i) => (
+                <li key={i} className="flex gap-3 text-ink-soft leading-relaxed">
+                  <X className="w-4 h-4 mt-1 shrink-0 text-rose-400" aria-hidden /> {pt}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl bg-secondary-800 p-7 sm:p-8 text-white shadow-lg shadow-secondary-900/15">
+            <div aria-hidden className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/5" />
+            <h3 className="relative flex items-center gap-3 text-lg font-semibold">
+              <span className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
+                <Check className="w-4 h-4" aria-hidden />
+              </span>
+              {why.with_title || t('landing_why_with')}
+            </h3>
+            <ul className="relative mt-6 space-y-3.5">
+              {(why.with_points || []).map((pt, i) => (
+                <li key={i} className="flex gap-3 text-white/85 leading-relaxed">
+                  <Check className="w-4 h-4 mt-1 shrink-0 text-primary-300" aria-hidden /> {pt}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
-      </section>
+      </Section>
 
       {/* Features Section */}
-      <section id="features" className="max-w-7xl mx-auto py-24 px-5">
-        <div className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 text-primary-700 text-sm font-semibold mb-4">
-            <Sparkles className="w-4 h-4" /> {features.badge || t('landing_features_badge')}
-          </span>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">{features.title || t('landing_features_title')}</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">{features.subtitle || t('landing_features_subtitle')}</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <Section id="features" muted>
+        <SectionHeader
+          eyebrow={features.badge || t('landing_features_badge')}
+          title={features.title || t('landing_features_title')}
+          subtitle={features.subtitle || t('landing_features_subtitle')}
+        />
+        <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {(features.items || []).map((item, i) => {
             const IconEl = resolveIcon(item.icon);
             return (
-              <div key={i} className="group p-8 bg-white rounded-2xl shadow-lg border border-gray-100 transition-all duration-200 hover:shadow-xl hover:border-primary-100 hover:-translate-y-0.5">
-                <div className="p-3 rounded-xl bg-primary-100 text-primary-600 w-fit mb-5 group-hover:bg-primary-200 transition-colors">
-                  <IconEl className="w-6 h-6" aria-hidden />
+              <div key={i} className={`${CARD} p-7 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`}>
+                <div className="w-11 h-11 rounded-xl bg-primary-100/70 text-primary-700 flex items-center justify-center">
+                  <IconEl className="w-5 h-5" aria-hidden />
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-900">{item.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                <h3 className="mt-5 text-lg font-semibold text-ink">{item.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">{item.description}</p>
               </div>
             );
           })}
         </div>
-      </section>
+      </Section>
 
       {/* Feature showcase (the client's flyers, rebuilt) */}
       <Showcase data={showcase} />
 
       {/* Personas Section */}
-      <section className="py-24 px-5 bg-linear-to-b from-gray-50 to-white">
-        <div className="max-w-6xl mx-auto text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">{personas.title || t('landing_personas_title')}</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">{personas.subtitle || t('landing_personas_subtitle')}</p>
-        </div>
-        <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-8">
+      <Section muted>
+        <SectionHeader title={personas.title || t('landing_personas_title')} subtitle={personas.subtitle || t('landing_personas_subtitle')} />
+        <div className="mt-14 grid md:grid-cols-3 gap-5">
           {(personas.items || []).map((item, i) => {
             const IconEl = resolveIcon(item.icon);
             return (
-              <div key={i} className="text-center p-8 rounded-2xl bg-white border border-gray-100 shadow-lg hover:shadow-xl transition-all">
-                <div className="w-14 h-14 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center mx-auto mb-5">
-                  <IconEl className="w-7 h-7" aria-hidden />
+              <div key={i} className={`${CARD} p-7`}>
+                <div className="w-11 h-11 rounded-xl bg-secondary-100 text-secondary-700 flex items-center justify-center">
+                  <IconEl className="w-5 h-5" aria-hidden />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-3">{item.title}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{item.description}</p>
+                <h3 className="mt-5 text-lg font-semibold text-ink">{item.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">{item.description}</p>
               </div>
             );
           })}
         </div>
-      </section>
+      </Section>
 
       {/* How It Works */}
-      <section className="max-w-6xl mx-auto py-24 px-5">
-        <h2 className="text-center text-3xl md:text-4xl font-extrabold mb-4 text-gray-900">{howItWorks.title || t('landing_how_title')}</h2>
-        <p className="text-center text-gray-600 mb-16 max-w-xl mx-auto">{howItWorks.subtitle || t('landing_how_subtitle')}</p>
-        <div className="relative">
-          <div className="hidden lg:block absolute top-8 left-0 right-0 h-0.5 bg-linear-to-r from-primary-200 via-primary to-primary-200" style={{ left: '12.5%', right: '12.5%' }} aria-hidden />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-6">
-            {(howItWorks.steps || []).map((step, i) => (
-              <div key={i} className="relative text-center">
-                <div className="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-5 shadow-lg shadow-primary-200/50 relative z-10">
-                  {i + 1}
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-900">{step.title}</h3>
-                <p className="text-gray-600 leading-relaxed text-sm">{step.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Section>
+        <SectionHeader title={howItWorks.title || t('landing_how_title')} subtitle={howItWorks.subtitle || t('landing_how_subtitle')} />
+        <ol className="relative mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+          <span aria-hidden className="hidden lg:block absolute top-5 left-[12.5%] right-[12.5%] h-px bg-slate-200" />
+          {(howItWorks.steps || []).map((step, i) => (
+            <li key={i} className="relative text-center">
+              <span className="relative z-10 mx-auto w-10 h-10 rounded-full bg-white ring-1 ring-slate-200 shadow-sm flex items-center justify-center text-base font-semibold text-primary-600">
+                {i + 1}
+              </span>
+              <h3 className="mt-5 text-lg font-semibold text-ink">{step.title}</h3>
+              <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">{step.text}</p>
+            </li>
+          ))}
+        </ol>
+      </Section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-5 bg-gray-50">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">{pricing.title || t('landing_pricing_title')}</h2>
-          <p className="text-gray-600 mb-12 max-w-xl mx-auto">{pricing.subtitle || t('landing_pricing_subtitle')}</p>
-          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {(pricing.tiers || []).map((tier, i) => (
-              <div key={i} className={`p-8 rounded-2xl bg-white ${tier.is_highlighted ? 'border-2 border-primary shadow-lg' : 'border border-gray-200 shadow'}`}>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{tier.title}</h3>
-                <p className="text-gray-600 text-sm mb-6">{tier.description}</p>
-                <ul className="text-left space-y-2 text-gray-700 text-sm mb-8">
-                  {(tier.features || []).map((f, j) => (
-                    <li key={j} className="flex gap-2">
-                      <CheckCircle2 className={`w-5 h-5 shrink-0 ${tier.is_highlighted ? 'text-primary' : 'text-gray-400'}`} /> {f}
-                    </li>
-                  ))}
-                </ul>
-                {tier.is_coming_soon ? (
-                  <button disabled className="w-full py-3 rounded-xl bg-gray-200 text-gray-500 font-semibold cursor-not-allowed">{tier.cta}</button>
-                ) : (
-                  <button onClick={handleGetStarted} className="w-full py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-600 transition-colors">
-                    {isAuthenticated ? t('go_to_dashboard') : tier.cta}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+      <Section id="pricing" muted>
+        <SectionHeader title={pricing.title || t('landing_pricing_title')} subtitle={pricing.subtitle || t('landing_pricing_subtitle')} />
+        <div className="mt-14 grid md:grid-cols-2 gap-5 sm:gap-6 max-w-4xl mx-auto">
+          {(pricing.tiers || []).map((tier, i) => (
+            <div key={i} className={`flex flex-col rounded-2xl bg-white p-8 ${tier.is_highlighted ? 'ring-2 ring-primary/70 shadow-lg shadow-primary-700/10' : 'ring-1 ring-slate-200/80'}`}>
+              <h3 className="text-xl font-semibold text-ink">{tier.title}</h3>
+              <p className="mt-2 text-[15px] text-ink-soft">{tier.description}</p>
+              <ul className="mt-6 mb-8 space-y-3 text-[15px] text-ink">
+                {(tier.features || []).map((f, j) => (
+                  <li key={j} className="flex gap-3">
+                    <Check className={`w-5 h-5 shrink-0 ${tier.is_highlighted ? 'text-primary-600' : 'text-secondary-600'}`} aria-hidden /> {f}
+                  </li>
+                ))}
+              </ul>
+              {tier.is_coming_soon ? (
+                <button type="button" disabled className="mt-auto w-full rounded-xl bg-slate-100 py-3 text-[15px] font-medium text-slate-400 cursor-not-allowed">{tier.cta}</button>
+              ) : (
+                <button type="button" onClick={handleGetStarted} className={`${BTN_PRIMARY} mt-auto w-full`}>
+                  {startLabel(tier.cta)}
+                </button>
+              )}
+            </div>
+          ))}
         </div>
-      </section>
+      </Section>
 
       {/* Demo Slider */}
       <DemoSlider
@@ -568,80 +532,106 @@ const PublicHome = () => {
       />
 
       {/* Testimonials */}
-      <section className="py-24 px-5 bg-linear-to-b from-white to-gray-50">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-center text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">{testimonials.title || t('landing_testimonials_title')}</h2>
-          <p className="text-center text-gray-600 mb-12 max-w-xl mx-auto">{testimonials.subtitle || t('landing_testimonials_subtitle')}</p>
-          <div className="grid md:grid-cols-2 gap-8">
-            {(testimonials.items || []).map((item, i) => (
-              <div key={i} className="p-8 rounded-2xl bg-white border border-gray-100 shadow-lg">
+      <Section muted>
+        <SectionHeader title={testimonials.title || t('landing_testimonials_title')} subtitle={testimonials.subtitle || t('landing_testimonials_subtitle')} />
+        <div className="mt-14 grid md:grid-cols-2 gap-5 sm:gap-6 max-w-5xl mx-auto">
+          {(testimonials.items || []).map((item, i) => (
+            <figure key={i} className={`${CARD} p-8 flex flex-col`}>
+              <Quote className="w-8 h-8 text-primary-200" aria-hidden />
+              {/* Not italic: Anek Bangla has no italic, and a slanted Bengali fallback is hard to read. */}
+              <blockquote className="mt-4 flex-1 text-lg leading-relaxed text-ink">{item.quote}</blockquote>
+              <figcaption className="mt-6 flex items-center justify-between gap-4 border-t border-slate-100 pt-5">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-full bg-secondary-100 text-secondary-700 flex items-center justify-center font-semibold">
+                    {item.name?.charAt(0)}
+                  </span>
+                  <div>
+                    <div className="font-medium text-ink">{item.name}</div>
+                    {item.role && <div className="text-sm text-ink-soft">{item.role}</div>}
+                  </div>
+                </div>
                 {item.rating > 0 && (
-                  <div className="flex mb-3">
+                  <div className="flex shrink-0" aria-label={`${item.rating}/5`}>
                     {Array.from({ length: item.rating }).map((_, j) => (
-                      <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                      <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" aria-hidden />
                     ))}
                   </div>
                 )}
-                <p className="text-gray-700 italic mb-6">&ldquo;{item.quote}&rdquo;</p>
-                <div>
-                  <span className="font-semibold text-gray-900">{item.name}</span>
-                  {item.role && <span className="text-gray-500 text-sm"> · {item.role}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
+              </figcaption>
+            </figure>
+          ))}
         </div>
-      </section>
+      </Section>
 
-      {/* CTA Section */}
-      <section className="bg-linear-to-br from-primary to-primary-700 text-white py-20 px-5 text-center">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-5">{cta.title || t('landing_cta_title')}</h2>
-          <p className="text-xl opacity-90 mb-8">{cta.subtitle || t('landing_cta_subtitle')}</p>
-          <button onClick={handleGetStarted}
-            className="inline-flex items-center gap-2 px-10 py-4 bg-white text-primary font-bold text-lg rounded-xl hover:bg-gray-100 transition-colors shadow-2xl">
-            {isAuthenticated ? t('go_to_dashboard') : (cta.button_label || t('landing_get_started_free'))}
-            <ChevronRight className="w-5 h-5" />
-          </button>
-          <p className="mt-4 text-sm opacity-80">{cta.disclaimer || t('landing_cta_no_card')}</p>
+      {/* CTA Section: a teal panel, the same material as the video. */}
+      <section className="bg-white py-20 sm:py-24 px-5">
+        <div className="relative overflow-hidden max-w-5xl mx-auto rounded-3xl bg-linear-to-br from-secondary-700 to-secondary-900 px-6 py-14 sm:px-12 sm:py-16 text-center text-white">
+          <div aria-hidden className="absolute -top-24 -left-20 w-72 h-72 rounded-full bg-white/5" />
+          <div aria-hidden className="absolute -bottom-32 -right-24 w-96 h-96 rounded-full bg-white/5" />
+          <div className="relative">
+            <h2 className="text-[1.75rem] sm:text-4xl font-medium leading-snug">{cta.title || t('landing_cta_title')}</h2>
+            <p className="mt-4 text-base sm:text-lg text-white/75 max-w-2xl mx-auto">{cta.subtitle || t('landing_cta_subtitle')}</p>
+            <button type="button" onClick={handleGetStarted} className={`${BTN_PRIMARY} mt-8 px-8 py-3.5 text-base`}>
+              {startLabel(cta.button_label || t('landing_get_started_free'))}
+              <ArrowRight className="w-4 h-4" aria-hidden />
+            </button>
+            <p className="mt-4 text-sm text-white/60">{cta.disclaimer || t('landing_cta_no_card')}</p>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer id="contact" className="bg-gray-800 text-white p-10 mt-10">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 border-b border-gray-700 pb-10 mb-8">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2 mb-3">
-                <img src={appLogo} alt="Bari Porichalona Logo" className="w-8 h-8" />
-                <h2 className="text-xl font-bold">{nav.brand_name || t('bari_porichalona')}</h2>
+      <footer id="contact" className="bg-secondary-900 text-white">
+        <div className="max-w-6xl mx-auto px-5 pt-14 pb-8">
+          <div className="grid grid-cols-2 md:grid-cols-12 gap-10 pb-10 border-b border-white/10">
+            <div className="col-span-2 md:col-span-5">
+              <div className="flex items-center gap-2.5">
+                <span className="w-10 h-10 rounded-xl bg-white flex items-center justify-center">
+                  <img src={appLogo} alt="" className="w-7 h-7" />
+                </span>
+                <span className="text-lg font-semibold">{brand}</span>
               </div>
-              <p className="text-gray-400 text-sm">{footer.tagline || t('landing_footer_tagline')}</p>
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/60">{footer.tagline || t('landing_footer_tagline')}</p>
             </div>
-            <div className="flex flex-col">
-              <h3 className="text-lg font-semibold mb-5 text-gray-100">{t('landing_footer_product')}</h3>
-              {(footer.product_links || []).map((link, i) => (
-                <a key={i} href={link.href} className="text-gray-400 text-sm hover:text-white mb-3 transition-colors">{link.label}</a>
-              ))}
+            <div className="md:col-span-2">
+              <h3 className="text-sm font-semibold text-white/90">{t('landing_footer_product')}</h3>
+              <ul className="mt-4 space-y-3">
+                {(footer.product_links || []).map((link, i) => (
+                  <li key={i}><a href={link.href} className="text-sm text-white/60 hover:text-white transition-colors">{link.label}</a></li>
+                ))}
+              </ul>
             </div>
-            <div className="flex flex-col">
-              <h3 className="text-lg font-semibold mb-5 text-gray-100">{t('landing_footer_company')}</h3>
-              {(footer.company_links || []).map((link, i) => (
-                <a key={i} href={link.href} className="text-gray-400 text-sm hover:text-white mb-3 transition-colors">{link.label}</a>
-              ))}
+            <div className="md:col-span-2">
+              <h3 className="text-sm font-semibold text-white/90">{t('landing_footer_company')}</h3>
+              <ul className="mt-4 space-y-3">
+                {(footer.company_links || []).map((link, i) => (
+                  <li key={i}><a href={link.href} className="text-sm text-white/60 hover:text-white transition-colors">{link.label}</a></li>
+                ))}
+              </ul>
             </div>
-            <div className="flex flex-col">
-              <h3 className="text-lg font-semibold mb-5 text-gray-100">{t('landing_footer_connect')}</h3>
-              {footer.email && (
-                <a href={`mailto:${footer.email}`} className="text-gray-400 text-sm hover:text-white mb-3 transition-colors">Email: {footer.email}</a>
-              )}
-              {footer.phone && (
-                <a href={`tel:${footer.phone.replace(/\s/g, '')}`} className="text-gray-400 text-sm hover:text-white mb-3 transition-colors">Phone: {footer.phone}</a>
-              )}
+            <div className="col-span-2 md:col-span-3">
+              <h3 className="text-sm font-semibold text-white/90">{t('landing_footer_connect')}</h3>
+              <ul className="mt-4 space-y-3">
+                {footer.email && (
+                  <li>
+                    <a href={`mailto:${footer.email}`} className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors">
+                      <Mail className="w-4 h-4 shrink-0" aria-hidden /> {footer.email}
+                    </a>
+                  </li>
+                )}
+                {footer.phone && (
+                  <li>
+                    <a href={`tel:${footer.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors">
+                      <Phone className="w-4 h-4 shrink-0" aria-hidden /> {footer.phone}
+                    </a>
+                  </li>
+                )}
+              </ul>
             </div>
           </div>
-          <div className="text-center pt-5">
-            <p className="text-gray-500 text-sm">© {new Date().getFullYear()} {nav.brand_name || t('bari_porichalona')}. {t('landing_footer_rights')}</p>
+          <div className="pt-6 flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-white/50">© {new Date().getFullYear()} {brand}. {t('landing_footer_rights')}</p>
+            <LanguageSwitch />
           </div>
         </div>
       </footer>

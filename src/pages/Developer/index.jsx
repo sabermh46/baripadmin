@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   BellRing,
   ChevronRight,
+  Inbox,
   Database,
   Receipt,
   Server,
@@ -15,6 +16,7 @@ import { useGetDeveloperOverviewQuery } from '../../store/api/developerApi';
 const MODULE_ICON = {
   'push-notifications': BellRing,
   'app-fee-notifications': Receipt,
+  pit: Inbox,
 };
 
 /** A key/value line in one of the environment cards. */

@@ -2,6 +2,7 @@ import {
   BellDot,
   BellRing,
   BookUser,
+  CalendarClock,
   ChartColumnBig,
   CircleAlert,
   CircleUser,
@@ -16,6 +17,7 @@ import {
   LogOut,
   Mail,
   MessageSquare,
+  MessageSquareText,
   Receipt,
   Settings,
   Terminal,
@@ -154,6 +156,15 @@ const NAV_ITEMS = [
     group: "money",
     roles: ["developer", "web_owner", "staff", "house_owner", "caretaker"],
   },
+  {
+    // Rent bills and late-rent reminders that send on their own. House owners only, as the
+    // route and the API are.
+    path: "/schedule",
+    labelKey: "schedule",
+    icon: CalendarClock,
+    group: "money",
+    roles: ["house_owner"],
+  },
   { path: "/staff/audit-logs", labelKey: "audit_logs", icon: FileClock, group: "admin", roles: ["developer", "web_owner"] },
   {
     path: "/admin/notification-settings",
@@ -165,6 +176,7 @@ const NAV_ITEMS = [
   { path: "/admin/settings", labelKey: "settings", icon: Settings, group: "admin", roles: ["developer", "web_owner"] },
   { path: "/admin/landing-editor", labelKey: "landing_editor", icon: LayoutTemplate, group: "admin", roles: ["web_owner"] },
   { path: "/admin/email-templates", labelKey: "email_templates", icon: Mail, group: "admin", roles: ["web_owner", "developer"] },
+  { path: "/admin/sms-templates", labelKey: "sms_templates", icon: MessageSquareText, group: "admin", roles: ["web_owner", "developer"] },
   { path: "/admin/sms-allowance", labelKey: "sms_allowance", icon: MessageSquare, group: "admin", roles: ["web_owner", "developer"] },
   {
     path: "/admin/support-channels",

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import {
+  LANDING_LOCALES,
   useGetLandingConfigQuery,
   useUpdateLandingSectionMutation,
   useResetLandingSectionMutation,
@@ -140,7 +141,9 @@ const HeroEditor = ({ data, onChange }) => {
       <Field label="Title After Highlight" value={data.title_after} onChange={(v) => setField('title_after', v)} />
       <Field label="Subtitle" value={data.subtitle} onChange={(v) => setField('subtitle', v)} textarea />
       <Field label="Primary CTA Button" value={data.cta_primary} onChange={(v) => setField('cta_primary', v)} />
-      <Field label="Secondary CTA Button" value={data.cta_secondary} onChange={(v) => setField('cta_secondary', v)} />
+      <Field label="Secondary CTA Button" hint="Plays the hero video from the start, with sound." value={data.cta_secondary} onChange={(v) => setField('cta_secondary', v)} />
+      {/* The video itself is a file (public/media/promo), not content: only its button label is here. */}
+      <Field label="Video sound button" hint="Shown on the video while it plays muted." value={data.video_sound_label} onChange={(v) => setField('video_sound_label', v)} />
       <Field label="Trust Pill – Secure" value={data.trust_secure} onChange={(v) => setField('trust_secure', v)} />
       <Field label="Trust Pill – No Card" value={data.trust_no_card} onChange={(v) => setField('trust_no_card', v)} />
       <Field label="Trusted By Text" value={data.trusted_by} onChange={(v) => setField('trusted_by', v)} />
@@ -532,20 +535,6 @@ const CtaEditor = ({ data, onChange }) => {
   );
 };
 
-// The video file and its chapters are not here: they are tied to the video's own timing, so they
-// live with it (public/media/promo, PublicHome/PromoVideo.jsx). Only the words around it are.
-const PromoVideoEditor = ({ data, onChange }) => {
-  const setField = (key, val) => onChange({ ...data, [key]: val });
-  return (
-    <div>
-      <Field label="Badge" value={data.badge} onChange={(v) => setField('badge', v)} />
-      <Field label="Title" value={data.title} onChange={(v) => setField('title', v)} />
-      <Field label="Subtitle" value={data.subtitle} onChange={(v) => setField('subtitle', v)} textarea />
-      <Field label="Sound button label (shown while the video plays muted)" value={data.sound_label} onChange={(v) => setField('sound_label', v)} />
-    </div>
-  );
-};
-
 const FooterEditor = ({ data, onChange }) => {
   const setField = (key, val) => onChange({ ...data, [key]: val });
   return (
@@ -563,7 +552,6 @@ const FooterEditor = ({ data, onChange }) => {
 const SECTION_EDITORS = {
   nav:          { label: 'Navigation',      Editor: NavEditor },
   hero:         { label: 'Hero',            Editor: HeroEditor },
-  promo_video:  { label: 'Promo Video',     Editor: PromoVideoEditor },
   why:         { label: 'Why Section',     Editor: WhyEditor },
   features:     { label: 'Features',        Editor: FeaturesEditor },
   showcase:     { label: 'Showcase',        Editor: ShowcaseEditor },
@@ -576,7 +564,7 @@ const SECTION_EDITORS = {
   footer:       { label: 'Footer',          Editor: FooterEditor },
 };
 
-const SECTION_ORDER = ['nav', 'hero', 'promo_video', 'why', 'features', 'showcase', 'personas', 'how_it_works', 'pricing', 'demo_slider', 'testimonials', 'cta', 'footer'];
+const SECTION_ORDER = ['nav', 'hero', 'why', 'features', 'showcase', 'personas', 'how_it_works', 'pricing', 'demo_slider', 'testimonials', 'cta', 'footer'];
 
 /** Kept out of the strip's own overflow so it stays pinned while the tabs move under it. */
 const ScrollArrow = ({ direction, disabled, onClick }) => (
@@ -595,8 +583,34 @@ const ScrollArrow = ({ direction, disabled, onClick }) => (
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 
+// The page is stored per language and each is edited on its own. Bengali first: it is what
+// visitors see unless they switch.
+const LOCALE_LABELS = { bn: 'বাংলা', en: 'English' };
+
+const LocalePicker = ({ locale, onChange, dirty }) => (
+  <div role="radiogroup" aria-label="Language being edited" className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+    {LANDING_LOCALES.map((code) => (
+      <button
+        key={code}
+        type="button"
+        role="radio"
+        aria-checked={locale === code}
+        onClick={() => onChange(code)}
+        className={`relative px-3 py-1.5 text-sm rounded-md transition-colors ${
+          locale === code ? 'bg-white text-gray-900 font-semibold shadow-sm' : 'text-gray-500 hover:text-gray-800'
+        }`}
+      >
+        {LOCALE_LABELS[code]}
+        {/* Unsaved edits in the other language survive the switch; this says they exist. */}
+        {dirty[code] && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" aria-label="unsaved changes" />}
+      </button>
+    ))}
+  </div>
+);
+
 const LandingPageEditor = () => {
-  const { data: configResponse, isLoading } = useGetLandingConfigQuery();
+  const [locale, setLocale] = useState('bn');
+  const { data: configResponse, isLoading, isFetching } = useGetLandingConfigQuery(locale);
   const [updateSection, { isLoading: isSaving }] = useUpdateLandingSectionMutation();
   const [resetSection, { isLoading: isResetting }] = useResetLandingSectionMutation();
 
@@ -626,37 +640,43 @@ const LandingPageEditor = () => {
     const el = tabStripRef.current;
     if (el) el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: 'smooth' });
   };
-  // edits: only stores sections the user has modified locally (overrides server data)
-  const [edits, setEdits] = useState({});
+  // edits: only the sections modified locally (they override server data), per language, so
+  // switching language never throws away unsaved work in the other one.
+  const [edits, setEdits] = useState({ bn: {}, en: {} });
+  const dirty = Object.fromEntries(LANDING_LOCALES.map((code) => [code, Object.keys(edits[code] || {}).length > 0]));
 
-  // Merge server data with local edits — no useEffect needed
-  const serverData = configResponse?.data || {};
-  const localData = { ...serverData, ...edits };
+  // Merge server data with local edits — no useEffect needed. While the other language is
+  // loading, the previous one's server data must not be shown as if it were this one's.
+  const serverData = (configResponse?.locale ?? locale) === locale ? configResponse?.data || {} : {};
+  const localData = { ...serverData, ...edits[locale] };
 
   const sectionData = localData[activeSection] || {};
   const { Editor } = SECTION_EDITORS[activeSection] || {};
 
+  const dropEdit = (code, section) =>
+    setEdits((prev) => { const next = { ...prev[code] }; delete next[section]; return { ...prev, [code]: next }; });
+
   const handleChange = (newData) => {
-    setEdits((prev) => ({ ...prev, [activeSection]: newData }));
+    setEdits((prev) => ({ ...prev, [locale]: { ...prev[locale], [activeSection]: newData } }));
   };
 
   const handleSave = async () => {
     const { _updatedAt, ...payload } = sectionData;
     try {
-      await updateSection({ section: activeSection, data: payload }).unwrap();
+      await updateSection({ section: activeSection, data: payload, locale }).unwrap();
       // Clear local override — server data is now up-to-date
-      setEdits((prev) => { const next = { ...prev }; delete next[activeSection]; return next; });
-      toast.success('Section saved successfully');
+      dropEdit(locale, activeSection);
+      toast.success(`Section saved (${LOCALE_LABELS[locale]})`);
     } catch {
       toast.error('Failed to save section');
     }
   };
 
   const handleReset = async () => {
-    if (!window.confirm('Reset this section to built-in defaults? This cannot be undone.')) return;
+    if (!window.confirm(`Reset the ${LOCALE_LABELS[locale]} version of this section to built-in defaults? This cannot be undone.`)) return;
     try {
-      await resetSection(activeSection).unwrap();
-      setEdits((prev) => { const next = { ...prev }; delete next[activeSection]; return next; });
+      await resetSection({ section: activeSection, locale }).unwrap();
+      dropEdit(locale, activeSection);
       toast.success('Section reset to defaults');
     } catch {
       toast.error('Failed to reset section');
@@ -729,9 +749,12 @@ const LandingPageEditor = () => {
           <div className="min-w-0">
             <h1 className="font-bold text-gray-900 text-base">{SECTION_EDITORS[activeSection]?.label}</h1>
             {/* Explanatory, not essential — it would take two lines of a phone screen. */}
-            <p className="hidden sm:block text-xs text-gray-400 mt-0.5">Changes apply to the public landing page immediately after saving</p>
+            <p className="hidden sm:block text-xs text-gray-400 mt-0.5">
+              Editing the {LOCALE_LABELS[locale]} page. Changes apply to it immediately after saving.
+            </p>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+            <LocalePicker locale={locale} onChange={setLocale} dirty={dirty} />
             <button
               onClick={handleReset}
               disabled={isResetting}
@@ -753,7 +776,7 @@ const LandingPageEditor = () => {
 
         {/* Scrollable form area */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {isLoading ? (
+          {isLoading || (isFetching && configResponse?.locale !== locale) ? (
             <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading section data...</div>
           ) : Editor ? (
             <div className="max-w-2xl">

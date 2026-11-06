@@ -1,7 +1,9 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Bell, CheckCircle2, LayoutDashboard, Mail, Paperclip, Receipt, RefreshCw, Users, Wallet } from 'lucide-react';
 import TkSymbol from '../../components/common/TkSymbol';
 import { money } from '../../utils/paymentDisplay';
+import { landingLocale } from '../../store/api/landingApi';
 
 /**
  * Feature showcase: the client's six marketing flyers, rebuilt as one tabbed section.
@@ -15,37 +17,89 @@ import { money } from '../../utils/paymentDisplay';
  * the flyers' Bengali numerals: a visitor who signs up should see the same figures they saw here.
  */
 
-const MONTH = 'নভেম্বর 2026';
+// The words inside the mockups, in each language the landing page has. The figures are shared;
+// only names and labels change. The section's own copy (tabs, headlines, points) is not here: it
+// comes from the landing CMS in the visitor's language.
+const COPY = {
+  bn: {
+    month: 'নভেম্বর 2026',
+    renters: ['রহিম উদ্দিন', 'সুমি আক্তার', 'জাহিদ হাসান', 'নাসরিন বেগম', 'করিম মিয়া'],
+    expenses: ['কেয়ারটেকারের বেতন', 'বিদ্যুৎ বিল', 'পানির বিল', 'মেরামত', 'অন্যান্য'],
+    paid: 'পরিশোধিত', due: 'বকেয়া', flat: 'ফ্ল্যাট', totalRent: 'মোট ভাড়া', collectedSoFar: 'আদায় হয়েছে',
+    thisMonthsRent: 'এই মাসের ভাড়া', collectionRate: 'আদায়ের হার', brand: 'বাড়ি পরিচালনা',
+    receiptSubject: (month) => `প্রতি: ভাড়াটিয়া · বিষয়: ${month} – ভাড়ার রশিদ`,
+    dear: (name) => `প্রিয় ${name},`, receiptIntro: 'নভেম্বর মাসের ভাড়ার হিসাব নিচে দেওয়া হলো।',
+    receiptNo: 'রশিদ নং', monthLabel: 'মাস', monthlyRent: 'মাসিক ভাড়া', paidOn: 'পরিশোধের তারিখ',
+    paidOnValue: '05 নভেম্বর 2026', status: 'অবস্থা', receiptFile: 'ভাড়ার_রশিদ_নভেম্বর_2026.pdf',
+    collected: 'আদায়', mobile: 'মোবাইল', startDate: 'শুরুর তারিখ', startDateValue: '01 জানুয়ারি 2025',
+    email: 'ইমেইল', reminder: 'রিমাইন্ডার', whenDue: 'ভাড়া বকেয়া থাকলে',
+    reminderBody: (amount) => <>প্রিয় রহিম ভাই, নভেম্বর মাসের ভাড়া {amount} এখনো বকেয়া আছে। অনুগ্রহ করে দ্রুত পরিশোধ করুন।</>,
+    totalSpent: 'মোট খরচ', spent: 'খরচ', remaining: 'অবশিষ্ট', dashboard: 'ড্যাশবোর্ড',
+    monthlyCollection: 'মাসিক আদায় (%)', inBengali: 'বাংলা ভাষায়', sameAccounts: 'একই হিসাব, মোবাইল ও কম্পিউটারে',
+  },
+  en: {
+    month: 'November 2026',
+    renters: ['Rahim Uddin', 'Sumi Akter', 'Zahid Hasan', 'Nasrin Begum', 'Karim Mia'],
+    expenses: ["Caretaker's salary", 'Electricity bill', 'Water bill', 'Repairs', 'Other'],
+    paid: 'Paid', due: 'Due', flat: 'Flat', totalRent: 'Total rent', collectedSoFar: 'Collected',
+    thisMonthsRent: "This month's rent", collectionRate: 'Collection rate', brand: 'Bari Porichalona',
+    receiptSubject: (month) => `To: tenant · Subject: ${month} rent receipt`,
+    dear: (name) => `Dear ${name},`, receiptIntro: 'Here is your rent statement for November.',
+    receiptNo: 'Receipt no.', monthLabel: 'Month', monthlyRent: 'Monthly rent', paidOn: 'Paid on',
+    paidOnValue: '05 November 2026', status: 'Status', receiptFile: 'rent_receipt_november_2026.pdf',
+    collected: 'Collected', mobile: 'Mobile', startDate: 'Start date', startDateValue: '01 January 2025',
+    email: 'Email', reminder: 'Reminder', whenDue: 'When rent is due',
+    reminderBody: (amount) => <>Dear Rahim, your November rent of {amount} is still due. Please pay it soon.</>,
+    totalSpent: 'Total spent', spent: 'Spent', remaining: 'Remaining', dashboard: 'Dashboard',
+    monthlyCollection: 'Monthly collection (%)', inBengali: 'In Bengali', sameAccounts: 'The same accounts on mobile and computer',
+  },
+};
+
+const MockCopy = createContext(COPY.bn);
+const useMock = () => useContext(MockCopy);
 
 const RENTERS = [
-  { name: 'রহিম উদ্দিন', flat: '1A', rent: 12000, paid: true },
-  { name: 'সুমি আক্তার', flat: '2B', rent: 10500, paid: true },
-  { name: 'জাহিদ হাসান', flat: '3A', rent: 11000, paid: false },
-  { name: 'নাসরিন বেগম', flat: '3B', rent: 9500, paid: true },
-  { name: 'করিম মিয়া', flat: '4A', rent: 13000, paid: false },
+  { flat: '1A', rent: 12000, paid: true },
+  { flat: '2B', rent: 10500, paid: true },
+  { flat: '3A', rent: 11000, paid: false },
+  { flat: '3B', rent: 9500, paid: true },
+  { flat: '4A', rent: 13000, paid: false },
 ];
 
 // Adjacent-pair separation checked with the dataviz validator (CVD ΔE ≥ 16). Teal and the gray
 // "other" read low-chroma on their own, which is why every slice is also labeled with its amount.
 const EXPENSES = [
-  { label: 'কেয়ারটেকারের বেতন', amount: 8000, color: 'var(--color-secondary-700)' },
-  { label: 'বিদ্যুৎ বিল', amount: 3500, color: 'var(--color-primary-500)' },
-  { label: 'পানির বিল', amount: 2000, color: 'var(--color-secondary-400)' },
-  { label: 'মেরামত', amount: 4500, color: 'var(--color-primary-700)' },
-  { label: 'অন্যান্য', amount: 1500, color: '#94a3b8' },
+  { amount: 8000, color: 'var(--color-secondary-700)' },
+  { amount: 3500, color: 'var(--color-primary-500)' },
+  { amount: 2000, color: 'var(--color-secondary-400)' },
+  { amount: 4500, color: 'var(--color-primary-700)' },
+  { amount: 1500, color: '#94a3b8' },
 ];
+
+// The rows with this language's names on them.
+const useRenters = () => {
+  const m = useMock();
+  return RENTERS.map((r, i) => ({ ...r, name: m.renters[i] }));
+};
+const useExpenses = () => {
+  const m = useMock();
+  return EXPENSES.map((e, i) => ({ ...e, label: m.expenses[i] }));
+};
 
 const Amount = ({ value, className = '' }) => (
   <span className={`whitespace-nowrap ${className}`}><TkSymbol />{money(value)}</span>
 );
 
-const StatusPill = ({ paid }) => (
-  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
-    paid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
-  }`}>
-    {paid ? 'পরিশোধিত' : 'বকেয়া'}
-  </span>
-);
+const StatusPill = ({ paid }) => {
+  const m = useMock();
+  return (
+    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+      paid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+    }`}>
+      {paid ? m.paid : m.due}
+    </span>
+  );
+};
 
 const Initial = ({ name, className = '', tone = 'bg-secondary-100 text-secondary-700' }) => (
   <span className={`shrink-0 rounded-full font-bold flex items-center justify-center ${tone} ${className}`}>
@@ -95,22 +149,25 @@ const TotalTiles = ({ items }) => (
   </div>
 );
 
-const OverviewMockup = () => (
+const OverviewMockup = () => {
+  const m = useMock();
+  const renters = useRenters();
+  return (
   <div className="flex-1 flex flex-col gap-3">
     <TotalTiles items={[
-      { label: 'মোট ভাড়া', value: 125000, tone: 'text-secondary-700', dot: 'bg-secondary-700' },
-      { label: 'আদায় হয়েছে', value: 95000, tone: 'text-green-700', dot: 'bg-green-600' },
-      { label: 'বকেয়া', value: 30000, tone: 'text-red-600', dot: 'bg-red-500' },
+      { label: m.totalRent, value: 125000, tone: 'text-secondary-700', dot: 'bg-secondary-700' },
+      { label: m.collectedSoFar, value: 95000, tone: 'text-green-700', dot: 'bg-green-600' },
+      { label: m.due, value: 30000, tone: 'text-red-600', dot: 'bg-red-500' },
     ]} />
     <Card className="flex-1 p-4 flex flex-col">
-      <h4 className="text-sm font-bold text-secondary-700 mb-3">এই মাসের ভাড়া</h4>
+      <h4 className="text-sm font-bold text-secondary-700 mb-3">{m.thisMonthsRent}</h4>
       <div className="flex-1 flex flex-col justify-around gap-3">
-        {RENTERS.map((r, i) => (
+        {renters.map((r, i) => (
           <div key={r.name} className={`${i === 3 ? ROOM[340] : i === 4 ? ROOM[420] : 'flex'} items-center gap-3`}>
             <Initial name={r.name} className="w-9 h-9 text-sm" />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-gray-900 truncate">{r.name}</div>
-              <div className="text-[11px] text-subdued">ফ্ল্যাট {r.flat}</div>
+              <div className="text-[11px] text-subdued">{m.flat} {r.flat}</div>
             </div>
             {/* Stacked on a phone: side by side they leave the name about four letters. */}
             <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-3">
@@ -122,17 +179,19 @@ const OverviewMockup = () => (
       </div>
       <div className={`${ROOM[460]} flex-col gap-1.5 mt-3 pt-3 border-t border-gray-100`}>
         <div className="flex justify-between text-xs">
-          <span className="text-subdued">আদায়ের হার</span>
+          <span className="text-subdued">{m.collectionRate}</span>
           <span className="font-semibold text-green-700">76%</span>
         </div>
         <Bar value={76} />
       </div>
     </Card>
   </div>
-);
+  );
+};
 
 const ReceiptMockup = () => {
-  const r = RENTERS[0];
+  const m = useMock();
+  const r = useRenters()[0];
   return (
     <Card className="flex-1 overflow-hidden flex flex-col">
       <div className="bg-secondary-100 px-4 py-3 flex items-center gap-3">
@@ -140,20 +199,20 @@ const ReceiptMockup = () => {
           <Mail className="w-4 h-4" />
         </span>
         <div className="min-w-0">
-          <div className="text-sm font-bold text-secondary-700">বাড়ি পরিচালনা</div>
-          <div className="text-[11px] text-subdued truncate">প্রতি: ভাড়াটিয়া · বিষয়: {MONTH} – ভাড়ার রশিদ</div>
+          <div className="text-sm font-bold text-secondary-700">{m.brand}</div>
+          <div className="text-[11px] text-subdued truncate">{m.receiptSubject(m.month)}</div>
         </div>
       </div>
       <div className="flex-1 p-4 sm:p-5 flex flex-col">
-        <p className="text-sm font-bold text-gray-900">প্রিয় {r.name},</p>
-        <p className="text-xs text-subdued mb-3">নভেম্বর মাসের ভাড়ার হিসাব নিচে দেওয়া হলো।</p>
+        <p className="text-sm font-bold text-gray-900">{m.dear(r.name)}</p>
+        <p className="text-xs text-subdued mb-3">{m.receiptIntro}</p>
         <dl className="flex-1 flex flex-col justify-around text-sm divide-y divide-gray-100 border-t border-gray-100">
           {[
-            ['রশিদ নং', 'BP-2611-01', ROOM[380]],
-            ['ফ্ল্যাট', r.flat],
-            ['মাস', MONTH],
-            ['মাসিক ভাড়া', <Amount key="rent" value={r.rent} />],
-            ['পরিশোধের তারিখ', '05 নভেম্বর 2026', ROOM[340]],
+            [m.receiptNo, 'BP-2611-01', ROOM[380]],
+            [m.flat, r.flat],
+            [m.monthLabel, m.month],
+            [m.monthlyRent, <Amount key="rent" value={r.rent} />],
+            [m.paidOn, m.paidOnValue, ROOM[340]],
           ].map(([label, value, show = 'flex']) => (
             <div key={label} className={`${show} justify-between gap-2 py-2.5`}>
               <dt className="text-subdued">{label}</dt>
@@ -161,13 +220,13 @@ const ReceiptMockup = () => {
             </div>
           ))}
           <div className="flex justify-between items-center py-2.5">
-            <dt className="text-subdued">অবস্থা</dt>
+            <dt className="text-subdued">{m.status}</dt>
             <dd><StatusPill paid /></dd>
           </div>
         </dl>
         <div className={`${ROOM[420]} items-center gap-2 mt-3 rounded-xl border border-dashed border-secondary-300 bg-secondary-100/50 px-3 py-2 text-xs text-secondary-700`}>
           <Paperclip className="w-4 h-4 shrink-0" aria-hidden />
-          <span className="truncate font-semibold">ভাড়ার_রশিদ_নভেম্বর_2026.pdf</span>
+          <span className="truncate font-semibold">{m.receiptFile}</span>
         </div>
       </div>
     </Card>
@@ -175,6 +234,8 @@ const ReceiptMockup = () => {
 };
 
 const StatusMockup = () => {
+  const m = useMock();
+  const renters = useRenters();
   const paid = RENTERS.filter((r) => r.paid).length;
   const due = RENTERS.reduce((sum, r) => sum + r.rent, 0);
   const collected = RENTERS.reduce((sum, r) => sum + (r.paid ? r.rent : 0), 0);
@@ -182,33 +243,33 @@ const StatusMockup = () => {
     <Card className="flex-1 p-4 flex flex-col">
       <div className="flex items-center gap-2 mb-3">
         <div className="flex-1 rounded-xl bg-green-50 px-3 py-2 flex items-center justify-between">
-          <span className="text-xs text-green-700">পরিশোধিত</span>
+          <span className="text-xs text-green-700">{m.paid}</span>
           <span className="text-lg font-bold text-green-700">{paid}</span>
         </div>
         <div className="flex-1 rounded-xl bg-red-50 px-3 py-2 flex items-center justify-between">
-          <span className="text-xs text-red-600">বকেয়া</span>
+          <span className="text-xs text-red-600">{m.due}</span>
           <span className="text-lg font-bold text-red-600">{RENTERS.length - paid}</span>
         </div>
-        <span className="hidden sm:block text-xs text-subdued pl-2">{MONTH}</span>
+        <span className="hidden sm:block text-xs text-subdued pl-2">{m.month}</span>
       </div>
       <div className={`${ROOM[420]} flex-col gap-1.5 mb-3`}>
         <div className="flex justify-between text-xs">
-          <span className="text-subdued">{MONTH} · আদায়</span>
+          <span className="text-subdued">{m.month} · {m.collected}</span>
           <span className="font-semibold text-gray-800"><Amount value={collected} /> / <Amount value={due} /></span>
         </div>
         <Bar value={Math.round((collected / due) * 100)} />
       </div>
       <div className="flex-1 flex flex-col justify-around divide-y divide-gray-100 border-t border-gray-100">
-        {RENTERS.map((r) => (
+        {renters.map((r) => (
           <div key={r.name} className="flex items-center gap-2 py-2.5">
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-gray-900 truncate">{r.name}</div>
               {/* Under 20rem the rent joins this line: as its own column it left the name two letters. */}
               <div className="sm:hidden text-[11px] text-subdued whitespace-nowrap">
-                ফ্ল্যাট {r.flat}<span className="hidden @max-xs:inline"> · <Amount value={r.rent} className="font-semibold text-gray-700" /></span>
+                {m.flat} {r.flat}<span className="hidden @max-xs:inline"> · <Amount value={r.rent} className="font-semibold text-gray-700" /></span>
               </div>
             </div>
-            <span className="hidden sm:block w-20 text-xs text-subdued">ফ্ল্যাট {r.flat}</span>
+            <span className="hidden sm:block w-20 text-xs text-subdued">{m.flat} {r.flat}</span>
             <Amount value={r.rent} className="w-20 @max-xs:hidden text-sm font-semibold text-gray-800" />
             <span className="w-20 text-right"><StatusPill paid={r.paid} /></span>
           </div>
@@ -219,7 +280,8 @@ const StatusMockup = () => {
 };
 
 const ReminderMockup = ({ label, badge }) => {
-  const r = RENTERS[0];
+  const m = useMock();
+  const r = useRenters()[0];
   return (
     <div className="flex-1 grid sm:grid-cols-2 content-center gap-3">
       <Card className="p-4">
@@ -227,17 +289,17 @@ const ReminderMockup = ({ label, badge }) => {
           <Initial name={r.name} className="w-11 h-11 text-lg" tone="bg-secondary-700 text-white" />
           <div>
             <div className="text-sm font-bold text-gray-900">{r.name}</div>
-            <div className="text-[11px] text-subdued">ফ্ল্যাট {r.flat}</div>
+            <div className="text-[11px] text-subdued">{m.flat} {r.flat}</div>
           </div>
         </div>
         <dl className="text-xs divide-y divide-gray-100 border-t border-gray-100">
           {/* On a phone the two cards stack, so the last two rows wait for a tall enough panel
               rather than shrinking the reminder — the point of this tab. */}
           {[
-            ['মোবাইল', '01712-345678'],
-            ['মাসিক ভাড়া', <Amount key="rent" value={r.rent} />],
-            ['শুরুর তারিখ', '01 জানুয়ারি 2025', 'hidden sm:flex room-380:flex'],
-            ['ইমেইল', 'rahim@example.com', 'hidden sm:flex room-420:flex'],
+            [m.mobile, '01712-345678'],
+            [m.monthlyRent, <Amount key="rent" value={r.rent} />],
+            [m.startDate, m.startDateValue, 'hidden sm:flex room-380:flex'],
+            [m.email, 'rahim@example.com', 'hidden sm:flex room-420:flex'],
           ].map(([k, v, show = 'flex']) => (
             <div key={k} className={`${show} justify-between gap-2 py-2`}>
               <dt className="text-subdued">{k}</dt>
@@ -252,12 +314,12 @@ const ReminderMockup = ({ label, badge }) => {
             <Bell className="w-5 h-5" />
           </span>
           <div>
-            <div className="text-sm font-bold text-primary-800">{label || 'রিমাইন্ডার'}</div>
-            <div className="text-[11px] text-primary-800/70">ভাড়া বকেয়া থাকলে</div>
+            <div className="text-sm font-bold text-primary-800">{label || m.reminder}</div>
+            <div className="text-[11px] text-primary-800/70">{m.whenDue}</div>
           </div>
         </div>
         <p className="bg-white rounded-xl p-3 text-xs leading-relaxed text-gray-800 flex-1">
-          প্রিয় রহিম ভাই, নভেম্বর মাসের ভাড়া <Amount value={r.rent} /> এখনো বকেয়া আছে। অনুগ্রহ করে দ্রুত পরিশোধ করুন।
+          {m.reminderBody(<Amount value={r.rent} />)}
         </p>
         {badge && (
           <span className="self-start mt-3 px-3 py-1 rounded-full bg-white text-[11px] font-semibold text-primary-700">{badge}</span>
@@ -268,6 +330,7 @@ const ReminderMockup = ({ label, badge }) => {
 };
 
 const Donut = ({ items }) => {
+  const m = useMock();
   const total = items.reduce((sum, i) => sum + i.amount, 0);
   const r = 48;
   const c = 2 * Math.PI * r;
@@ -286,7 +349,7 @@ const Donut = ({ items }) => {
         ))}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[10px] sm:text-[11px] text-subdued">মোট খরচ</span>
+        <span className="text-[10px] sm:text-[11px] text-subdued">{m.totalSpent}</span>
         <Amount value={total} className="text-xs sm:text-base font-bold text-gray-900" />
       </div>
     </div>
@@ -296,16 +359,19 @@ const Donut = ({ items }) => {
 const EXPENSE_TOTAL = EXPENSES.reduce((sum, e) => sum + e.amount, 0);
 const COLLECTED = 95000;
 
-const ExpensesMockup = () => (
+const ExpensesMockup = () => {
+  const m = useMock();
+  const expenses = useExpenses();
+  return (
   <div className="flex-1 flex flex-col justify-center gap-3">
     {/* Side by side even on a phone: stacked, the chart doubled the height it had to be scaled into.
         Only under 18rem (a 320px phone) does it stack — beside the chart the labels ran into the amounts. */}
     <Card className="flex-1 p-3 sm:p-5 flex flex-col">
-      <h4 className="text-sm font-bold text-secondary-700 mb-2 sm:mb-3">{MONTH} · খরচ</h4>
+      <h4 className="text-sm font-bold text-secondary-700 mb-2 sm:mb-3">{m.month} · {m.spent}</h4>
       <div className="flex-1 flex items-center gap-3 sm:gap-5 @max-2xs:flex-col @max-2xs:items-stretch">
-        <Donut items={EXPENSES} />
+        <Donut items={expenses} />
         <ul className="flex-1 min-w-0 divide-y divide-gray-100">
-          {EXPENSES.map((e) => (
+          {expenses.map((e) => (
             <li key={e.label} className="py-1.5 sm:py-2">
               <div className="flex items-center gap-2 sm:gap-2.5">
                 <span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded shrink-0" style={{ backgroundColor: e.color }} />
@@ -323,12 +389,13 @@ const ExpensesMockup = () => (
     </Card>
     {/* The month's income against its spending: the "আয়-ব্যয় এক নজরে" the tab promises. */}
     <TotalTiles items={[
-      { label: 'আদায়', value: COLLECTED, tone: 'text-green-700' },
-      { label: 'খরচ', value: EXPENSE_TOTAL, tone: 'text-red-600' },
-      { label: 'অবশিষ্ট', value: COLLECTED - EXPENSE_TOTAL, tone: 'text-secondary-700' },
+      { label: m.collected, value: COLLECTED, tone: 'text-green-700' },
+      { label: m.spent, value: EXPENSE_TOTAL, tone: 'text-red-600' },
+      { label: m.remaining, value: COLLECTED - EXPENSE_TOTAL, tone: 'text-secondary-700' },
     ]} />
   </div>
-);
+  );
+};
 
 const STAT_TONES = {
   total: { bg: 'bg-secondary-100', text: 'text-secondary-700' },
@@ -371,7 +438,10 @@ const LaptopStat = ({ label, value, tone, className = '' }) => (
  * at 1024px the panel is half the screen and narrower than on a large phone, and the window-based
  * sizes clipped the totals there.
  */
-const DevicesMockup = () => (
+const DevicesMockup = () => {
+  const m = useMock();
+  const renters = useRenters();
+  return (
   <div className="flex-1 flex flex-col justify-center">
     {/* Laptop */}
     <div className="ml-12 @md:ml-24 @max-md:room-380:ml-0 @max-lg:room-460:ml-0">
@@ -386,19 +456,19 @@ const DevicesMockup = () => (
           </div>
           <div className="flex-1 min-w-0 p-2 @md:p-4 flex flex-col gap-1.5 @md:gap-3">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[11px] @md:text-sm font-bold text-gray-900">ড্যাশবোর্ড</span>
-              <span className="text-[9px] @md:text-[11px] text-subdued whitespace-nowrap">{MONTH}</span>
+              <span className="text-[11px] @md:text-sm font-bold text-gray-900">{m.dashboard}</span>
+              <span className="text-[9px] @md:text-[11px] text-subdued whitespace-nowrap">{m.month}</span>
             </div>
             <div className="@container">
               <div className="grid grid-cols-3 @max-[10rem]:grid-cols-2 gap-1.5">
-                <LaptopStat label="মোট ভাড়া" value={125000} tone="total" className="@max-[10rem]:hidden" />
-                <LaptopStat label="আদায়" value={95000} tone="paid" />
-                <LaptopStat label="বকেয়া" value={30000} tone="due" />
+                <LaptopStat label={m.totalRent} value={125000} tone="total" className="@max-[10rem]:hidden" />
+                <LaptopStat label={m.collected} value={95000} tone="paid" />
+                <LaptopStat label={m.due} value={30000} tone="due" />
               </div>
             </div>
             {/* Only where the screen is big enough to hold it above a few renters. */}
             <div className="hidden @lg:flex flex-col gap-1">
-              <span className="text-[11px] text-subdued">মাসিক আদায় (%)</span>
+              <span className="text-[11px] text-subdued">{m.monthlyCollection}</span>
               <div className="h-14 flex items-end gap-1.5">
                 {MONTHLY.map((v, i) => (
                   <span key={i} className={`flex-1 rounded-t ${i === MONTHLY.length - 1 ? 'bg-secondary-700' : 'bg-secondary-300'}`}
@@ -409,7 +479,7 @@ const DevicesMockup = () => (
             {/* A wrapping column: a row that does not fit whole wraps into a second column, which
                 is off to the right and clipped — so the list ends on a whole row, never half of one. */}
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col flex-wrap divide-y divide-gray-100">
-              {RENTERS.map((r) => (
+              {renters.map((r) => (
                 <div key={r.name} className="w-full flex items-center justify-between gap-2 py-1 @md:py-1.5">
                   <span className="text-[11px] @md:text-xs font-semibold text-gray-800 truncate">{r.name}</span>
                   <StatusPill paid={r.paid} />
@@ -426,23 +496,24 @@ const DevicesMockup = () => (
       {/* Phone */}
       <div className="w-24 @md:w-36 shrink-0 rounded-[1.25rem] @md:rounded-[1.75rem] bg-gray-800 p-1.5 @md:p-2 shadow-2xl">
         <div className="rounded-[0.95rem] @md:rounded-[1.35rem] bg-white overflow-hidden">
-          <div className="bg-secondary-700 text-white text-[10px] @md:text-xs font-semibold text-center pt-3 pb-2 @md:pt-4 @md:pb-2.5">বাড়ি পরিচালনা</div>
+          <div className="bg-secondary-700 text-white text-[10px] @md:text-xs font-semibold text-center pt-3 pb-2 @md:pt-4 @md:pb-2.5">{m.brand}</div>
           <div className="p-1.5 @md:p-2.5 space-y-1.5 @md:space-y-2">
-            <MiniStat label="আদায়" value={95000} tone="paid" />
-            <MiniStat label="বকেয়া" value={30000} tone="due" />
+            <MiniStat label={m.collected} value={95000} tone="paid" />
+            <MiniStat label={m.due} value={30000} tone="due" />
             <div className="text-center pt-0.5 pb-1">
-              <span className="inline-block px-2 @md:px-3 py-0.5 @md:py-1 rounded-full bg-primary text-white text-[9px] @md:text-[10px] font-semibold">বাংলা ভাষায়</span>
+              <span className="inline-block px-2 @md:px-3 py-0.5 @md:py-1 rounded-full bg-primary text-white text-[9px] @md:text-[10px] font-semibold">{m.inBengali}</span>
             </div>
           </div>
         </div>
       </div>
       <p className="flex-1 min-w-0 pb-1 flex items-center gap-1.5 @md:gap-2 text-xs @md:text-sm font-semibold text-white">
         <RefreshCw className="w-4 h-4 shrink-0 text-primary-300" aria-hidden />
-        একই হিসাব, মোবাইল ও কম্পিউটারে
+        {m.sameAccounts}
       </p>
     </div>
   </div>
-);
+  );
+};
 
 // The Landing Page Editor offers these keys in its MOCKUP_LABELS — add a mockup in both places.
 const MOCKUPS = {
@@ -524,6 +595,8 @@ const toTab = (next) => (prev) =>
  * from a rAF-throttled scroll handler; React only re-renders when the tab actually changes.
  */
 const Showcase = ({ data = {} }) => {
+  const { i18n } = useTranslation();
+  const copy = COPY[landingLocale(i18n.language)];
   const tabs = data.tabs || [];
   const count = tabs.length;
   const [view, setView] = useState({ index: 0, dir: 1 });
@@ -630,10 +703,10 @@ const Showcase = ({ data = {} }) => {
               Two lines reserved on a phone, so a one-line headline does not pull the tabs up
               and make everything below jump. */}
           <div key={`head-${index}`} className={`text-center shrink-0 ${copyIn}`}>
-            <h2 className="min-h-[2.5em] lg:min-h-0 flex items-center justify-center text-xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">
+            <h2 className="min-h-[2.5em] lg:min-h-0 flex items-center justify-center text-xl sm:text-3xl md:text-4xl font-medium text-ink leading-snug">
               {tab.title}
             </h2>
-            {tab.subtitle && <p className="showcase-short-hide hidden sm:block text-gray-600 max-w-2xl mx-auto mt-2 sm:mt-3">{tab.subtitle}</p>}
+            {tab.subtitle && <p className="showcase-short-hide hidden sm:block text-ink-soft sm:text-lg max-w-2xl mx-auto mt-2 sm:mt-3">{tab.subtitle}</p>}
           </div>
 
           {/* One row at every width: it scrolls on a phone (scrollbar hidden — the active tab is
@@ -644,10 +717,10 @@ const Showcase = ({ data = {} }) => {
               <button key={i} ref={(el) => { tabRefs.current[i] = el; }}
                 role="tab" id={`showcase-tab-${i}`} aria-selected={i === index} aria-controls="showcase-panel"
                 tabIndex={i === index ? 0 : -1} onClick={() => goTo(i)}
-                className={`shrink-0 whitespace-nowrap px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[13px] sm:text-sm font-semibold border transition-colors ${
+                className={`shrink-0 whitespace-nowrap px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[13px] sm:text-sm font-medium border transition-colors ${
                   i === index
                     ? 'bg-primary border-primary text-white'
-                    : 'bg-white border-gray-200 text-gray-600 hover:border-primary hover:text-primary'
+                    : 'bg-white border-slate-200 text-ink-soft hover:border-primary hover:text-primary'
                 }`}>
                 {t.tab}
               </button>
@@ -666,7 +739,7 @@ const Showcase = ({ data = {} }) => {
                   they are set a size up on a wide screen to carry it. */}
               <ul className="showcase-compact-hide space-y-1.5 sm:space-y-3 lg:space-y-4">
                 {(tab.points || []).map((pt, i) => (
-                  <li key={i} className="flex gap-2 sm:gap-3 text-sm sm:text-base lg:text-lg leading-snug text-gray-700">
+                  <li key={i} className="flex gap-2 sm:gap-3 text-sm sm:text-base lg:text-lg leading-snug text-ink-soft">
                     <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5 text-primary" aria-hidden />
                     <span>{pt}</span>
                   </li>
@@ -680,13 +753,15 @@ const Showcase = ({ data = {} }) => {
               <div ref={circleBRef} aria-hidden className="absolute -bottom-28 -left-20 w-72 h-72 rounded-full bg-white/5 will-change-transform" />
               <FitBox className="inset-3 sm:inset-6 lg:inset-8">
                 <div key={`mockup-${index}`} className={`flex-1 flex flex-col ${mockupIn}`} style={{ animationDelay: '120ms' }}>
-                  <Mockup label={tab.mockup_label} badge={tab.mockup_badge} />
+                  <MockCopy.Provider value={copy}>
+                    <Mockup label={tab.mockup_label} badge={tab.mockup_badge} />
+                  </MockCopy.Provider>
                 </div>
               </FitBox>
             </div>
           </div>
 
-          {data.sample_note && <p className="shrink-0 text-center text-[11px] sm:text-xs text-gray-400 mt-2 sm:mt-4">{data.sample_note}</p>}
+          {data.sample_note && <p className="shrink-0 text-center text-[11px] sm:text-xs text-slate-400 mt-2 sm:mt-4">{data.sample_note}</p>}
         </div>
       </div>
     </section>

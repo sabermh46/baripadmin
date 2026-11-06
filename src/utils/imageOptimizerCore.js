@@ -37,6 +37,16 @@ export const PRESETS = {
     label: 'profile picture',
   },
 
+  // A renter's photo is kept on file to recognise the person, and is opened full size, so
+  // it gets the detail of a phone photo shrunk for the web rather than an avatar's 512px.
+  // Typically 120–300KB as WebP.
+  photo: {
+    maxEdge: 1280,
+    qualities: [0.9, 0.85, 0.8, 0.74],
+    targetBytes: 400 * 1024,
+    label: 'photo',
+  },
+
   // An identity document has to stay READABLE — a name and a number have to survive. So the
   // long edge stays generous and the quality ladder starts and stops higher than the
   // avatar's; shaving another 40KB is not worth an unreadable NID number.

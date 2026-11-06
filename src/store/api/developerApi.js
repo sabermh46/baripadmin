@@ -64,6 +64,28 @@ export const developerApi = baseApi.injectEndpoints({
       query: () => ({ url: '/developer/app-fee-notifications/preview', method: 'GET' }),
       providesTags: [{ type: 'PushEvent', id: 'APP_FEE_PREVIEW' }],
     }),
+
+    // Mail & SMS pit (off production only): what MAIL_MAILER=pit / SMS_PIT=true caught.
+    getPitMessages: builder.query({
+      query: ({ channel, q }) => ({ url: '/developer/pit', method: 'GET', params: { channel, ...(q ? { q } : {}) } }),
+      providesTags: ['Pit'],
+    }),
+    getPitMessage: builder.query({
+      query: (id) => ({ url: `/developer/pit/${id}`, method: 'GET' }),
+      // Opening a message marks it read, which the list's unread counts need to show.
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        await queryFulfilled.catch(() => {});
+        dispatch(developerApi.util.invalidateTags(['Pit']));
+      },
+    }),
+    deletePitMessage: builder.mutation({
+      query: (id) => ({ url: `/developer/pit/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Pit'],
+    }),
+    clearPit: builder.mutation({
+      query: (channel) => ({ url: '/developer/pit', method: 'DELETE', params: channel ? { channel } : {} }),
+      invalidatesTags: ['Pit'],
+    }),
   }),
 });
 
@@ -76,4 +98,8 @@ export const {
   useUpdateAppFeeNotificationSettingsMutation,
   useResetAppFeeNotificationSettingsMutation,
   useGetAppFeeReminderPreviewQuery,
+  useGetPitMessagesQuery,
+  useGetPitMessageQuery,
+  useDeletePitMessageMutation,
+  useClearPitMutation,
 } = developerApi;

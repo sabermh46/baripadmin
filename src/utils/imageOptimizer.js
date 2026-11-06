@@ -61,7 +61,7 @@ function getWorker() {
 
 /**
  * @param {File}   file
- * @param {string} preset  key of PRESETS — 'avatar' | 'document' | 'landing'
+ * @param {string} preset  key of PRESETS — 'avatar' | 'photo' | 'document' | 'landing'
  * @param {object} [options]
  * @param {(n:number)=>void} [options.onProgress]  0..1
  * @returns {Promise<{file: File, originalBytes: number, bytes: number, width: number,

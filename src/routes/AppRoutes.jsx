@@ -47,14 +47,18 @@ const ChangePassword       = lazyWithRetry(() => import('../pages/auth/ChangePas
 const HouseOwnerExpensesPage = lazyWithRetry(() => import('../pages/Expenses'));
 const AppFeePage           = lazyWithRetry(() => import('../pages/AppFee/AppFeePage'));
 const LoansPage            = lazyWithRetry(() => import('../pages/Loans'));
+const SchedulePage         = lazyWithRetry(() => import('../pages/Schedule'));
+const RentCollectionPage   = lazyWithRetry(() => import('../pages/RentCollection'));
 const LandingPageEditor    = lazyWithRetry(() => import('../pages/Admin/LandingPageEditor'));
 const EmailTemplates       = lazyWithRetry(() => import('../pages/Admin/EmailTemplates'));
+const SmsTemplates         = lazyWithRetry(() => import('../pages/Admin/SmsTemplates'));
 const SmsAllowances        = lazyWithRetry(() => import('../pages/Admin/SmsAllowances'));
 const SupportPage          = lazyWithRetry(() => import('../pages/Support'));
 const SupportChannels      = lazyWithRetry(() => import('../pages/Admin/SupportChannels'));
 const DeveloperPanel       = lazyWithRetry(() => import('../pages/Developer'));
 const DeveloperPushEvents  = lazyWithRetry(() => import('../pages/Developer/PushNotifications'));
 const DeveloperAppFeeNotifications = lazyWithRetry(() => import('../pages/Developer/AppFeeNotifications'));
+const DeveloperPit = lazyWithRetry(() => import('../pages/Developer/Pit'));
 
 
 
@@ -399,6 +403,18 @@ const AppRoutes = () => {
                 <LoansPage />
               </RoleGuard>
             } />
+            {/* House owners only: a schedule sends in the owner's name, from the owner's SMS allowance. */}
+            {/* The dashboard's rent collection card, in full ("সব দেখুন"). Same people as the card. */}
+            <Route path="/rent-collection" element={
+              <RoleGuard roles={['house_owner', 'caretaker']}>
+                <RentCollectionPage />
+              </RoleGuard>
+            } />
+            <Route path="/schedule" element={
+              <RoleGuard roles={['house_owner']}>
+                <SchedulePage />
+              </RoleGuard>
+            } />
             <Route path="admin/landing-editor" element={
               <RoleGuard roles={['web_owner', 'developer']}>
                 <LandingPageEditor />
@@ -407,6 +423,11 @@ const AppRoutes = () => {
             <Route path="admin/email-templates" element={
               <RoleGuard roles={['web_owner', 'developer']}>
                 <EmailTemplates />
+              </RoleGuard>
+            } />
+            <Route path="admin/sms-templates" element={
+              <RoleGuard roles={['web_owner', 'developer']}>
+                <SmsTemplates />
               </RoleGuard>
             } />
             <Route path="admin/sms-allowance" element={
@@ -445,6 +466,11 @@ const AppRoutes = () => {
             <Route path="developer/app-fee-notifications" element={
               <RoleGuard roles={['developer', 'web_owner']}>
                 <DeveloperAppFeeNotifications />
+              </RoleGuard>
+            } />
+            <Route path="developer/pit" element={
+              <RoleGuard roles={['developer', 'web_owner']}>
+                <DeveloperPit />
               </RoleGuard>
             } />
         </Route>

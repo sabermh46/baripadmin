@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { showMessageInLanguage } from '../../utils/showMessageInLanguage';
 import useOwnerOptions from '../../hooks/useOwnerOptions';
 import ImageUploadField from '../common/ImageUploadField';
+import DocumentUploadField from '../common/DocumentUploadField';
 
 const renterSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -42,6 +43,8 @@ const RenterFormFields = ({ onClose, renter, houseOwnerId }) => {
   const isEdit = !!renter;
   const [nidFrontImage, setNidFrontImage] = useState(null);
   const [nidBackImage, setNidBackImage] = useState(null);
+  const [photo, setPhoto] = useState(null);
+  const [agreement, setAgreement] = useState(null);
   const [ownerSearch, setOwnerSearch] = useState('');
   
   const { isHouseOwner, isStaff, isWebOwner, user } = useAuth();
@@ -110,6 +113,8 @@ const RenterFormFields = ({ onClose, renter, houseOwnerId }) => {
       if (nidBackImage) {
         formData.append('nidBackImage', nidBackImage);
       }
+      if (photo) formData.append('photo', photo);
+      if (agreement) formData.append('agreement', agreement);
 
       console.log(formData);
       
@@ -122,6 +127,8 @@ const RenterFormFields = ({ onClose, renter, houseOwnerId }) => {
           reset();
           setNidFrontImage(null);
           setNidBackImage(null);
+          setPhoto(null);
+          setAgreement(null);
         } catch (error) {
           toast.error(apiErrorMessage(error, 'Could not update the renter.'));
           console.error('Failed to update renter:', error);
@@ -134,6 +141,8 @@ const RenterFormFields = ({ onClose, renter, houseOwnerId }) => {
           reset();
           setNidFrontImage(null);
           setNidBackImage(null);
+          setPhoto(null);
+          setAgreement(null);
         } catch (error) {
           toast.error(apiErrorMessage(error));
           console.error('Failed to create renter:', error);
@@ -315,6 +324,27 @@ const RenterFormFields = ({ onClose, renter, houseOwnerId }) => {
               storedUrl={renter?.nidBackImageUrl}
               onChange={setNidBackImage}
               hint="Drag a photo here, or click to choose. It is shrunk on your device before upload."
+            />
+          </div>
+
+          {/* The renter's photo and the signed rental agreement, kept with the NID. Both are
+              served only to people who may see this renter, as the NID scans are. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ImageUploadField
+              label="Renter Photo"
+              name="photo"
+              preset="photo"
+              aspect="square"
+              storedUrl={renter?.photoUrl}
+              onChange={setPhoto}
+              hint="A clear photo of the renter's face."
+            />
+            <DocumentUploadField
+              label="Rental Agreement"
+              storedUrl={renter?.agreementUrl}
+              downloadName={`agreement_${renter?.name || 'renter'}`}
+              onChange={setAgreement}
+              hint="PDF or photo of the signed agreement, up to 10 MB."
             />
           </div>
 

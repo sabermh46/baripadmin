@@ -341,14 +341,14 @@ export const baseApi = createApi({
     'Auth', 'User', 'Settings', 'SystemSettings', 'AuditLog', 'LandingPage',
     'House', 'Houses', 'HouseFlats', 'HouseStats', 'HouseCaretakers',
     'Flat', 'Renter', 'Notice',
-    'Payment', 'AdvancePayment', 'PaymentReceipt', 'Loan',
+    'Payment', 'AdvancePayment', 'PaymentReceipt', 'Loan', 'RentSchedule',
     'Caretaker', 'CaretakerAssignment',
     'AppFeePayments', 'AppFeeBreakdown',
     'ManagedOwners', 'ManagedUsers',
     'Notification', 'UserApproval', 'NotificationSettings', 'SmsProvider',
     'Analytics', 'HouseOwnerAnalytics', 'Report', 'EmailStats', 'WorkerStats',
     'EmailTemplate', 'SmsAllowance', 'SmsSettings', 'SmsLog',
-    'DeveloperPanel', 'PushEvent', 'SupportChannel',
+    'DeveloperPanel', 'PushEvent', 'SupportChannel', 'Pit',
   ],
 
   // Restores the query cache that redux-persist wrote to IndexedDB, so a reload paints

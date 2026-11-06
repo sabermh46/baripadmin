@@ -1,5 +1,6 @@
 import { Check, ChevronLeft, ChevronRight, Info, Target } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 /**
  * The status dot's tone, by how much of the house has paid.
@@ -62,7 +63,9 @@ export default function RentCollectionProgress({
 
   return (
     <section className="my-4 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
+      {/* Wraps on a narrow screen: the title and its "view all" keep the first line whole, and
+          the month switcher drops to the second. */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className={`flex min-w-0 items-center gap-2 text-base font-bold text-slate-900 sm:text-lg font-anek-bn`}>
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
             <Target className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -70,9 +73,17 @@ export default function RentCollectionProgress({
           <span className="truncate">{t('rent_collection_progress')}</span>
         </h2>
 
+        {/* The full picture, in money and month by month, opened on the month shown here. */}
+        <Link
+          to={`/rent-collection?view=month&year=${year}&month=${month}`}
+          className="shrink-0 rounded-md px-2 py-1 text-xs font-semibold text-primary outline-none hover:bg-primary-100/50 focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
+          {t('rc_view_all')}
+        </Link>
+
         {/* The month nav is one control group now, rather than two oversized chevrons pushed
             to the far edges of the card with the month floating between them. */}
-        <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-gray-200 p-0.5">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 rounded-lg border border-gray-200 p-0.5">
           <button
             type="button"
             onClick={handlePrevious}
