@@ -18,7 +18,15 @@ const Dashboard            = lazyWithRetry(() => import('../pages/Dashboard'));
 import DashboardSkeleton from '../components/houseowner/DashboardSkeleton';
 const ProfilePage          = lazyWithRetry(() => import('../pages/Profile'));
 const AuthSuccess          = lazyWithRetry(() => import('../pages/AuthSuccess'));
-const PublicHome           = lazyWithRetry(() => import('../pages/PublicHome'));
+const loadPublicHome = () => import('../pages/PublicHome');
+const PublicHome           = lazyWithRetry(loadPublicHome);
+
+// A visitor opening "/" is almost always headed for the landing page, so its code starts
+// downloading now, alongside the rest of the app's start-up, instead of after the first
+// render asks for it. The import is shared, so lazy() picks up the same request.
+if (typeof window !== 'undefined' && window.location.pathname === '/') {
+  loadPublicHome().catch(() => { /* lazyWithRetry retries and reports it */ });
+}
 const NotificationPage     = lazyWithRetry(() => import('../pages/Notification'));
 const ComingSoonPage       = lazyWithRetry(() => import('../pages/utility/ComingSoonPage'));
 const AccessDeniedPage     = lazyWithRetry(() => import('../pages/utility/AccessDeniedPage'));

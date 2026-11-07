@@ -1,0 +1,23 @@
+# Bari Porichalona: https://bariporichalona.com
+#
+# The landing page is the only public page. Everything else is the signed-in app, which shows
+# a crawler nothing but a login form, so it is kept out of search results.
+#
+# The page's scripts, styles, fonts, images and video stay crawlable: the landing page is built
+# by JavaScript, and a search engine that cannot load them sees an empty page.
+
+User-agent: *
+Allow: /$
+Allow: /index.html$
+Allow: /assets/
+Allow: /media/
+Allow: /fonts/
+Allow: /llms.txt
+Allow: /sitemap.xml
+Allow: /manifest.webmanifest
+Allow: /*.png$
+Allow: /*.svg$
+Allow: /*.ico$
+Disallow: /
+
+Sitemap: https://bariporichalona.com/sitemap.xml

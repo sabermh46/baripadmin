@@ -1,0 +1,33 @@
+# Bari Porichalona (বাড়ি পরিচালনা)
+
+> Bari Porichalona is a house rent management app for Bangladesh. House owners and their caretakers use it to manage houses and flats, keep renter records, collect rent and send rent bills and reminders by SMS and email. It works in Bengali and English, and installs on a phone as an app.
+
+The name means "house management" in Bengali. The app is web-based and installable (a progressive web app), so it runs on Android, iPhone and computers without an app store.
+
+## Who it is for
+
+- **House owners**: see every house, flat, renter and rent payment in one place, with expenses and reports.
+- **Caretakers**: manage the day-to-day work of a house on the owner's behalf, with only the access the owner gives them.
+
+Renters do not log in. They receive their rent bills, reminders and receipts by SMS and email.
+
+## What it does
+
+- **Houses and flats**: several houses per owner, each flat's rent, and which flats are let or vacant.
+- **Renters**: contact details, national ID (NID) scans, a photo and the signed rental agreement, visible only to people allowed to see that renter.
+- **Rent collection**: record payments (full or partial), see what is paid, due and overdue for each month, and review collection by month or by year.
+- **Receipts**: a receipt for every payment, as a PDF and by email or SMS.
+- **Scheduled rent bills and reminders**: the owner sets a schedule once, and each month the rent bill goes out on the chosen day, followed by reminders while the rent is unpaid, by SMS, email or both.
+- **Advance (security deposit)**: the advance a renter paid, how much has been applied to rent, and a notice to the renter each time it is.
+- **Expenses and loans**: household expenses, with owner approval for expenses entered by a caretaker, and loans.
+- **Reports**: income, expenses and rent collection.
+- **Notifications**: push notifications on the phone, plus SMS and email.
+- **Languages**: Bengali (the default) and English, switched on any screen.
+
+## Getting an account
+
+Accounts are set up by the Bari Porichalona team; there is no open sign-up. To start, contact the team at support@bariporichalona.com.
+
+## Links
+
+- [Bari Porichalona website](https://bariporichalona.com/): the product page, with a one-minute video of the app

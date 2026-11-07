@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/snapshot-landing.mjs",
     "build": "vite build && npm run check:chunks",
+    "snapshot:landing": "node scripts/snapshot-landing.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "check:chunks": "node scripts/check-chunk-cycles.mjs"

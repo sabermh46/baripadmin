@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks';
 import { appLogo, buildingShade, housesImage, laptopImage, profileAvatar } from '../../assets';
@@ -37,6 +37,7 @@ import { LANDING_LOCALES, landingLocale, useGetLandingPageQuery } from '../../st
 import { useGetPublicRegistrationStatusQuery } from '../../store/api/authApi';
 import Showcase from './Showcase';
 import HeroVideo from './HeroVideo';
+import { initialLanding, rememberLanding } from './landingContent';
 
 // Icon registry — maps string names stored in DB to Lucide components
 const ICON_MAP = {
@@ -227,11 +228,15 @@ const PublicHome = () => {
   const { t, i18n } = useTranslation();
   const heroVideoRef = useRef(null);
 
-  // The page's words come from the landing CMS in the visitor's language. Switching language
-  // keeps showing the previous one's content until the new one arrives, rather than blanking.
+  // The page's words come from the landing CMS in the visitor's language. It renders at once
+  // from the copy bundled into the build (or this browser's newer saved one), then the
+  // backend's answer replaces it if anything changed (landingContent.js).
   const locale = landingLocale(i18n.language);
   const { data: landingResponse } = useGetLandingPageQuery(locale);
-  const lp = landingResponse?.data || {};
+  const fresh = landingResponse?.locale === locale ? landingResponse.data : undefined;
+  const initial = useMemo(() => initialLanding(locale), [locale]);
+  useEffect(() => { if (fresh) rememberLanding(locale, fresh); }, [locale, fresh]);
+  const lp = fresh || initial;
 
   const nav          = lp.nav          || {};
   const hero         = lp.hero         || {};

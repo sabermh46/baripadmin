@@ -8,8 +8,12 @@ import { playProgressively } from './progressiveVideo';
  *
  * - It loads nothing until it is near the screen, then only the first 10 seconds; the rest is
  *   fetched once the visitor has watched 5 (see progressiveVideo.js).
- * - It plays muted when it comes into view and pauses when it leaves, unless the visitor prefers
+ * - It plays when it comes into view and pauses when it leaves, unless the visitor prefers
  *   reduced motion or has Data Saver on; then it waits for a tap.
+ * - It starts with sound. Browsers only allow that once the visitor has interacted with the
+ *   site (Chrome also on sites they often watch media on), so where it is refused the video
+ *   plays muted instead and the sound comes on with the visitor's first tap, click or key
+ *   anywhere on the page. A visitor who mutes it stays muted.
  * - Behind it, a blurred copy of the current frame glows out onto the page and follows whatever
  *   is on screen, like an ambient-light TV.
  * - No timeline: the hero only asks for two things, sound and pause. `ref.playWithSound()` lets
@@ -37,6 +41,8 @@ const HeroVideo = ({ soundLabel, ref }) => {
   const indexRef = useRef(undefined); // undefined: not asked yet; null: unavailable
   const detachRef = useRef(null);
   const userPausedRef = useRef(false);
+  const userMutedRef = useRef(false);
+  const disarmRef = useRef(null);
 
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
@@ -65,8 +71,42 @@ const HeroVideo = ({ soundLabel, ref }) => {
     videoRef.current.play().catch(() => {});
   };
 
+  // The browser refused sound: bring it in with the first gesture anywhere on the page. A tap
+  // on the video itself is left to the video's own handlers (its first tap unmutes too), so
+  // that one tap does not unmute twice, i.e. not at all.
+  const unmuteOnFirstGesture = () => {
+    if (disarmRef.current) return;
+    const events = ['pointerdown', 'keydown', 'touchend'];
+    const disarm = () => {
+      events.forEach((name) => document.removeEventListener(name, onGesture, true));
+      disarmRef.current = null;
+    };
+    function onGesture(e) {
+      if (frameRef.current?.contains(e.target)) return;
+      disarm();
+      const video = videoRef.current;
+      if (video && video.muted && !userMutedRef.current) video.muted = false;
+    }
+    events.forEach((name) => document.addEventListener(name, onGesture, true));
+    disarmRef.current = disarm;
+  };
+
+  // Autoplay: with sound if the browser allows it, muted (until the first gesture) if not.
+  const autoplayWithSound = () => {
+    const video = videoRef.current;
+    attach();
+    if (!userMutedRef.current) video.muted = false;
+    video.play().catch((err) => {
+      if (err?.name !== 'NotAllowedError' || video.muted) return;
+      video.muted = true;
+      video.play().catch(() => {});
+      unmuteOnFirstGesture();
+    });
+  };
+
   const playWithSound = () => {
     const video = videoRef.current;
+    userMutedRef.current = false;
     video.muted = false;
     if (video.ended || video.currentTime > 0.5) video.currentTime = 0;
     play();
@@ -76,9 +116,9 @@ const HeroVideo = ({ soundLabel, ref }) => {
 
   useImperativeHandle(ref, () => ({ playWithSound }));
 
-  useEffect(() => () => detachRef.current?.(), []);
+  useEffect(() => () => { detachRef.current?.(); disarmRef.current?.(); }, []);
 
-  // Near the screen: fetch the (tiny) index. Mostly in view: play muted. Out of view: pause.
+  // Near the screen: fetch the (tiny) index. Mostly in view: play. Out of view: pause.
   useEffect(() => {
     const frame = frameRef.current;
     const video = videoRef.current;
@@ -87,7 +127,7 @@ const HeroVideo = ({ soundLabel, ref }) => {
     }, { rootMargin: '400px 0px' });
     const view = new IntersectionObserver(([entry]) => {
       if (entry.intersectionRatio >= 0.35) {
-        if (autoplay && !userPausedRef.current && !video.ended) fetchIndex().then(play);
+        if (autoplay && !userPausedRef.current && !video.ended) fetchIndex().then(autoplayWithSound);
       } else if (!video.paused) {
         video.pause();
       }
@@ -138,6 +178,7 @@ const HeroVideo = ({ soundLabel, ref }) => {
   const toggleSound = () => {
     const video = videoRef.current;
     video.muted = !video.muted;
+    userMutedRef.current = video.muted;
     if (!video.muted && (video.paused || video.ended)) { if (video.ended) video.currentTime = 0; play(); }
   };
 

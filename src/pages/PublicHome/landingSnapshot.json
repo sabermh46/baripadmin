@@ -1,0 +1,715 @@
+{
+ "generatedAt": "2026-11-07T05:08:32.033Z",
+ "source": "http://localhost:8080",
+ "bn": {
+  "nav": {
+   "brand_name": "বাড়ি পরিচালনা",
+   "links": [
+    {
+     "label": "হোম",
+     "href": "#"
+    },
+    {
+     "label": "ফিচার",
+     "href": "#features"
+    },
+    {
+     "label": "মূল্য",
+     "href": "#pricing"
+    },
+    {
+     "label": "যোগাযোগ",
+     "href": "#contact"
+    }
+   ],
+   "cta_login": "লগইন",
+   "cta_signup": "সাইন আপ"
+  },
+  "hero": {
+   "badge": "বাংলাদেশের জন্য তৈরি",
+   "title_before": "বাড়ি ভাড়ার সব হিসাব, ",
+   "title_highlight": "এক জায়গায়",
+   "title_after": "",
+   "subtitle": "ভাড়া আদায়, রশিদ, রিমাইন্ডার, খরচ আর লোনের হিসাব, সবকিছু একটি সহজ সফটওয়্যারে। বাড়ির মালিক, কেয়ারটেকার ও স্টাফ, সবার জন্য।",
+   "cta_primary": "বিনামূল্যে শুরু করুন",
+   "cta_secondary": "ভিডিওটি দেখুন",
+   "trust_secure": "ব্যাংক-মানের নিরাপত্তা",
+   "trust_no_card": "কার্ড লাগবে না",
+   "stats": [
+    {
+     "value": "100+",
+     "label": "পরিচালিত প্রপার্টি"
+    },
+    {
+     "value": "1 কোটি+",
+     "label": "ভাড়ার লেনদেন"
+    },
+    {
+     "value": "500+",
+     "label": "সন্তুষ্ট ব্যবহারকারী"
+    }
+   ],
+   "trusted_by": "ঢাকা, চট্টগ্রামসহ সারা দেশের বাড়ির মালিকদের আস্থা",
+   "video_sound_label": "শব্দসহ দেখুন"
+  },
+  "why": {
+   "title": "ভাড়ার হিসাব আর মাথাব্যথা নয়",
+   "subtitle": "খাতা, এক্সেল শিট আর হোয়াটসঅ্যাপে হিসাব রাখা কঠিন। বাড়ি পরিচালনা সবকিছু এক জায়গায় নিয়ে আসে।",
+   "without_title": "বাড়ি পরিচালনা ছাড়া",
+   "without_points": [
+    "ফোন আর মেসেজ করে ভাড়ার তাগাদা",
+    "সব বাড়ি ও ভাড়াটিয়ার হিসাব এক জায়গায় নেই",
+    "হাতে লিখে ভাড়ার রশিদ দেওয়া",
+    "খরচ আর লোনের হিসাব হাতে লিখে রাখা"
+   ],
+   "with_title": "বাড়ি পরিচালনা দিয়ে",
+   "with_points": [
+    "স্বয়ংক্রিয় রিমাইন্ডার ও পেমেন্টের হিসাব",
+    "বাড়ি, ফ্ল্যাট ও ভাড়াটিয়া এক ড্যাশবোর্ডে",
+    "তাৎক্ষণিক পুশ নোটিফিকেশন",
+    "খরচ, অ্যাপ ফি ও লোন এক জায়গায়"
+   ]
+  },
+  "features": {
+   "badge": "সবকিছু এক প্ল্যাটফর্মে",
+   "title": "আপনার কাজের ধরন অনুযায়ী তৈরি",
+   "subtitle": "বাড়ি, ভাড়া, রিমাইন্ডার, খরচ আর রিপোর্ট। মালিক, কেয়ারটেকার ও স্টাফ, প্রত্যেকের জন্য ঠিক যতটুকু অ্যাক্সেস দরকার।",
+   "items": [
+    {
+     "icon": "House",
+     "title": "বাড়ি ও ফ্ল্যাট ব্যবস্থাপনা",
+     "description": "একাধিক বাড়ি পরিচালনা করুন, কোন ফ্ল্যাট খালি আর কোনটি ভাড়ায় দেখুন, সব গুছিয়ে রাখুন।"
+    },
+    {
+     "icon": "Wallet",
+     "title": "ভাড়া আদায়",
+     "description": "স্বয়ংক্রিয় রিমাইন্ডার, পেমেন্টের হিসাব আর বিলম্ব ফি, সব নিজে থেকেই।"
+    },
+    {
+     "icon": "Bell",
+     "title": "শিডিউল করা বিল ও রিমাইন্ডার",
+     "description": "মাসের শুরুতে ভাড়ার বিল আর ভাড়া বাকি থাকলে রিমাইন্ডার, এসএমএস ও ইমেইলে, নিজে থেকেই।"
+    },
+    {
+     "icon": "Shield",
+     "title": "ভূমিকা অনুযায়ী অ্যাক্সেস",
+     "description": "মালিক, কেয়ারটেকার ও স্টাফের জন্য আলাদা ড্যাশবোর্ড, যার যতটুকু অনুমতি দরকার।"
+    },
+    {
+     "icon": "Smartphone",
+     "title": "মোবাইল অ্যাপের মতো",
+     "description": "ফোনে অ্যাপ হিসেবে ইনস্টল করুন, অফলাইনেও দেখুন, পুশ নোটিফিকেশন পান।"
+    },
+    {
+     "icon": "BarChart3",
+     "title": "রিপোর্ট ও বিশ্লেষণ",
+     "description": "আয়-ব্যয়ের রিপোর্ট তৈরি করুন, পুরো হিসাব পরিষ্কারভাবে বুঝে নিন।"
+    }
+   ]
+  },
+  "showcase": {
+   "title": "বাড়িওয়ালার ভাড়ার হিসাব এখন সহজ",
+   "sample_note": "* ছবির তথ্য কেবল নমুনা হিসেবে দেখানো হয়েছে",
+   "tabs": [
+    {
+     "mockup": "overview",
+     "tab": "এক নজরে",
+     "title": "বাড়ি ভাড়ার সব হিসাব, এখন এক জায়গায়",
+     "subtitle": "বাড়িওয়ালাদের জন্য স্মার্ট রেন্ট ম্যানেজমেন্ট সফটওয়্যার",
+     "points": [
+      "মাসের শুরুতে স্বয়ংক্রিয়ভাবে ভাড়াটিয়ার ইমেইলে ভাড়ার রশিদ",
+      "কে ভাড়া দিয়েছে, কে দেয়নি – এক নজরেই দেখুন",
+      "ভাড়াটিয়ার সব তথ্য আপডেট রাখুন, ভাড়া দিতে দেরি হলে অটো রিমাইন্ডার",
+      "কেয়ারটেকারের বেতনসহ সব খরচের হিসাব এক জায়গায়",
+      "মোবাইল বা কম্পিউটারে, বাংলা ভাষায়"
+     ]
+    },
+    {
+     "mockup": "receipt",
+     "tab": "ভাড়ার রশিদ",
+     "title": "প্রতি মাসের শুরুতেই ভাড়ার রশিদ, নিজে থেকেই",
+     "subtitle": "হাতে হাতে রশিদ লেখা বা বারবার মনে করানোর ঝামেলা নেই",
+     "points": [
+      "মাসের শুরুতে ভাড়াটিয়ার ইমেইলে স্বয়ংক্রিয়ভাবে ভাড়ার বিল ও রশিদ",
+      "কে টাকা দিয়েছে আর কে দেয়নি, রশিদেই স্পষ্ট",
+      "সব রশিদ ও হিসাব সফটওয়্যারে সংরক্ষিত",
+      "সময় বাঁচান, ভুল হিসাব কমান"
+     ]
+    },
+    {
+     "mockup": "status",
+     "tab": "ভাড়ার অবস্থা",
+     "title": "কে ভাড়া দিয়েছে, কে দেয়নি – এক নজরেই",
+     "subtitle": "প্রতিটি ফ্ল্যাটের ভাড়ার অবস্থা সবসময় হাতের কাছে",
+     "points": [
+      "পরিশোধিত ও বকেয়া ভাড়া আলাদাভাবে দেখুন",
+      "মাস অনুযায়ী ভাড়ার ইতিহাস সংরক্ষিত",
+      "মোট আদায় ও বকেয়ার হিসাব স্বয়ংক্রিয়",
+      "ভাড়াটিয়ার তথ্য আপডেট রাখুন সহজেই"
+     ]
+    },
+    {
+     "mockup": "reminder",
+     "tab": "রিমাইন্ডার",
+     "title": "ভাড়াটিয়ার তথ্য গুছিয়ে রাখুন, রিমাইন্ডার যাবে অটো",
+     "subtitle": "ভাড়া দিতে দেরি হলে ভাড়াটিয়ার কাছে নিজে থেকেই বার্তা যাবে",
+     "points": [
+      "ভাড়াটিয়ার সব তথ্য এক জায়গায়, সবসময় আপডেট",
+      "ভাড়া দিতে দেরি হলে অটোমেটিক রিমাইন্ডার",
+      "বারবার ফোন করে তাগাদা দেওয়ার ঝামেলা নেই",
+      "সময়মতো ভাড়া আদায়, সম্পর্কও ভালো"
+     ],
+     "mockup_label": "অটো রিমাইন্ডার",
+     "mockup_badge": "স্বয়ংক্রিয়ভাবে পাঠানো"
+    },
+    {
+     "mockup": "expenses",
+     "tab": "খরচের হিসাব",
+     "title": "কেয়ারটেকারের বেতন থেকে সব খরচ, হিসাব পরিষ্কার",
+     "subtitle": "আয়ের পাশাপাশি খরচের হিসাবও এক জায়গায় রাখুন",
+     "points": [
+      "কেয়ারটেকারের বেতন সহজেই এন্ট্রি করুন",
+      "বিদ্যুৎ, পানি, মেরামতসহ সব খরচ লিখে রাখুন",
+      "খরচের ধরন অনুযায়ী আলাদা হিসাব",
+      "মাসের আয়-খরচ এক নজরে"
+     ]
+    },
+    {
+     "mockup": "devices",
+     "tab": "মোবাইল ও কম্পিউটার",
+     "title": "মোবাইলে বা কম্পিউটারে, বাংলায় – খুব সহজে",
+     "subtitle": "একই অ্যাকাউন্ট, যেকোনো ডিভাইস থেকে বাড়ি পরিচালনা",
+     "points": [
+      "মোবাইল ও কম্পিউটার, দুই জায়গা থেকেই ব্যবহার করুন",
+      "সম্পূর্ণ বাংলা ভাষায় সফটওয়্যার",
+      "খুব সহজ ব্যবহার, ঝামেলাহীন ব্যবস্থাপনা",
+      "যেকোনো সময়, যেকোনো জায়গা থেকে হিসাব দেখুন"
+     ]
+    }
+   ]
+  },
+  "personas": {
+   "title": "ভাড়ার সঙ্গে যুক্ত সবার জন্য",
+   "subtitle": "আপনি বাড়ির মালিক, পরিচালক কিংবা ভাড়াটিয়া, বাড়ি পরিচালনা আপনার ভূমিকা অনুযায়ী কাজ করে।",
+   "items": [
+    {
+     "icon": "UserCheck",
+     "title": "বাড়ির মালিক",
+     "description": "সব বাড়ি, ভাড়ার অবস্থা, খরচ আর রিপোর্ট এক জায়গায় দেখুন। নির্দিষ্ট অনুমতি দিয়ে কেয়ারটেকার ও স্টাফ যোগ করুন।"
+    },
+    {
+     "icon": "Users",
+     "title": "কেয়ারটেকার ও স্টাফ",
+     "description": "প্রতিদিনের কাজ সামলান: ভাড়ার তথ্য, খরচ আর লোনের হিসাব, সব নিজের ড্যাশবোর্ড থেকে।"
+    },
+    {
+     "icon": "House",
+     "title": "ভাড়াটিয়া",
+     "description": "নোটিশ ও রিমাইন্ডার এক অ্যাপে, ভাড়া আর বকেয়ার পরিষ্কার হিসাব। (ভাড়াটিয়াদের ফিচার শিগগিরই আসছে।)"
+    }
+   ]
+  },
+  "how_it_works": {
+   "title": "বাড়ি পরিচালনা যেভাবে কাজ করে",
+   "subtitle": "সাইন আপ থেকে পুরো নিয়ন্ত্রণ, মাত্র চার ধাপে।",
+   "steps": [
+    {
+     "title": "সাইন আপ করুন",
+     "text": "মালিক, কেয়ারটেকার বা স্টাফ হিসেবে অ্যাকাউন্ট খুলুন, ইমেইল বা গুগল দিয়ে।"
+    },
+    {
+     "title": "প্রপার্টি যোগ করুন",
+     "text": "বাড়ি, ফ্ল্যাট আর ভাড়াটিয়ার তথ্য যোগ করুন।"
+    },
+    {
+     "title": "পরিচালনা ও আদায়",
+     "text": "ভাড়ার রিমাইন্ডার পাঠান, পেমেন্টের হিসাব রাখুন, অনুরোধগুলো সামলান।"
+    },
+    {
+     "title": "সবসময় আপডেট থাকুন",
+     "text": "নোটিফিকেশন পান, রিপোর্ট দেখুন, ড্যাশবোর্ড থেকে সব পরিচালনা করুন।"
+    }
+   ]
+  },
+  "pricing": {
+   "title": "সহজ ও স্বচ্ছ মূল্য",
+   "subtitle": "বিনামূল্যে শুরু করুন, প্রয়োজন অনুযায়ী বাড়ান। কোনো লুকানো খরচ নেই।",
+   "tiers": [
+    {
+     "title": "বিনামূল্যে শুরু",
+     "description": "মূল ফিচারগুলো কোনো খরচ ছাড়াই ব্যবহার করুন।",
+     "features": [
+      "বাড়ি ও ফ্ল্যাট",
+      "ভাড়া ও রিমাইন্ডার",
+      "সাধারণ রিপোর্ট"
+     ],
+     "cta": "বিনামূল্যে শুরু করুন",
+     "is_coming_soon": false,
+     "is_highlighted": false
+    },
+    {
+     "title": "প্রো (শিগগিরই আসছে)",
+     "description": "আরও বেশি প্রপার্টি, উন্নত রিপোর্ট ও অগ্রাধিকার সাপোর্ট।",
+     "features": [
+      "ফ্রি প্ল্যানের সবকিছু",
+      "উন্নত বিশ্লেষণ",
+      "অগ্রাধিকার সাপোর্ট"
+     ],
+     "cta": "শিগগিরই আসছে",
+     "is_coming_soon": true,
+     "is_highlighted": true
+    }
+   ]
+  },
+  "demo_slider": {
+   "title": "কাজের মধ্যে বাড়ি পরিচালনা",
+   "subtitle": "যে ফিচারগুলো সারা দেশের বাড়ির মালিকদের হিসাব আরও সহজ করছে।",
+   "slides": [
+    {
+     "tag": "প্রপার্টি ব্যবস্থাপনা",
+     "title": "সব প্রপার্টি, এক ড্যাশবোর্ডে",
+     "description": "প্রতিটি বাড়ি, ফ্ল্যাট আর ভাড়াটিয়ার পুরো চিত্র এক নজরে। কোন ফ্ল্যাট ভাড়ায়, কার ভাড়া বাকি, স্প্রেডশিট ঘাঁটতে হবে না।",
+     "image_key": "building",
+     "image_url": null
+    },
+    {
+     "tag": "বাড়ি ব্যবস্থাপনা",
+     "title": "বাড়ি ও ফ্ল্যাট এক নজরে",
+     "description": "প্রতিটি বাড়ির ফ্ল্যাট গুছিয়ে রাখুন, কোনটি খালি দেখুন, মুহূর্তেই ভাড়াটিয়া যুক্ত করুন। খুঁজুন, ফিল্টার করুন, এক স্ক্রিন থেকেই সব পরিচালনা করুন।",
+     "image_key": "houses",
+     "image_url": null
+    },
+    {
+     "tag": "ভাড়া ও পেমেন্ট",
+     "title": "ভাড়া আদায় এখন সহজ",
+     "description": "পেমেন্ট লিখে রাখুন, বিলম্ব ফি নিজে থেকেই হিসাব হবে, হোয়াটসঅ্যাপ/এসএমএস রিমাইন্ডার পাঠান। পেমেন্টের পুরো ইতিহাস, অগ্রিম আর রশিদ, সব এক জায়গায়।",
+     "image_key": "laptop",
+     "image_url": null
+    },
+    {
+     "tag": "ভাড়াটিয়ার প্রোফাইল",
+     "title": "প্রত্যেক ভাড়াটিয়াকে জানুন",
+     "description": "যোগাযোগের তথ্য, এনআইডি, ওঠার তারিখ আর পেমেন্টের ইতিহাসসহ পূর্ণ প্রোফাইল রাখুন। কয়েক ক্লিকেই ভাড়াটিয়া যুক্ত, স্থানান্তর বা বাদ দিন।",
+     "image_key": "profile",
+     "image_url": null
+    }
+   ]
+  },
+  "testimonials": {
+   "title": "বাড়ির মালিকদের পছন্দ",
+   "subtitle": "বাড়ির মালিক ও কেয়ারটেকাররা বাড়ি পরিচালনা নিয়ে যা বলছেন।",
+   "items": [
+    {
+     "quote": "হোয়াটসঅ্যাপে আর ভাড়ার পেছনে ছুটতে হয় না। সবকিছু এক জায়গায়, রিমাইন্ডারও নিজে থেকেই চলে যায়।",
+     "name": "বাড়ির মালিক",
+     "role": "ঢাকা",
+     "avatar_url": null,
+     "rating": 5
+    },
+    {
+     "quote": "কয়েকটা বাড়ি সামলানো আগে খুব ঝামেলার ছিল। বাড়ি পরিচালনার ড্যাশবোর্ড আর রিপোর্ট সব সহজ করে দিয়েছে।",
+     "name": "কেয়ারটেকার",
+     "role": "ঢাকা",
+     "avatar_url": null,
+     "rating": 5
+    }
+   ]
+  },
+  "cta": {
+   "title": "ভাড়ার হিসাব সহজ করতে প্রস্তুত?",
+   "subtitle": "যে বাড়ির মালিক ও কেয়ারটেকাররা প্রতিদিন বাড়ি পরিচালনা ব্যবহার করছেন, তাঁদের সঙ্গে যোগ দিন।",
+   "button_label": "বিনামূল্যে শুরু করুন",
+   "disclaimer": "কোনো ক্রেডিট কার্ড লাগবে না"
+  },
+  "footer": {
+   "tagline": "2024 সাল থেকে বাড়ি ভাড়ার ব্যবস্থাপনা সহজ করছি",
+   "email": "support@bariporichalona.com",
+   "phone": "+880 1712 345678",
+   "product_links": [
+    {
+     "label": "ফিচার",
+     "href": "#features"
+    },
+    {
+     "label": "মূল্য",
+     "href": "#pricing"
+    },
+    {
+     "label": "ডেমো",
+     "href": "#demo"
+    }
+   ],
+   "company_links": [
+    {
+     "label": "আমাদের সম্পর্কে",
+     "href": "#about"
+    },
+    {
+     "label": "যোগাযোগ",
+     "href": "#contact"
+    },
+    {
+     "label": "গোপনীয়তা নীতি",
+     "href": "#privacy"
+    }
+   ],
+   "social_links": []
+  }
+ },
+ "en": {
+  "nav": {
+   "brand_name": "Bari Porichalona",
+   "links": [
+    {
+     "label": "Home",
+     "href": "#"
+    },
+    {
+     "label": "Features",
+     "href": "#features"
+    },
+    {
+     "label": "Pricing",
+     "href": "#pricing"
+    },
+    {
+     "label": "Contact",
+     "href": "#contact"
+    }
+   ],
+   "cta_login": "Login",
+   "cta_signup": "Sign Up"
+  },
+  "hero": {
+   "badge": "Made for Bangladesh",
+   "title_before": "Simplify Your ",
+   "title_highlight": "House Rent",
+   "title_after": " Management",
+   "subtitle": "From rent collection to maintenance requests, manage everything in one place. Designed for house owners, caretakers, and tenants.",
+   "cta_primary": "Get Started Free",
+   "cta_secondary": "Watch the Video",
+   "trust_secure": "Bank-level Security",
+   "trust_no_card": "No Credit Card",
+   "stats": [
+    {
+     "value": "100+",
+     "label": "Properties Managed"
+    },
+    {
+     "value": "1Cr+",
+     "label": "Rent Processed"
+    },
+    {
+     "value": "500+",
+     "label": "Happy Users"
+    }
+   ],
+   "trusted_by": "Trusted by landlords across Dhaka, Chattogram & beyond",
+   "video_sound_label": "Watch with sound"
+  },
+  "why": {
+   "title": "Rent Management Shouldn't Be a Headache",
+   "subtitle": "Spreadsheets, WhatsApp reminders, and paper ledgers don't scale. Bari Porichalona brings everything into one place.",
+   "without_title": "Without Bari Porichalona",
+   "without_points": [
+    "Chasing rent via calls and messages",
+    "No single view of all properties and tenants",
+    "Writing rent receipts by hand",
+    "Manual expense and loan tracking"
+   ],
+   "with_title": "With Bari Porichalona",
+   "with_points": [
+    "Automated reminders and payment tracking",
+    "One dashboard for houses, flats, and renters",
+    "Instant push notifications",
+    "Expenses, app fees, and loans in one place"
+   ]
+  },
+  "features": {
+   "badge": "Everything in one platform",
+   "title": "Built for How You Work",
+   "subtitle": "Houses, rent, reminders, expenses, and reports—all with the right access for owners, caretakers, and staff.",
+   "items": [
+    {
+     "icon": "House",
+     "title": "House & Flat Management",
+     "description": "Manage multiple properties, track occupancy, and organize flats efficiently."
+    },
+    {
+     "icon": "Wallet",
+     "title": "Rent Collection",
+     "description": "Automated rent reminders, payment tracking, and late fee handling."
+    },
+    {
+     "icon": "Bell",
+     "title": "Scheduled Bills & Reminders",
+     "description": "Rent bills at the start of the month and reminders when rent is late, by SMS and email, sent on their own."
+    },
+    {
+     "icon": "Shield",
+     "title": "Role-Based Access",
+     "description": "Dashboards for owners, caretakers, and staff with the right permissions."
+    },
+    {
+     "icon": "Smartphone",
+     "title": "PWA & Mobile Ready",
+     "description": "Install as an app, use offline, and get push notifications."
+    },
+    {
+     "icon": "BarChart3",
+     "title": "Analytics & Reports",
+     "description": "Track performance, generate financial reports, and get insights."
+    }
+   ]
+  },
+  "showcase": {
+   "title": "Rent accounts for landlords, made simple",
+   "sample_note": "* Figures shown are sample data",
+   "tabs": [
+    {
+     "mockup": "overview",
+     "tab": "At a glance",
+     "title": "All your rent accounts, now in one place",
+     "subtitle": "Smart rent management software for landlords",
+     "points": [
+      "Rent receipts emailed to tenants automatically at the start of the month",
+      "See who has paid and who hasn't, at a glance",
+      "Keep tenant details up to date, with automatic reminders when rent is late",
+      "Every expense in one place, caretaker's salary included",
+      "On mobile or computer, in Bengali"
+     ]
+    },
+    {
+     "mockup": "receipt",
+     "tab": "Rent receipts",
+     "title": "Rent receipts at the start of every month, on their own",
+     "subtitle": "No more writing receipts by hand or reminding tenants again and again",
+     "points": [
+      "Rent bill and receipt emailed to tenants automatically at the start of the month",
+      "Who has paid and who hasn't is clear on the receipt",
+      "Every receipt and record saved in the software",
+      "Save time and cut down on mistakes"
+     ]
+    },
+    {
+     "mockup": "status",
+     "tab": "Rent status",
+     "title": "Who has paid, who hasn't, at a glance",
+     "subtitle": "Every flat's rent status, always at hand",
+     "points": [
+      "See paid and due rent separately",
+      "Rent history saved month by month",
+      "Totals collected and due, calculated automatically",
+      "Keep tenant details up to date with ease"
+     ]
+    },
+    {
+     "mockup": "reminder",
+     "tab": "Reminders",
+     "title": "Keep tenant details organised, reminders go out automatically",
+     "subtitle": "When rent is late, the tenant gets a message on its own",
+     "points": [
+      "All tenant details in one place, always up to date",
+      "Automatic reminders when rent is late",
+      "No more calling again and again to chase rent",
+      "Rent on time, and a better relationship too"
+     ],
+     "mockup_label": "Auto reminder",
+     "mockup_badge": "Sent automatically"
+    },
+    {
+     "mockup": "expenses",
+     "tab": "Expenses",
+     "title": "From the caretaker's salary to every expense, accounts made clear",
+     "subtitle": "Keep expenses alongside income, in one place",
+     "points": [
+      "Record the caretaker's salary easily",
+      "Log every expense: electricity, water, repairs and more",
+      "Separate totals for each type of expense",
+      "The month's income and expenses at a glance"
+     ]
+    },
+    {
+     "mockup": "devices",
+     "tab": "Mobile & computer",
+     "title": "On mobile or computer, in Bengali, with ease",
+     "subtitle": "One account, manage your property from any device",
+     "points": [
+      "Use it on mobile and computer alike",
+      "Software fully in Bengali",
+      "Simple to use, hassle-free management",
+      "Check your accounts anytime, from anywhere"
+     ]
+    }
+   ]
+  },
+  "personas": {
+   "title": "For Everyone in the Rent Chain",
+   "subtitle": "Whether you own properties, manage them, or live in one—Bari Porichalona adapts to your role.",
+   "items": [
+    {
+     "icon": "UserCheck",
+     "title": "House Owners",
+     "description": "See all properties, rent status, expenses, and reports in one place. Invite caretakers and staff with controlled access."
+    },
+    {
+     "icon": "Users",
+     "title": "Caretakers & Staff",
+     "description": "Manage day-to-day: collect rent info, track expenses and loans—all from your dashboard."
+    },
+    {
+     "icon": "House",
+     "title": "Tenants",
+     "description": "Get notices and reminders in one app. Clear view of rent and dues. (Tenant features coming soon.)"
+    }
+   ]
+  },
+  "how_it_works": {
+   "title": "How Bari Porichalona Works",
+   "subtitle": "Four simple steps from signup to full control.",
+   "steps": [
+    {
+     "title": "Sign Up",
+     "text": "Create your account as owner, caretaker, or staff. Use email or Google."
+    },
+    {
+     "title": "Add Properties",
+     "text": "Add houses, flats, and tenant information to the system."
+    },
+    {
+     "title": "Manage & Collect",
+     "text": "Send rent reminders, track payments, and manage requests."
+    },
+    {
+     "title": "Stay Updated",
+     "text": "Get notifications, view reports, and run everything from the dashboard."
+    }
+   ]
+  },
+  "pricing": {
+   "title": "Simple, Transparent Pricing",
+   "subtitle": "Start free. Scale as you grow. No hidden fees.",
+   "tiers": [
+    {
+     "title": "Free to Start",
+     "description": "Get started with core features at no cost.",
+     "features": [
+      "Houses & flats",
+      "Rent & reminders",
+      "Basic reports"
+     ],
+     "cta": "Get Started Free",
+     "is_coming_soon": false,
+     "is_highlighted": false
+    },
+    {
+     "title": "Pro (Coming Soon)",
+     "description": "More properties, advanced reports, and priority support.",
+     "features": [
+      "Everything in Free",
+      "Advanced analytics",
+      "Priority support"
+     ],
+     "cta": "Coming Soon",
+     "is_coming_soon": true,
+     "is_highlighted": true
+    }
+   ]
+  },
+  "demo_slider": {
+   "title": "See Bari Porichalona in Action",
+   "subtitle": "Explore the key features that help property owners across Bangladesh manage smarter.",
+   "slides": [
+    {
+     "tag": "Property Management",
+     "title": "All Your Properties, One Dashboard",
+     "description": "Get a bird's-eye view of every house, flat, and renter. Monitor occupancy, rent status, and dues at a glance without switching between spreadsheets.",
+     "image_key": "building",
+     "image_url": null
+    },
+    {
+     "tag": "House Management",
+     "title": "Houses & Flats at a Glance",
+     "description": "Organize flats within each house, track availability, and assign renters in seconds. Search, filter, and manage your entire portfolio from one screen.",
+     "image_key": "houses",
+     "image_url": null
+    },
+    {
+     "tag": "Rent & Payments",
+     "title": "Rent Collection Made Simple",
+     "description": "Record payments, auto-calculate late fees, and send WhatsApp/SMS reminders. Full payment history, advance deposits, and receipts—all in one place.",
+     "image_key": "laptop",
+     "image_url": null
+    },
+    {
+     "tag": "Renter Profiles",
+     "title": "Know Every Renter",
+     "description": "Maintain complete renter profiles with contact info, NID details, move-in dates, and payment history. Assign, transfer, or remove renters with a few clicks.",
+     "image_key": "profile",
+     "image_url": null
+    }
+   ]
+  },
+  "testimonials": {
+   "title": "Loved by Property Managers",
+   "subtitle": "See what house owners and caretakers say about Bari Porichalona.",
+   "items": [
+    {
+     "quote": "Finally stopped chasing rent on WhatsApp. Everything is in one place and reminders go out automatically.",
+     "name": "House Owner",
+     "role": "Dhaka",
+     "avatar_url": null,
+     "rating": 5
+    },
+    {
+     "quote": "Managing multiple houses used to be messy. Bari Porichalona's dashboard and reports made it simple.",
+     "name": "Caretaker",
+     "role": "Dhaka",
+     "avatar_url": null,
+     "rating": 5
+    }
+   ]
+  },
+  "cta": {
+   "title": "Ready to Simplify Your Rent Management?",
+   "subtitle": "Join property owners and caretakers who use Bari Porichalona every day.",
+   "button_label": "Get Started Free",
+   "disclaimer": "No credit card required"
+  },
+  "footer": {
+   "tagline": "Simplifying house rent management since 2026",
+   "email": "support@bariporichalona.com",
+   "phone": "+880 1712 345678",
+   "product_links": [
+    {
+     "label": "Features",
+     "href": "#features"
+    },
+    {
+     "label": "Pricing",
+     "href": "#pricing"
+    },
+    {
+     "label": "Demo",
+     "href": "#demo"
+    }
+   ],
+   "company_links": [
+    {
+     "label": "About Us",
+     "href": "#about"
+    },
+    {
+     "label": "Contact",
+     "href": "#contact"
+    },
+    {
+     "label": "Privacy Policy",
+     "href": "#privacy"
+    }
+   ],
+   "social_links": [],
+   "_updatedAt": "2026-08-27T17:27:33.273Z"
+  }
+ }
+}

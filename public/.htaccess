@@ -33,6 +33,12 @@ Options -Indexes
   Options -MultiViews
 </IfModule>
 
+# llms.txt has Bengali in it. Without a charset Apache sends .txt as bare text/plain, and a
+# client that guesses Latin-1 shows the Bengali as garbage.
+<IfModule mod_mime.c>
+  AddCharset UTF-8 .txt .xml
+</IfModule>
+
 # Sourcemaps. `sourcemap: 'hidden'` in vite.config.js only drops the
 # //# sourceMappingURL comment — the .map files are still built, still uploaded
 # (sw.js.map alone is 209 KB), and still fetchable at a guessable URL, which
