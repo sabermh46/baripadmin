@@ -12,6 +12,9 @@ export { default as renterIcon } from './icons/renter.svg';
 export { default as googleIcon } from './icons/google.svg';
 export { default as housesImage } from './icons/houses.png';
 export { default as bariBg } from './bari-bg.webp';
+// Landing hero backdrop (pages/PublicHome/HeroArt.jsx), cut from 'Modern Villa in a Lush Garden.webp'.
+export { default as heroVilla1280 } from './hero-villa-1280.webp';
+export { default as heroVilla720 } from './hero-villa-720.webp';
 
 // Safari's Add to Home Screen walkthrough — see components/common/IosInstallGuide.jsx.
 export { default as iosGuide1 } from './iphone_guide/1.webp';

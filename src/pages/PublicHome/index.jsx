@@ -18,7 +18,7 @@ import {
   X,
   PlayCircle,
   ShieldCheck,
-  CreditCard,
+  CalendarCheck,
   Lock,
   Star,
   Globe,
@@ -36,7 +36,7 @@ import {
 import { LANDING_LOCALES, landingLocale, useGetLandingPageQuery } from '../../store/api/landingApi';
 import { useGetPublicRegistrationStatusQuery } from '../../store/api/authApi';
 import Showcase from './Showcase';
-import HeroVideo from './HeroVideo';
+import HeroArt from './HeroArt';
 import { initialLanding, rememberLanding } from './landingContent';
 
 // Icon registry — maps string names stored in DB to Lucide components
@@ -76,6 +76,15 @@ const resolveSlideImage = (slide) => {
 
 const BTN_PRIMARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-[15px] font-medium text-white shadow-sm shadow-primary-700/20 transition-colors hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30';
 const BTN_SECONDARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-[15px] font-medium text-ink ring-1 ring-slate-200 transition-colors hover:bg-slate-50 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200';
+// The nav bar's one button. Its own class, not BTN_PRIMARY plus overrides: two padding
+// utilities on one element resolve by stylesheet order, not class order, so the bigger one won
+// and the label wrapped onto two lines on a phone.
+const NAV_BTN = 'inline-flex items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 sm:px-5 py-2 text-sm font-medium text-white shadow-sm shadow-primary-700/20 transition-colors hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30';
+// The hero's own buttons: rounder and a size up from the rest of the page.
+const HERO_BTN_PRIMARY = 'inline-flex items-center justify-center gap-2.5 rounded-full bg-primary px-8 py-3.5 text-base sm:text-lg font-medium text-white shadow-lg shadow-primary-600/25 transition-colors hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30';
+const HERO_BTN_SECONDARY = 'inline-flex items-center justify-center gap-2.5 rounded-full bg-white px-7 py-3.5 text-base sm:text-lg font-medium text-ink ring-1 ring-slate-200 shadow-sm transition-colors hover:bg-slate-50 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200';
+// One icon per hero stat, in the CMS's order: properties, rent processed, users.
+const HERO_STAT_ICONS = [Users, CalendarCheck, ShieldCheck];
 const CARD = 'rounded-2xl bg-white ring-1 ring-slate-200/80 shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
 
 const Section = ({ id, muted = false, className = '', children }) => (
@@ -281,8 +290,8 @@ const PublicHome = () => {
         <div className="max-w-7xl mx-auto px-5 h-16 flex justify-between items-center gap-3">
           <Link to="/" className="flex items-center gap-2.5 shrink-0">
             <img src={appLogo} alt="" className="h-9 w-auto" />
-            {/* Under 360px the name and both buttons do not fit one row; the logo carries the brand there. */}
-            <span className="max-[359px]:hidden whitespace-nowrap text-base sm:text-lg font-semibold text-secondary-800">{brand}</span>
+            {/* Under 380px the name and both buttons do not fit one row; the logo carries the brand there. */}
+            <span className="max-[379px]:hidden whitespace-nowrap text-base sm:text-lg font-semibold text-secondary-800">{brand}</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -299,17 +308,17 @@ const PublicHome = () => {
                 <span className="hidden sm:inline mr-2 text-sm text-ink-soft">
                   {t('landing_hello_user', { name: user?.name?.split(' ')[0] || t('landing_user_fallback') })}
                 </span>
-                <Link to="/dashboard" className={`${BTN_PRIMARY} px-4 py-2 text-sm`}>{t('go_to_dashboard')}</Link>
+                <Link to="/dashboard" className={`${NAV_BTN}`}>{t('go_to_dashboard')}</Link>
               </>
             ) : (
               <>
-                <Link to="/login" className="rounded-lg px-3 sm:px-4 py-2 text-sm font-medium text-ink hover:bg-slate-100 transition-colors">
+                <Link to="/login" className="whitespace-nowrap rounded-full px-2.5 sm:px-4 py-2 text-sm font-medium text-ink hover:bg-slate-100 transition-colors">
                   {nav.cta_login || t('landing_login')}
                 </Link>
                 {signupOpen ? (
-                  <Link to="/signup" className={`${BTN_PRIMARY} px-4 py-2 text-sm`}>{nav.cta_signup || t('landing_signup')}</Link>
+                  <Link to="/signup" className={`${NAV_BTN}`}>{nav.cta_signup || t('landing_signup')}</Link>
                 ) : (
-                  <a href="#contact" className={`${BTN_PRIMARY} px-4 py-2 text-sm`}>{t('landing_contact_us')}</a>
+                  <a href="#contact" className={`${NAV_BTN}`}>{t('landing_contact_us')}</a>
                 )}
               </>
             )}
@@ -317,71 +326,84 @@ const PublicHome = () => {
         </div>
       </nav>
 
-      {/* Hero: the promo video is the picture. On a phone it comes straight after the headline,
-          ahead of the buttons; on a wide screen it takes the right-hand side. */}
-      <section className="relative overflow-hidden bg-linear-to-b from-white to-slate-50">
-        <div aria-hidden className="absolute -top-48 -right-40 w-152 h-152 rounded-full bg-secondary-200/30 blur-3xl" />
-        <div aria-hidden className="absolute top-1/3 -left-48 w-120 h-120 rounded-full bg-primary-200/25 blur-3xl" />
-        <div aria-hidden className="absolute inset-0 opacity-[0.035] [mask-image:linear-gradient(to_bottom,black,transparent_75%)]"
-          style={{ backgroundImage: 'linear-gradient(to right, #1f2d33 1px, transparent 1px), linear-gradient(to bottom, #1f2d33 1px, transparent 1px)', backgroundSize: '56px 56px' }} />
+      {/* Hero: a villa in its garden with the promo video standing in front of it (HeroArt).
+          On a phone the picture comes straight after the headline, ahead of the buttons; on a
+          wide screen it takes the right-hand side. */}
+      <section className="relative overflow-hidden bg-linear-to-b from-[#f2f8fc] via-white to-white">
+        <div aria-hidden className="absolute -top-56 right-[-12%] w-240 h-176 rounded-full bg-sky-100/70 blur-3xl" />
+        <div aria-hidden className="absolute top-1/3 -left-56 w-120 h-120 rounded-full bg-primary-100/40 blur-3xl" />
 
-        <div className="relative max-w-7xl mx-auto px-5 pt-10 sm:pt-14 lg:pt-20 pb-14 lg:pb-24 grid grid-cols-1 lg:grid-cols-12 gap-x-12 gap-y-8 lg:gap-y-0">
-          <div className="lg:col-span-5 lg:row-start-1 lg:self-end text-center lg:text-left">
+        <div className="relative max-w-7xl mx-auto px-5 pt-8 sm:pt-12 lg:pt-8 pb-14 lg:pb-16 grid grid-cols-1 lg:grid-cols-[minmax(0,23fr)_minmax(0,25fr)] gap-x-10 gap-y-8 lg:gap-y-0">
+          <div className="relative z-20 lg:col-start-1 lg:row-start-1 lg:self-end text-center lg:text-left">
             {hero.badge && (
-              <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[13px] font-medium text-secondary-700 ring-1 ring-secondary-200 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-hidden />
+              <span className="inline-flex items-center gap-2.5 rounded-full bg-white/80 px-4 py-1.5 text-sm font-medium text-ink ring-1 ring-slate-200 shadow-sm backdrop-blur-sm">
+                <span className="relative flex w-2 h-2" aria-hidden>
+                  <span className="absolute inset-0 rounded-full bg-primary opacity-60 motion-safe:animate-ping" />
+                  <span className="relative w-2 h-2 rounded-full bg-primary" />
+                </span>
                 {hero.badge}
               </span>
             )}
             {/* `??`, not `||`: an empty part is deliberate (the Bengali headline ends on its
-                highlight), and `||` would fill it with the built-in English-shaped fallback. */}
-            <h1 className="mt-5 text-[2rem] sm:text-5xl lg:text-[3.25rem] font-medium leading-[1.25] text-ink">
+                highlight), and `||` would fill it with the built-in English-shaped fallback.
+                The highlight never breaks inside itself, so it moves to its own line whole. */}
+            <h1 className="mt-6 text-[2.25rem] sm:text-5xl lg:text-[3.15rem] xl:text-[3.4rem] font-bold leading-[1.22] text-ink">
               {hero.title_before ?? t('landing_hero_title_before')}
-              <span className="text-primary-600">{hero.title_highlight ?? t('landing_hero_title_highlight')}</span>
+              {(() => {
+                const highlight = hero.title_highlight ?? t('landing_hero_title_highlight');
+                // Ending on the highlight (the Bengali headline), it takes a line of its own.
+                const after = hero.title_after ?? t('landing_hero_title_after');
+                return highlight ? (
+                  <span className={`relative ${after ? 'inline-block' : 'table mx-auto lg:mx-0'} whitespace-nowrap pb-2 text-primary-600`}>
+                    {highlight}
+                    <svg aria-hidden viewBox="0 0 200 14" preserveAspectRatio="none"
+                      className="absolute left-[30%] -bottom-1 w-[55%] h-3.5 text-primary-400">
+                      <path d="M4 10 C 60 2, 130 1, 196 8" stroke="currentColor" strokeWidth="4" fill="none" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                ) : null;
+              })()}
               {hero.title_after ?? t('landing_hero_title_after')}
             </h1>
-            <p className="mt-5 text-base sm:text-lg leading-relaxed text-ink-soft max-w-xl mx-auto lg:mx-0">
+            <p className="mt-6 text-base sm:text-lg leading-relaxed text-ink-soft max-w-xl mx-auto lg:mx-0">
               {hero.subtitle || t('landing_hero_subtitle')}
             </p>
           </div>
 
-          <div className="min-w-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:row-span-2 lg:self-center">
-            <HeroVideo ref={heroVideoRef} soundLabel={hero.video_sound_label} />
+          <div className="min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center">
+            <HeroArt videoRef={heroVideoRef} soundLabel={hero.video_sound_label} />
           </div>
 
-          <div className="lg:col-span-5 lg:row-start-2 lg:self-start lg:pt-8 text-center lg:text-left">
+          <div className="relative z-20 lg:col-start-1 lg:row-start-2 lg:self-start lg:pt-9 text-center lg:text-left">
             {/* Full width and stacked on a phone, where two auto-width buttons wrapped into a
                 ragged pair; side by side from sm up. */}
-            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 [&>*]:w-full sm:[&>*]:w-auto">
-              <button type="button" onClick={handleGetStarted} className={BTN_PRIMARY}>
+            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 sm:gap-4 [&>*]:w-full sm:[&>*]:w-auto">
+              <button type="button" onClick={handleGetStarted} className={HERO_BTN_PRIMARY}>
                 {startLabel(hero.cta_primary || t('landing_get_started_free'))}
-                <ArrowRight className="w-4 h-4" aria-hidden />
+                <ArrowRight className="w-5 h-5" aria-hidden />
               </button>
-              <button type="button" onClick={() => heroVideoRef.current?.playWithSound()} className={BTN_SECONDARY}>
-                <PlayCircle className="w-5 h-5 text-primary-600" aria-hidden />
+              <button type="button" onClick={() => heroVideoRef.current?.playWithSound()} className={HERO_BTN_SECONDARY}>
+                <PlayCircle className="w-6 h-6 text-primary-600" aria-hidden />
                 {hero.cta_secondary || t('landing_watch_demo')}
               </button>
             </div>
 
-            <div className="mt-6 flex flex-wrap justify-center lg:justify-start items-center gap-x-6 gap-y-2 text-sm text-ink-soft">
-              <span className="inline-flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-secondary-600" aria-hidden />
-                {hero.trust_secure || t('landing_hero_trust_secure')}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <CreditCard className="w-4 h-4 text-secondary-600" aria-hidden />
-                {hero.trust_no_card || t('landing_hero_trust_no_card')}
-              </span>
-            </div>
-
             {(hero.stats || []).length > 0 && (
-              <div className="mt-8 grid grid-cols-3 divide-x divide-slate-200 border-t border-slate-200 pt-6 max-w-md mx-auto lg:mx-0">
-                {hero.stats.map((stat, i) => (
-                  <div key={i} className="px-2 first:pl-0 text-center lg:text-left">
-                    <div className="text-xl sm:text-2xl font-semibold text-ink">{stat.value}</div>
-                    <div className="mt-0.5 text-xs sm:text-[13px] text-ink-soft">{stat.label}</div>
-                  </div>
-                ))}
+              <div className="mt-10 grid grid-cols-3 divide-x divide-slate-200/80 max-w-xl mx-auto lg:mx-0 rounded-2xl bg-white/80 py-4 ring-1 ring-slate-200/70 shadow-[0_8px_30px_-12px_rgba(16,24,40,0.12)] backdrop-blur-sm">
+                {hero.stats.map((stat, i) => {
+                  const StatIcon = HERO_STAT_ICONS[i % HERO_STAT_ICONS.length];
+                  return (
+                    <div key={i} className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 px-2 sm:px-4">
+                      <span className="w-10 h-10 shrink-0 rounded-xl bg-secondary-100/70 text-secondary-700 flex items-center justify-center" aria-hidden>
+                        <StatIcon className="w-5 h-5" />
+                      </span>
+                      <div className="text-center sm:text-left">
+                        <div className="text-xl sm:text-2xl font-bold leading-tight text-ink">{stat.value}</div>
+                        <div className="mt-0.5 text-xs sm:text-[13px] text-ink-soft">{stat.label}</div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

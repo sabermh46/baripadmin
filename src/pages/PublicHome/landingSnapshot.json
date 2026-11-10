@@ -1,6 +1,5 @@
 {
- "generatedAt": "2026-11-07T05:08:32.033Z",
- "source": "http://localhost:8080",
+ "generatedAt": "2026-11-09T18:42:47.497Z",
  "bn": {
   "nav": {
    "brand_name": "বাড়ি পরিচালনা",
@@ -677,7 +676,7 @@
    "disclaimer": "No credit card required"
   },
   "footer": {
-   "tagline": "Simplifying house rent management since 2026",
+   "tagline": "Simplifying house rent management since 2024",
    "email": "support@bariporichalona.com",
    "phone": "+880 1712 345678",
    "product_links": [
@@ -708,8 +707,7 @@
      "href": "#privacy"
     }
    ],
-   "social_links": [],
-   "_updatedAt": "2026-08-27T17:27:33.273Z"
+   "social_links": []
   }
  }
 }

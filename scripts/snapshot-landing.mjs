@@ -36,7 +36,7 @@ const keep = (why) => {
 
 if (!api) keep('no API URL (pass one, or set VITE_APP_API_URL in .env.production)');
 
-const snapshot = { generatedAt: new Date().toISOString(), source: api };
+const snapshot = { generatedAt: new Date().toISOString() };
 
 for (const locale of LOCALES) {
   let body;
